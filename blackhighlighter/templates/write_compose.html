@@ -1,0 +1,57 @@
+{# This is a django-templated HTML file #}
+{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+
+{% comment %}
+
+ compose_tab.html - "Compose" tab, included from write.html
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+
+{% endcomment %}
+
+<p>Write the full, <b>unabridged</b> version of your letter below.  None of what you write 
+will be sent over the network until you've had a chance to mark which parts you want to 
+protect.  (<a href="{% url network-named_url %}" target="_blank">"How can I verify this?"</a>)
+Provide all relevant information for the recipient to follow up with you, just as you would
+in a typical private email.</p>
+
+{% comment %}
+Contents will be copied from here to #editor-protect when the tab is switched.
+These contents are then overwritten if the user switches back
+Currently making sure textarea starts out EMPTY!  No spaces, newlines, or breaks between start and end tag.
+Browsers vary widely: http://dev.opera.com/articles/view/rich-html-editing-in-the-browser-part-1/
+{% endcomment %}
+<textarea id="editor-compose" style="width: 100%; height: 200px;"></textarea>
+
+<br />
+<p>When you've finished, click the button below to continue to the protect phase (you will
+still be able to come back and make changes if necessary.)</p>
+
+<center><p>
+	<a class="button" href="#" onclick="WriteLetter.nextStep();">
+		<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Next step: <b>Protect</b>
+	</a>
+</p></center>
+
+<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+	<strong>Note:</strong> Because what you type is not being sent to our server until
+	after you've taken out the parts you want to protect, we are not saving a copy
+	as you type.  So if your browser or computer crashes, you'll lose your letter.
+	You might want to compose in another program with auto-save, and then paste
+	it here when you are finished.</p>
+</div>

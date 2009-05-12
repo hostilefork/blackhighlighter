@@ -1,0 +1,89 @@
+{# This is a django-templated HTML file #}
+{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+
+{% comment %}
+
+ protect_tab.html - "Protect" tab, included from write.html
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+
+{% endcomment %}
+
+<p>Now it's time to pull out your "black highlighter" and protect any sensitive
+information you don't want posted to the public.  Anything marked in orange is
+a suggestion you can protect with a single click (email addresses, etc.)
+Click on a protected section to un-protect it, and you can go back and make 
+changes to the text by clicking on the "Compose" tab.</p>
+
+<p>You won't be sending the marked out text of your
+	letter to the server.  However, you will be sending a digital verification
+	number that can be used by you or the recipient to prove what you wrote.
+	(To understand how this is possible,	<a href="{% url cryptography-named_url %}" target="_blank">read this</a>.
+	Everything you do not mark out will be published to the server.  </p>
+
+{% comment %}
+	Contents will be copied here from editor-compose textarea when tab is switched
+	When tab is switched back to compose, any protection changes are copied back
+{% endcomment %}
+<textarea id="editor-protect" style="width: 100%; height: 200px;"></textarea>
+
+{# For the moment, using demo-source toggle from jquery UI demos.css #}
+<div id="demo-source"><a href="#" class="source-closed">if curious, you can view the JSON in the commitment</a>
+	<div>
+		<div id='json-commit'>
+{# Filled on demand #}
+		</div>
+	</div>
+</div>
+
+<br />
+
+<p>When you're satisfied that everything you didn't mark out is okay to publish
+on the internet so anyone can see it, continue.</p>
+
+<div id="error-commit">
+	<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+		<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+		<strong>Error:</strong> <span id="error-commit-msg">{# filled by notifyErrorOnTab() #}</span></p>
+	</div>
+	<br/>
+</div>
+
+<div id="buttons-protect">
+	<center><p>
+	<!-- button has weird margins, needs spacing (using nbsp for now)... better fix? -->
+		<a href="#" onclick="WriteLetter.previousStep()">go back and edit</a>
+		-or- &nbsp; 
+		<a class="button" href="#" onclick="WriteLetter.commit()">
+			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" /><b>Publish the Public Portions</b>
+		</a>
+	</p></center>
+</div>
+
+<div id="progress-commit">
+	<center><img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}ajax-loader.gif" /></center>
+</div>
+
+<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+	<b>Legal note:</b> By posting your letter, you are agreeing to publish
+	it under the Creative Commons <a href="http://creativecommons.org/licenses/by-nd/3.0/" target="_blank">No Derivative Works</a> 
+	license.  This gives others the right to present copies for commentary (or for 
+	any other purpose)&mdash;just as long as those copies and
+	digital signatures are not modified.  This is of fundamental importance, so 
+	<a href="{% url legal-named_url %}" target="_blank">read more here</a> if you have any questions.</p>
+</div>

@@ -1,0 +1,138 @@
+/*
+ blackhighlighter.css - CSS particular to the read/write/verify widgets.
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+*/
+
+
+/* 
+	Note: only valid color names are:
+		aqua, black, blue, fuchsia, gray, green, lime, maroon, navy, 
+		olive, purple, red, silver, teal, white, and yellow.
+	See http://www.w3schools.com/css/css_colornames.asp for hex codes 
+*/
+
+
+/* from http://www.aclevercookie.com/demos/autogrow_textarea.html */
+
+textarea.expanding {
+	line-height: 18px;
+    border: solid 1px #8AB134;
+}
+
+
+/* Grabbed this from http://www.jankoatwarpspeed.com/post/2009/03/11/How-to-create-Skype-like-buttons-using-jQuery.aspx */
+
+.button {
+    padding: 6px /* <-- was 4px */ 10px 3px 25px;
+    border: solid 1px #8AB134;
+    position: relative;
+    cursor: pointer;
+    display: inline-block;
+    /* REVIEW: hardcoded path, is this bad?  would use {{ BLACKHIGHLIGHTER_MEDIA_URL }} if it were a template... */
+    background-image: url( 'bkg.png' ); 
+    background-repeat: repeat-x;
+    font-size: 11px;
+    height: 16px;
+    text-decoration: none;
+    color: #40740D;
+    -moz-border-radius-bottomleft: 5px;
+    -moz-border-radius-bottomright: 5px;
+    -moz-border-radius-topleft: 5px;
+    -moz-border-radius-topright: 5px;
+}
+.button img {
+    position: absolute;
+    top: -4px;
+    left: -12px;
+    border: none;
+}
+.button:hover {
+    color: #8AB134;
+}
+
+
+/* Classes specific to write.html */
+
+.protection_area {
+	cursor: crosshair;
+}
+/* http://css-tricks.com/overriding-the-default-text-selection-color-with-css/ */
+.protection_area::selection {
+	background: #000000; /* Safari */
+	}
+.protection_area::-moz-selection {
+	background: #000000; /* Firefox */
+}
+
+/* must use span.protected as simply using .protected does not seem to work in Firefox */
+
+span.protected {
+}
+span.protected:hover {
+}
+/* when we are in read+write mode w.r.t. editing protections, e.g. compose tab */
+span.protected_readwrite {
+	background-color: gray;
+	color: black;
+}
+span.protected_readwrite:hover {
+	background-color: gray;
+	color:black;
+}
+/* when we are in read only mode w.r.t. editing protections, e.g. protect tab */
+span.protected_readonly {
+	background-color: black;
+	color: black;
+}
+span.protected_readonly:hover {
+	background-color: gray;
+	/* http://www.w3.org/TR/CSS21/ui.html#propdef-cursor */
+	/* Draw more "fun" cursor overrides to use, if avail? */
+	cursor: default;
+}
+span.suggested_protection {
+	background-color: #FFA500; /* Orange */
+	cursor: default;
+}
+span.suggested_protection:hover {
+	background-color: #FF4500; /* OrangeRed */
+	cursor: default;
+}
+
+
+/* Classes specific to read.html */
+
+#letter-text {
+	width: 100%;
+	border-width: 1px 1px 1px 1px;
+	padding: 1px 1px 1px 1px;
+	border-style: solid solid solid solid;
+	border-color: gray gray gray gray;
+	background-color: white;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+.protected {
+	background-color: black;
+	color: black;
+}
+.verified {
+	background-color: yellow;
+}
+.revealed {
+	background-color: #90EE90; /* Lightgreen */
+}
