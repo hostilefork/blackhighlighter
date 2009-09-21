@@ -52,8 +52,10 @@ import uuid
 # may want to try them later:
 #   render_to_response and get_object_or_404
 
+# The JSON library is only avaiable in 2.6, and apparently a bit slow too:
 # http://docs.python.org/library/json.html
-import json
+# import json
+import simplejson as json
 
 
 # Currently the Ajax APIs return JSON
@@ -164,7 +166,7 @@ def read(request, letter_uuid, tabstate):
 		'commit' : json.dumps(commitJson),
 		'reveals' : json.dumps(revealJsons),
 		'public_html': public_html,
-	})
+	}, current_app='blackhighlighter')
 	return HttpResponse(t.render(c))
 
 
@@ -188,7 +190,7 @@ def write(request):
 	t = loader.get_template('write.html')
 	c = RequestContext(request, {
 		'letter_uuid' : letter_uuid_str
-	})
+	}, current_app='blackhighlighter')
 	return HttpResponse(t.render(c))
 
 
@@ -284,7 +286,8 @@ def commit(request, letter_uuid):
 		for redaction in redactions:
 			redaction.save()
 
-	except Exception as inst:
+	# syntax of "except Exception as inst" does not work in 2.5 :(
+	except Exception, inst:
 	
 		return HttpJsonErrorForException(Exception, inst)
 	
@@ -358,7 +361,8 @@ def reveal(request, letter_uuid):
 			revealDb.reveal_date = postDate
 			revealDb.save()
 
-	except Exception as inst:
+	# syntax of "except Exception as inst:" does not work in Python 2.5 :(
+	except Exception, inst:
 	
 		return HttpJsonErrorForException(Exception, inst)
 
