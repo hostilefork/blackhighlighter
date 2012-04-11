@@ -1,0 +1,89 @@
+{# This is a django-templated HTML file #}
+{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+
+{% comment %}
+
+ verify_tab.html - "Verify" tab, included from read.html
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+
+{% endcomment %}
+
+{% comment %}
+	<!-- Each accordion div should look like this -->
+	<div title='{# hash #}'>
+		<a href="#">{# Local or Server #} Certificate: {# id #}</a>
+		<div>
+		{# JSON certificate text #}
+		<form>
+			<input type="button" value="Remove" name="button1" onclick="(code to remove this certificate)" />
+		</form>
+		</div>
+	</div>
+{% endcomment %}
+
+<div id="accordion">
+{% for reveal in revealsDb %}
+	<div title='{{ reveal.sha256 }}'>
+	{% if reveal.revealed %}
+		<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ reveal.reveal_date }}</a>
+	{% else %}
+		<a href="#">Certificate {{ forloop.counter }}: Not Revealed to Public</a>
+	{% endif %}
+		<div>
+			<i>For the moment, Javascript is required to see details of the reveal!</i>
+		</div>
+	</div>
+{% endfor %}
+</div>
+
+<p>This is where you paste or type in your certificates.  For samples of what 
+certificates look like, <a href="{% url certificates-named_url %}" target="_blank">click here</a>.</p> 
+
+<textarea style="width: 100%; height: 84px; min-height: 84px;" class="expanding" id="certificates"></textarea>
+
+<br />
+<p>If you paste one or more valid certificates for this letter and push verify, then it 
+should show you some of the missing portions.</p>
+
+<div id="error-verify">
+	<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+		<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+		<strong>Error:</strong> <span id="error-verify-msg">{# filled by notifyErrorOnTab() #}</span></p>
+	</div>
+	<br/>
+</div>
+
+<div id="buttons-verify">
+	<center><p>
+		<a class="button" href="#" onclick="ReadLetter.verify();">
+			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Next step: <b>Verify On Your Computer Only</b>
+		</a>
+	</p></center>
+</div>
+
+<div id="progress-verify">
+	<center><img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}ajax-loader.gif" /></center>
+</div>
+
+<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+	<strong>Note:</strong> Entering a certificate for verification does not send
+	anything to the server (for how to check that fact, <a href="{% url network-named_url %}" target="_blank">read this</a>).
+	You will only send the certificate to the server if you later choose to go through
+	with the "reveal" step and show the information to the public.</p>
+</div>

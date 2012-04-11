@@ -1,1 +1,10 @@
 See http://hostilefork.com/blackhighlighter/ for information about this project.
+
+It has been ported from Django to Node.js
+
+The Django code is frozen in the django-blackhighlighter subdirectory
+
+Node.js directory structure chosen to follow this suggestion:
+
+http://stackoverflow.com/questions/5178334/folder-structure-for-a-nodejs-project
+

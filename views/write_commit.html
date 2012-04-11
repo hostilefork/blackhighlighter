@@ -1,0 +1,49 @@
+{# This is a django-templated HTML file #}
+{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+
+{% comment %}
+
+ commit_tab.html - "Commit" tab, included from write.html
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+
+{% endcomment %}
+
+<div id="no-protections">
+<p>You didn't mark any parts of your letter as protected.  The letter is viewable
+in full at the following URL:</p>
+</div>
+
+<div id="some-protections">
+	<p>You <b>MUST</b> send the following information to the recipient (and save
+	a copy yourself).  It contains the verifiable proof of what was written in the 
+	hidden parts of the letter.  None of this was sent to the server, so if you lose 
+	this information then evidence of what you have written will be lost!</p>
+
+	<div id="json-protected" onclick="WriteLetter.highlightProtectedText(); return true;" style="width: 100%; height: auto; background-color: rgb(255, 255, 170); color: rgb(0,0,0);">
+	{# Filled by switching tabs #}
+	</div>
+	<br />
+	<p>Keep that safe, because both the missing information AND the proof to verify 
+	it are contained in that certificate.  You can test the certificate by visiting
+	the following URL:</p>
+</div>
+
+<div id="url-public" style="text-indent:30px;">
+{# URL is put here by write.js #}
+</div>
+<br />

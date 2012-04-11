@@ -1,0 +1,16 @@
+---
+applications:
+  .:
+    name: blackhighlighter
+    framework:
+      name: node
+      info:
+        mem: 64M
+        description: Node.js Application
+        exec: 
+    url: ${name}.${target-base}
+    mem: 64M
+    instances: 1
+    services:
+      mongodb-93c8c:
+        type: mongodb
