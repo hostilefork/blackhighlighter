@@ -4,7 +4,6 @@
 {# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
 
 {% comment %}
-
  write.html - Write functions (Compose, Protect, Commit, "Done") for blackhighlighter
  Copyright (C) 2009 HostileFork.com
 
@@ -22,7 +21,6 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
    See http://hostilefork.com/blackhighlighter for documentation.
-
 {% endcomment %}
 
 
@@ -32,25 +30,22 @@ blackhighlighter|WRITE
 
 
 {% block css %}
-	{{ block.super }} {# inherit parent css, do not overwrite it! #}
+	{% parent %} {# inherit parent css, do not overwrite it! #}
 
 	<link rel="stylesheet" type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" />
 {% endblock css %}
 
 
-{% block params-javascript %}
-	{{ block.super }} {# inherit any existing parameter block #}
+{% block params_javascript %}
+	{% parent %} {# inherit any existing parameter block #}
 	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
 
-	PARAMS.letter_uuid = "{{ letter_uuid }}";
-	PARAMS.show_url = "{% url blackhighlighter.views.show letter_uuid %}";
-	PARAMS.verify_url = "{% url blackhighlighter.views.verify letter_uuid %}";
-	PARAMS.commit_url = "{% url blackhighlighter.views.commit letter_uuid %}";
-{% endblock params-javascript %}
+	PARAMS.commit_url = "{% url blackhighlighter.views.commit %}";
+{% endblock params_javascript %}
 
 
 {% block scripts %}
-	{{ block.super }} {# inherit parent scripts, do not overwrite them! #}
+	{% parent %} {# inherit parent scripts, do not overwrite them! #}
 
 	<!-- http://www.webtoolkit.info/javascript-sha256.html -->
 	<script src="{{ LIBS_URL }}sha256.js" type="text/javascript"></script>

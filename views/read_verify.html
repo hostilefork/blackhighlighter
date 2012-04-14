@@ -1,10 +1,10 @@
-{# This is a django-templated HTML file #}
-{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
 
 {% comment %}
 
  verify_tab.html - "Verify" tab, included from read.html
- Copyright (C) 2009 HostileFork.com
+ Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -37,9 +37,9 @@
 {% endcomment %}
 
 <div id="accordion">
-{% for reveal in revealsDb %}
+{% for reveal in reveals %}
 	<div title='{{ reveal.sha256 }}'>
-	{% if reveal.revealed %}
+	{% if true %}
 		<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ reveal.reveal_date }}</a>
 	{% else %}
 		<a href="#">Certificate {{ forloop.counter }}: Not Revealed to Public</a>
@@ -70,7 +70,7 @@ should show you some of the missing portions.</p>
 
 <div id="buttons-verify">
 	<center><p>
-		<a class="button" href="#" onclick="ReadLetter.verify();">
+		<a class="button" href="#" onclick="BlackhighlighterRead.verify();">
 			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Next step: <b>Verify On Your Computer Only</b>
 		</a>
 	</p></center>

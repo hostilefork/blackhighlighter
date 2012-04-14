@@ -1,6 +1,6 @@
 //
 // write.js - blackhighlighter supplemental javascript for composing letters.
-// Copyright (C) 2009 HostileFork.com
+// Copyright (C) 2012 HostileFork.com
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -18,13 +18,15 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
-var WriteLetter = {};
+var BlackhighlighterWrite = {};
 
 $(document).ready(function() {
 
 	var Globals = {
 		commitObj: undefined,
 		protectedObjs: undefined,
+		verify_url: undefined,
+		commit_id: undefined,
 		successfulCommit: false,
 		lastTabId: 'tabs-compose' // we start on compose tab, and don't get a select notification for it
 	};
@@ -135,7 +137,7 @@ $(document).ready(function() {
 	
 	// Dynamic onclick methods...
 	// http://www.webdeveloper.com/forum/archive/index.php/t-33159.html
-	WriteLetter.doUnprotectOrTakeSuggestion = function(protectedEl) {
+	BlackhighlighterWrite.doUnprotectOrTakeSuggestion = function(protectedEl) {
 		if (protectedEl.hasClass('protected_readwrite')) {
 			return false;
 		}
@@ -173,7 +175,7 @@ $(document).ready(function() {
 		return true;
 	};
 	var doUnprotectOrTakeSuggestion_callback = function() {
-		return WriteLetter.doUnprotectOrTakeSuggestion($(this));
+		return BlackhighlighterWrite.doUnprotectOrTakeSuggestion($(this));
 	};
 	
 	
@@ -455,13 +457,12 @@ $(document).ready(function() {
 		removeProtectSuggestions(publicAndProtected.get(0));
 
 		Globals.commitObj = {
-			'url': absoluteFromRelativeURL(PARAMS.show_url),
 			'spans': []
 		};
 		
 		Globals.protectedObjs = undefined;
 		
-		var reveals = {};
+		var revealsByName = {};
 		var placeholders = [];
 		
 		var redactionOrder = 1;
@@ -509,22 +510,21 @@ $(document).ready(function() {
 							
 						// The server supports multiple reveals per letter, but currently there's no
 						// good interface for this... so we just have a single key for the reveal
-						var revealKey = 'defaultPen';
+						var revealName = 'defaultPen';
 
-						var reveal = reveals[revealKey];
+						var reveal = revealsByName[revealName];
 						if (!reveal) {
 							reveal = {
-								'url': absoluteFromRelativeURL(PARAMS.verify_url),
 								'redactions': []
 							};
 							
 							// We aren't currently naming the reveals, but we might do something
 							// like this when there are multiple reveals per letter in the UI
 							if (false) {
-								reveal.name = revealKey;
+								reveal.name = revealName;
 							}
 							
-							reveals[revealKey] = reveal;
+							revealsByName[revealName] = reveal;
 						}
 						
 						// http://www.javascripter.net/faq/convert3.htm
@@ -739,12 +739,15 @@ $(document).ready(function() {
 					$('#some-protections').hide();
 				} else {
 					var protectedHtml = '';
+					
+					protectedHtml += '<p>';
+					protectedHtml += '/* BEGIN REVEAL CERTIFICATE */' + '<br />';
+					protectedHtml += '/* To use this, visit: ' + absoluteFromRelativeURL(Globals.verify_url) + ' */' + '<br />';
+					
 					if (Globals.protectedObjs.length == 1) {
-						protectedHtml += '<p>';
-						protectedHtml += '/* BEGIN REVEAL CERTIFICATE */' + '<br />';
-						protectedHtml +=  escapeNonBreakingSpacesInString(JSON.stringify(Globals.protectedObjs[0], null, ' ')) + '<br />';
-						protectedHtml += '/* END REVEAL CERTIFICATE */';
-						protectedHtml += '</p>';
+						var reveal = Globals.protectedObjs[0];
+						reveal.commit_id = Globals.commit_id;
+						protectedHtml +=  escapeNonBreakingSpacesInString(JSON.stringify(reveal, null, ' ')) + '<br />';
 					} else if (Globals.protectedObjs.length > 1) {
 						if (true) {
 							throw "UI for multiple redaction pens is not yet implemented.";
@@ -757,6 +760,9 @@ $(document).ready(function() {
 							}
 						}
 					}
+					protectedHtml += '/* END REVEAL CERTIFICATE */';
+					protectedHtml += '</p>';
+
 					$('#json-protected').append($(protectedHtml));
 					$('#no-protections').hide();
 					$('#some-protections').show();
@@ -764,7 +770,7 @@ $(document).ready(function() {
 					// jQuery tabs do something weird to the selection
 					// http://groups.google.com/group/jquery-ui/browse_thread/thread/cf272e3dbb75f201
 					// waiting is a workaround
-					window.setTimeout(WriteLetter.highlightProtectedText, 200); // returns timerId
+					window.setTimeout(BlackhighlighterWrite.highlightProtectedText, 200); // returns timerId
 				}
 				break;
 
@@ -774,21 +780,21 @@ $(document).ready(function() {
 		Globals.lastTabId = ui.panel.id;
 	});
 
-	WriteLetter.highlightProtectedText = function() {
+	BlackhighlighterWrite.highlightProtectedText = function() {
 		highlightAllOfElement($('#json-protected').get(0));
 	};
 		
 	$('#tabs').bind('tabsfocus', function(event, ui) {
 		if (ui.panel.id == 'tabs-commit') {
-			WriteLetter.highlightProtectedText();
+			BlackhighlighterWrite.highlightProtectedText();
 		}
 	});
 
-	WriteLetter.previousStep = function() {
+	BlackhighlighterWrite.previousStep = function() {
 		$('#tabs').tabs('select', tabIndexForId(Globals.lastTabId)-1);
 	};
 
-	WriteLetter.nextStep = function() {
+	BlackhighlighterWrite.nextStep = function() {
 		$('#tabs').tabs('select', tabIndexForId(Globals.lastTabId)+1);
 	};
 
@@ -818,7 +824,7 @@ $(document).ready(function() {
 	};
 	finalizeCommitUI.timerId = undefined;
 	
-	WriteLetter.commit = function() {
+	BlackhighlighterWrite.commit = function() {
 
 		if (Globals.successfulCommit) {
 			throw "Duplicate commit attempt detected.";
@@ -858,16 +864,17 @@ $(document).ready(function() {
 			data: {
 				'commit': escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))
 			},
-			success: function(resultJson){
-				if (resultJson.error) {
-					notifyErrorOnTab('commit', resultJson.error.msg);
+			success: function(result){
+				if (result.error) {
+					notifyErrorOnTab('commit', result.error.msg);
 					finalizeCommitUI();
 				} else {
 					Globals.successfulCommit = true;
+					Globals.commit_id = result.commit_id;
+					Globals.verify_url = result.verify_url;
 
 					// The JSON response tells us where the show_url is for our new letter
-					// (this should agree with PARAMS.show_url)
-					var absURL = absoluteFromRelativeURL(resultJson.show_url);
+					var absURL = absoluteFromRelativeURL(result.show_url);
 					innerXHTML($('#url-public').get(0), 
 						'<a href="' + absURL + '" target="_blank">' + absURL + '</a>');
 				}

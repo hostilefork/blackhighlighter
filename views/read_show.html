@@ -1,10 +1,10 @@
-{# This is a django-templated HTML file #}
-{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
 
 {% comment %}
 
  show_tab.html - "Show" tab, included from read.html
- Copyright (C) 2009 HostileFork.com
+ Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -27,13 +27,13 @@
 portions have been protected by the author and have not been revealed
 on the server (or by a certificate local to your browser).  Text you see 
 with a yellow background has been verified in your browser, but hasn't
-been transmitted to the server.  Text with a green background was at 
-one time hidden but has since been revealed to the general public.</p>
+been revealed to the server.  Text with a green background was at 
+one time hidden but has since been published to the general public.</p>
 
 {# We generate the public HTML on the server side because we want the page to be readable without JavaScript #}
-{# REVIEW: ensure we've sanitized the HTML, as we are using the "safe" filter! #}
+{# REVIEW: ensure we've sanitized the HTML, as we are using the "raw" filter! #}
 <div id="letter-text">
-{{ public_html|safe|linebreaksbr }}
+{{ public_html|raw }}
 </div>
 
 <br />
@@ -44,16 +44,16 @@ choose, reveal its contents.</p>
 <div id="buttons-show-before">
 	<center><p>
 	<!-- button has weird margins, needs spacing (using nbsp for now)... better fix? -->
-		<a href="#" onclick="ReadLetter.previousStep(); return true;">add &amp; remove certificates</a>
+		<a href="#" onclick="BlackhighlighterRead.previousStep(); return true;">add &amp; remove certificates</a>
 	</p></center>
 </div>
 
 <div id="buttons-show-after">
 	<center><p>
 	<!-- button has weird margins, needs spacing (using nbsp for now)... better fix? -->
-		<a href="#" onclick="ReadLetter.previousStep(); return true;">add &amp; remove certificates</a>
+		<a href="#" onclick="BlackhighlighterRead.previousStep(); return true;">add &amp; remove certificates</a>
 		-or- &nbsp; 
-		<a class="button" href="#" onclick="ReadLetter.nextStep(); return true;">
+		<a class="button" href="#" onclick="BlackhighlighterRead.nextStep(); return true;">
 			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Optional Step: <b>Reveal</b>
 		</a>
 	</p></center>

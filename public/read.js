@@ -1,6 +1,6 @@
 //
 // read.js - blackhighlighter supplemental javascript for reading/verifying letters.
-// Copyright (C) 2009 HostileFork.com
+// Copyright (C) 2012 HostileFork.com
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,7 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
-var ReadLetter = {};
+var BlackhighlighterRead = {};
 
 $(document).ready(function(){
 
@@ -26,10 +26,10 @@ $(document).ready(function(){
 		// due to the fact that there's no "get currently active accordion section",
 		// we have to track it ourself.
 		lastAccordionId: null,
-		commitJson: JSON.parse(PARAMS.commit),
+		commit: PARAMS.commit,
 		initialLetterText: $('#letter-text').contents().clone(),
-		serverCertificates: {},
-		localCertificates: {},
+		serverRevealsByHash: {},
+		localRevealsByHash: {},
 		successfulVerify: undefined,
 		successfulReveal: undefined
 	};
@@ -90,34 +90,34 @@ $(document).ready(function(){
 	}
 
 	// NOTE: This is a function, not a map.
-	function accordionIndexAndChildForId(certKey) {
+	function accordionIndexAndChildForId(revealKey) {
 		var index = null;
 		var child = null;
 		$('#accordion').children().each(function(i) {
-			if ($(this).attr('title') == certKey) {
+			if ($(this).attr('title') == revealKey) {
 				if (index !== null) {
-					throw 'More than one accordion tab for certificate' + certKey;
+					throw 'More than one accordion tab for certificate' + revealKey;
 				}
 				index = i;
 				child = $(this);
 			}
 		});
 		if (index === null) {
-			throw 'Cannot find accordion tab for certificate ' + certKey;
+			throw 'Cannot find accordion tab for certificate ' + revealKey;
 		}
 		return {'index': index, 'child': child};
 	}
 	
-	function accordionIndexForId(certKey) {
-		return accordionIndexAndChildForId(certKey).index;
+	function accordionIndexForId(revealKey) {
+		return accordionIndexAndChildForId(revealKey).index;
 	}
 
-	function accordionHeaderForId(certKey) {
-		return accordionIndexAndChildForId(certKey).child.children().filter("a");
+	function accordionHeaderForId(revealKey) {
+		return accordionIndexAndChildForId(revealKey).child.children().filter("a");
 	}
 	
-	function accordionContentForId(certKey) {
-		return accordionIndexAndChildForId(certKey).child.children().filter("div");
+	function accordionContentForId(revealKey) {
+		return accordionIndexAndChildForId(revealKey).child.children().filter("div");
 	}
 	
 	// Hide the accordion from view until multiple reveals have UI better implemented
@@ -153,24 +153,24 @@ $(document).ready(function(){
 	// Pass -1 to close all (only possible with collapsible:true).
 	$('#accordion').accordion('activate', -1);
 	
-	ReadLetter.addCertificate = function(certJson, server) {
+	BlackhighlighterRead.addReveal = function(reveal, server) {
 
-		var contents = certJson.salt;
-		var numRedactionsInCertificate = 0;
-		for (var redactionSpanIndex = 0; redactionSpanIndex < certJson.redactions.length; redactionSpanIndex++) {
-			contents += certJson.redactions[redactionSpanIndex];
-			numRedactionsInCertificate++;		
+		var contents = reveal.salt;
+		var numRedactionsInReveal = 0;
+		for (var redactionSpanIndex = 0; redactionSpanIndex < reveal.redactions.length; redactionSpanIndex++) {
+			contents += reveal.redactions[redactionSpanIndex];
+			numRedactionsInReveal++;		
 		}
 		
 		var contentHash = SHA256(contents);
-		var claimedHash = certJson.sha256;
+		var claimedHash = reveal.sha256;
 		if (contentHash != claimedHash) {
 			throw 'Invalid certificate: content hash is ' + contentHash + ' while claimed hash is ' + claimedHash;
 		}
 
 		var numPlaceholdersForKey = 0;
-		for (var commitSpanIndex = 0; commitSpanIndex < Globals.commitJson.spans.length; commitSpanIndex++) {
-			var commitSpan = Globals.commitJson.spans[commitSpanIndex];
+		for (var commitSpanIndex = 0; commitSpanIndex < Globals.commit.spans.length; commitSpanIndex++) {
+			var commitSpan = Globals.commit.spans[commitSpanIndex];
 			if (commitSpan.sha256 == claimedHash) {
 				numPlaceholdersForKey++;
 			}
@@ -179,48 +179,47 @@ $(document).ready(function(){
 		if (numPlaceholdersForKey === 0) {
 			throw 'Certificate does not match any placeholders.';
 		}
-		if (numPlaceholdersForKey != numRedactionsInCertificate) {
-			throw 'Certificate contains ' + numRedactionsInCertificate + ' redactions for key when letter needs ' + 
+		if (numPlaceholdersForKey != numRedactionsInReveal) {
+			throw 'Certificate contains ' + numRedactionsInReveal + ' redactions for key when letter needs ' + 
 				numPlaceholdersForKey + ' for that key';
 		}
 	
 		if (server) {
-			Globals.serverCertificates[certJson.sha256] = certJson;
+			Globals.serverRevealsByHash[reveal.sha256] = reveal;
 		} else {
-			if (certJson.sha256 in Globals.serverCertificates) {
+			if (reveal.sha256 in Globals.serverRevealsByHash) {
 				throw 'Local certificate already revealed on server.';
-			} else if (certJson.sha256 in Globals.localCertificates) {
+			} else if (reveal.sha256 in Globals.localRevealsByHash) {
 				throw 'You have already revealed the local certificate.';
 			} else {
-				Globals.localCertificates[certJson.sha256] = certJson;
+				Globals.localRevealsByHash[reveal.sha256] = reveal;
 			}
 		}
 
-		var namePart = certJson.name ? (': ' + certJson.name) : '';
-		accordionHeaderForId(certJson.sha256).empty().append(
+		var namePart = reveal.name ? (': ' + reveal.name) : '';
+		accordionHeaderForId(reveal.sha256).empty().append(
 			'<span>' + (server ? 'Server Certificate' : 'Local Certificate') + namePart + '</span>');
 		var spanPart = $('<span></span>');
-		spanPart.append($('<p>' + JSON.stringify(certJson, null, ' ') + '</p>'));
+		spanPart.append($('<p>' + JSON.stringify(reveal, null, ' ') + '</p>'));
 		if (!server) {
-			var buttonPart = $('<input type="button" value="Remove" name="' + certJson.sha256 + '"></input>');
+			var buttonPart = $('<input type="button" value="Remove" name="' + reveal.sha256 + '"></input>');
 			buttonPart.click(function() {
-				ReadLetter.removeCertificate(this.name);
+				BlackhighlighterRead.removeReveal(this.name);
 				return true;
 			});
 			spanPart.append(buttonPart);
 		}			
-		accordionContentForId(certJson.sha256).empty().append(spanPart);
+		accordionContentForId(reveal.sha256).empty().append(spanPart);
 	};
 
 
 	try {
-		var revealsJson = JSON.parse(PARAMS.reveals);
-		if (!isArray(revealsJson)) {
+		if (!isArray(PARAMS.reveals)) {
 			throw "Expected server to give reveals[] as JSON array";
 		}
-		for (var revealsIndex = 0; revealsIndex < revealsJson.length; revealsIndex++) {
-			ReadLetter.addCertificate(revealsJson[revealsIndex], true);
-		}
+		$.each(PARAMS.reveals, function(index, reveal) {
+			BlackhighlighterRead.addReveal(reveal, true);
+		});
 	} catch(err) {
 		throw 'Reveal posted on server did not pass client verification check: ' + err; 
 	}
@@ -414,7 +413,7 @@ $(document).ready(function(){
 	function updateTabEnables() {
 		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));		
 		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
-		if (keysForObject(Globals.localCertificates).length > 0) {
+		if (keysForObject(Globals.localRevealsByHash).length > 0) {
 			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
 			$('#buttons-show-before').hide();			
 			$('#buttons-show-after').show();
@@ -443,7 +442,7 @@ $(document).ready(function(){
 				break;
 			
 			case 'tabs-show':		
-				var certIndices = {};
+				var revealIndices = {};
 							
 				function fillInPlaceholder(placeholder) {
 
@@ -451,17 +450,17 @@ $(document).ready(function(){
 
 					if (!placeholder.hasClass('revealed')) {
 						var publiclyRevealed = true;
-						var certificate = Globals.serverCertificates[shaHexDigest];
-						if (!certificate) {
+						var reveal = Globals.serverRevealsByHash[shaHexDigest];
+						if (!reveal) {
 							publiclyRevealed = false;
-							certificate = Globals.localCertificates[shaHexDigest];
+							reveal = Globals.localRevealsByHash[shaHexDigest];
 						}
-						if (certificate) {
-							if (!certIndices[shaHexDigest]) {
-								certIndices[shaHexDigest] = 0;
+						if (reveal) {
+							if (!revealIndices[shaHexDigest]) {
+								revealIndices[shaHexDigest] = 0;
 							}
-							placeholder.empty().append(document.createTextNode(certificate.redactions[certIndices[shaHexDigest]]));
-							certIndices[shaHexDigest]++;
+							placeholder.empty().append(document.createTextNode(reveal.redactions[revealIndices[shaHexDigest]]));
+							revealIndices[shaHexDigest]++;
 
 							placeholder.removeClass('protected');
 							if (publiclyRevealed) {
@@ -481,62 +480,29 @@ $(document).ready(function(){
 							// As per example #5, you can't make a closure using shaHexDigest here
 							// http://blog.morrisjohns.com/javascript_closures_for_dummies
 							// REVIEW: way to do this that frees up the title for something else?
-							ReadLetter.viewCertificate($(this).attr('title'));
+							BlackhighlighterRead.viewReveal($(this).attr('title'));
 							return true;
 						});
 						placeholder.after(referenceLink);
 					}
 				}
 
-				// we used to convert the JSON into a public HTML fragment...but server-side generation
-				// is better for running in non-javascript contexts.  Save what the server made in the
-				// beginning so that if we mess with it we can restore it back.			
-				if (true) {
-					$('#letter-text').empty().append(Globals.initialLetterText.clone());
-					$('#letter-text').find('span').filter('.placeholder').each(function(i) {
-						fillInPlaceholder($(this));		
-					});
-				} else {
-					// set letter text to the public html for now
-					// we strip off the envelope and ignore it...
-					var letterText = $('#letter-text').empty();
-					for (var commitSpanIndex = 0; commitSpanIndex < Globals.commitJson.spans.length; commitSpanIndex++) {
-						var commitSpan = Globals.commitJson.spans[commitSpanIndex];
-						if (isString(commitSpan)) {
-							// line breaks must be converted to br nodes
-							var commitSpanSplit = commitSpan.split('\n');
-							letterText.append(commitSpanSplit[0]);
-							for (var commitSpanSplitIndex = 1; commitSpanSplitIndex < commitSpanSplit.length; commitSpanSplitIndex++) {
-								letterText.append('<br />');
-								letterText.append(commitSpanSplit[commitSpanSplitIndex]);
-							}
-						} else {
-							var displayLength = parseInt(commitSpan.displayLength, 10);
-							var placeholderString = '';
-							for (var fillIndex = 0; fillIndex < displayLength; fillIndex++) {
-								placeholderString += '?';
-							}
-							
-							// REVIEW: use hex digest as title for query, or do something more clever?
-							// e.g. we could add a method onto the element or keep a sidestructure
-							var placeholder = $('<span class="placeholder" title="' + commitSpan.sha256 + '">' +
-								placeholderString + '</span>');
-							placeholder.addClass('protected');
-							letterText.append(placeholder);
-
-							fillInPlaceholder(placeholder);
-
-						}
-					}
-				}
-				
+				// we used to convert the JSON into a public HTML fragment on the client side.
+				// but server-side generation is better for running in non-javascript contexts.
+				// and making it possible for search engines to index the letter.
+				// Save what the server made in the beginning so that if we mess with it we
+				// can restore it back.			
+				$('#letter-text').empty().append(Globals.initialLetterText.clone());
+				$('#letter-text').find('span').filter('.placeholder').each(function(i) {
+					fillInPlaceholder($(this));		
+				});				
 				break;
 		
 			case 'tabs-reveal':
 				clearErrorOnTab('reveal');
 				$('#progress-reveal').hide();
 				$('#json-reveal').empty().append(
-					document.createTextNode(JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localCertificates), null, ' ')));
+					document.createTextNode(JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localRevealsByHash), null, ' ')));
 				break;
 		
 			case 'tabs-done':
@@ -563,42 +529,42 @@ $(document).ready(function(){
 	}	
 
 	
-	ReadLetter.viewCertificate = function(certKey) {
+	BlackhighlighterRead.viewReveal = function(revealKey) {
 		// first make sure we're on the verify tab
 		$('#tabs').tabs('select', tabIndexForId('tabs-verify'));
-		if (Globals.lastAccordionId != certKey) {
-			$('#accordion').accordion('activate', accordionIndexForId(certKey));
+		if (Globals.lastAccordionId != revealKey) {
+			$('#accordion').accordion('activate', accordionIndexForId(revealKey));
 		}
 	};
 
 	
-	ReadLetter.removeCertificate = function(certKey) {
+	BlackhighlighterRead.removeReveal = function(revealKey) {
 	
-		if (!(certKey in Globals.localCertificates)) {
+		if (!(revealKey in Globals.localRevealsByHash)) {
 			throw 'Attempt to remove certificate that is not in the local list.';
 		}
 		
-		delete Globals.localCertificates[certKey];
+		delete Globals.localRevealsByHash[revealKey];
 
-		accordionHeaderForId(certKey).empty().append(
+		accordionHeaderForId(revealKey).empty().append(
 				'<span>' + 'Certificate not revealed' + '</span>');
-		accordionContentForId(certKey).empty().append(
+		accordionContentForId(revealKey).empty().append(
 				'<span>' + 'No information about this reveal available' + '</span>');
 		
 		updateTabEnables();
 	};
 	
 
-	ReadLetter.previousStep = function() {
+	BlackhighlighterRead.previousStep = function() {
 		$('#tabs').tabs('select', tabIndexForId(lastTabId)-1);
 	};
 
 
-	ReadLetter.nextStep = function() {
+	BlackhighlighterRead.nextStep = function() {
 		$('#tabs').tabs('select', tabIndexForId(lastTabId)+1);
 	};
 	
-	ReadLetter.clearCertificateInputField = function() {
+	BlackhighlighterRead.clearRevealInputField = function() {
 		$('#certificates').get(0).value = '';
 	};
 	
@@ -611,7 +577,7 @@ $(document).ready(function(){
 		updateTabEnables();
 		
 		if (Globals.successfulVerify) {
-			ReadLetter.clearCertificateInputField();
+			BlackhighlighterRead.clearRevealInputField();
 			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
 		}
 		
@@ -628,11 +594,11 @@ $(document).ready(function(){
 	};
 	finalizeVerifyUI.timerId = undefined;
 	
-	ReadLetter.verify = function() {
+	BlackhighlighterRead.verify = function() {
 		clearErrorOnTab('verify');
 	
-		var certificateInput = $('#certificates').get(0).value;
-		if (trimAllWhitespace(certificateInput) === '') {
+		var revealInput = $('#certificates').get(0).value;
+		if (trimAllWhitespace(revealInput) === '') {
 			// if they haven't typed anything into the box
 			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
 		} else {
@@ -646,32 +612,34 @@ $(document).ready(function(){
 			// user feels confident that something actually happened
 			finalizeVerifyUI.timerId = window.setTimeout(finalizeVerifyUI.timerCallback, 3000);
 
-			var revealsJson = null;
+			var parsedJson = null;
 			// Catch parsing errors and put them in an error message
 			try {
-				var tidyCertText = tidyInputForJsonParser(certificateInput);
+				var tidyRevealText = tidyInputForJsonParser(revealInput);
 				
-				revealsJson = JSON.parse(tidyCertText);	
+				parsedJson = JSON.parse(tidyRevealText);	
 			} catch(errParse) {
 				notifyErrorOnTab('verify', errParse);
 				// do not continue to next tab
 				finalizeVerifyUI();
 			}
 
-			if (revealsJson) {
+			if (parsedJson) {
 				try {
-					if (isArray(revealsJson)) {
-						if (true) {
-							throw "User interface for multiple certificates is not currently available";
-						} else {
-							for (var revealObjIndex = 0; revealObjIndex < revealsJson.length; revealObjIndex++) {
-								var certJson = revealsJson[revealObjIndex];
-								ReadLetter.addCertificate(certJson, false);
-							}
-						}
+					var reveals = null;
+					if (!isArray(parsedJson)) {
+						reveals = [parsedJson];
 					} else {
-						ReadLetter.addCertificate(revealsJson, false);
+						reveals = parsedJson;
 					}
+					
+					if (reveals.length > 1) {
+						throw "User interface for multiple certificates is not currently available";
+					}
+					
+					$.each(reveals, function(index, reveal) {
+						BlackhighlighterRead.addReveal(reveal, false);
+					});
 
 					Globals.successfulVerify = true;
 					if (finalizeVerifyUI.timerId === null) {
@@ -722,7 +690,7 @@ $(document).ready(function(){
 	};
 	finalizeRevealUI.timerId = undefined;
 	
-	ReadLetter.reveal = function() {
+	BlackhighlighterRead.reveal = function() {
 	
 		$('#tabs').tabs('disable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('disable', tabIndexForId('tabs-show'));
@@ -744,9 +712,9 @@ $(document).ready(function(){
 			dataType: 'json', // expected response type from server
 			url: PARAMS.reveal_url,
 			data: {
-				'reveals': JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localCertificates), null, ' ') // sends as UTF-8
+				'reveals': JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localRevealsByHash), null, ' ') // sends as UTF-8
 			},
-			success: function(resultJson){
+			success: function(resultJson) {
 				if (resultJson.error) {
 					notifyErrorOnTab('reveal', resultJson.error.msg);
 					finalizeRevealUI();

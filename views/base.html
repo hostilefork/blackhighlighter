@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
+
+{% comment %}
+
+ common.html - Common template file for all non-admin blackhighlighter pages
+ Copyright (C) 2012 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+   
+{% endcomment %}
+
+{% comment %}
+All of blackhighlighter depends on a base.html file which is likely shared 
+for your entire site.  This sets up some of the minimum expectations of 
+what blocks need to be in the base.html.  For instance, you must include
+jquery and jquery UI... and set up a params-javascript block.
+
+You will probably want to copy and customize this file.
+{% endcomment %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<meta name="keywords" content="" />
+		<meta name="description" content="" />
+
+		<title>{% block title %}Blackhighlighter{% endblock %}</title>
+
+
+	<!-- Django allows us to pass parameters into our templates, good to have as javascript vars -->
+	<!-- http://lethain.com/entry/2008/sep/21/intro-to-unintrusive-javascript-with-django/ -->
+	<script type="text/javascript">
+{% block params_javascript %}
+		PARAMS = {};
+		PARAMS.libs_url = "{{ LIBS_URL }}"; 
+{% endblock params_javascript %}
+	</script>
+
+
+{% block css %}
+{% comment %}
+	I went and picked the first CSS layout that behaved like I wanted.  I found it at:
+
+		http://layouts.ironmyers.com/100_percent_Layouts/layout/?id=49
+
+ 	For better or worse, it uses the YUI CSS framework.  What is a CSS framework, you ask?
+
+		http://en.wikipedia.org/wiki/CSS_framework
+  
+	It looks silly to me, but the premise is that different browsers made different choices;
+	such as with spacing or whether a "h1" header should be 10 or 20 pixels tall.  To get
+	around this, YUI has a "reset" that un-styles all the elements, and then it adds them
+	all back in a way that will give you the same values in various browsers.
+
+	Whether this is good or bad is beyond me.  It is, however, not compatible with jquery ui.
+	This despite the fact that in this discussion someone says that it is:
+   
+		http://www.filamentgroup.com/lab/styling_buttons_and_toolbars_with_the_jquery_ui_css_framework/ 
+
+	Example incompatibilities are seen with the way the margins look on alert messages, or
+	the sudden appearance of outlining bullets on the tabs.  I've worked around these but
+	would be happy enough with a solution that didn't involve using YUI-CSS.
+	
+	REVIEW: I have been debating whether having the credits and copyright span the whole
+	page is better, or if having them only be as wide as the left panel is better.  I
+	commented out the part that made it span the whole page.
+{% endcomment %}
+		<link rel="stylesheet" type="text/css" href="{{ LIBS_URL }}yui-css/reset-fonts-grids2.css" />
+		<link rel="stylesheet" type="text/css" href="{{ LIBS_URL }}yui-css/base.css" />
+
+		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/themes/blitzer/ui.all.css" rel="stylesheet" />
+{% comment %}
+	"There is a trick that was written about a while ago (maybe on ALA) that 
+	 resets the font sizes for the entire site so that 1.0em is the same as 10px.
+	 body { font-size: 62.5% }"
+	See: http://www.blogherald.com/2006/09/08/css-tips-and-tricks/
+
+	jQuery UI uses this.  After shrinking your page, it sets things to 1.3em to bring
+	them back up to "normal" size.  However...
+
+	"This is pretty bogus, because text inside input boxes doesn't rescale
+	 (at least, not in FireFox,) and it obviously applies to the entire page, when 
+	 in fact you may want it to just apply to the UI widgets only."
+	See: http://fbloggs.wordpress.com/2009/03/03/how-to-scale-the-jquery-ui-font-size-for-just-the-ui-widgets/
+{% endcomment %}
+		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/demos.css" rel="stylesheet" />
+{% endblock css %}
+
+
+{% block scripts %}
+{% if false %}
+		<!-- Google has these online, so it saves on bandwidth to use their hosting -->
+		<script type="text/javascript" src="{{ LIBS_URL }}jquery/jquery-1.7.2.min.js"></script>
+		<script type="text/javascript" src="{{ LIBS_URL }}jquery-ui/jquery-ui-1.8.18.min.js"></script>
+{% else %}
+
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js"></script>
+{% endif %}
+		
+		<!-- If debugging in a browser without decent debugging infrastructure, Firebug Lite can be helpful -->
+		<!-- http://getfirebug.com/lite.html -->
+		<!-- <script type="text/javascript" src="http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js"></script> -->
+{% endblock scripts %}
+
+	
+	</head>
+	<body>
+		<div id="doc3" class="yui-t7">
+			<div id="hd">
+					<p>
+						{% if user.is_authenticated %}
+						<b>{{user.username}}</b>
+						<a href="/accounts/profile/">My Account</a>
+						<a href="/accounts/logout/?next={{ request.path }}">Sign out</a>
+						{% else %}
+						<a href="/accounts/login/?next={{ request.path }}">Sign in</a>
+						{% endif %}
+					</p>
+			</div>
+			<div id="bd">
+				<div id="yui-main"> {# Was 475px for demo... #}
+					<div class="yui-b">
+						<div class="yui-ge">
+							<div class="yui-u first">
+					
+{% block content %}
+	<p>Content</p>
+{% endblock content %}
+
+								<div>
+								
+{% block credits %}
+	<center>
+		Built with Node.js and running on Cloud Foundry: (<a href="{% url credits_named_url %}" target="_blank">full credits</a>)
+	</center>
+{% endblock credits %}
+{% block copyright %}
+	<center>
+		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2012 <a href="http://hostilefork.com/blackhighlighter/" target="_blank">hostilefork.com</a> with all original code released under Affero GPL v3.0
+	</center>
+{% endblock copyright %}
+
+								</div>
+							</div>
+							<div class="yui-u">
+
+{% block sidebar %}
+	<p><b>NOTE:</b> This is a demonstration installation of the <a href="http://hostilefork.com/blackhighlighter/">blackhighlighter</a> app.  I wanted a sandbox for people to try out the functionality, to show that it actually works and to perhaps motivate others to contribute to the project.  It is running on a very inexpensive server hosting account and I do not have the capacity to store letters permanently.  In fact, I'll probably be wiping the database rather often.  So please use this for testing only!  (That's why it says "sandbox") :)</p>
+{% endblock sidebar %}
+						
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="yui-b">
+				
+{# {% block credits %} #}
+{# {% endblock credits %} #}
+
+				</div>
+			</div>
+			<div id="ft">
+
+{# {% block copyright %} #}
+{# {% endblock copyright %} #}
+
+			</div>
+		</div>
+	</body>
+</html>

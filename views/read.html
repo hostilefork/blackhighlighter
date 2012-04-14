@@ -1,12 +1,12 @@
 {% extends "base.html" %} {# "extends" must be first tag in template, needed so DOCTYPE is first line #}
 
-{# This is a django-templated HTML file #}
-{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
 
 {% comment %}
 
  read.html - Read functions (Verify, Show, Reveal) for blackhighlighter
- Copyright (C) 2009 HostileFork.com
+ Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -32,31 +32,32 @@ blackhighlighter|READ
 
 
 {% block css %}
-	{{ block.super }} {# inherit parent css, do not overwrite it! #}
+	{% parent %} {# inherit parent css, do not overwrite it! #}
 
 	<link rel="stylesheet" type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" />
 {% endblock css %}
 
 
-{% block params-javascript %}
-	{{ block.super }} {# inherit any existing parameters #}
+{% block params_javascript %}
+	{% parent %} {# inherit any existing parameters #}
  
 	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
 
 	PARAMS.letter_uuid = "{{ letter_uuid }}";
 	PARAMS.tabstate = "{{ tabstate }}";
 	
-	{# http://docs.djangoproject.com/en/dev/ref/templates/builtins/#escapejs #}
-	PARAMS.commit = "{{ commit|escapejs }}";
-	PARAMS.reveals = "{{ reveals|escapejs }}"
+	{# Tried to use this but it didn't work, passing as JSON.stringify instead #}
+	{# https://github.com/paularmstrong/swig/blob/master/docs/filters.md#json_encode #}
+	PARAMS.commit = {{ commit|json_encode|raw }};
+	PARAMS.reveals = {{ reveals|json_encode|raw }};
 
 	PARAMS.reveal_url = "{% url blackhighlighter.views.reveal letter_uuid %}";
 	PARAMS.show_url = "{% url blackhighlighter.views.show letter_uuid %}";
-{% endblock params-javascript %}
+{% endblock params_javascript %}
 
 
 {% block scripts %}
-	{{ block.super }} {# inherit parent scripts, do not overwrite them! #}
+	{% parent %} {# inherit parent scripts, do not overwrite them! #}
 
 	<!-- http://www.webtoolkit.info/javascript-sha256.html -->
 	<script src="{{ LIBS_URL }}sha256.js" type="text/javascript"></script>

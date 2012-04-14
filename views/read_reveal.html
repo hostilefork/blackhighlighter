@@ -1,10 +1,10 @@
-{# This is a django-templated HTML file #}
-{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
 
 {% comment %}
 
  reveal_tab.html - "Reveal" tab, included from read.html
- Copyright (C) 2009 HostileFork.com
+ Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -48,9 +48,9 @@ button below.</p>
 
 <div id="buttons-reveal">
 	<center><p>
-		<a href="#" onclick="ReadLetter.previousStep(); return true;">go back and review the letter</a>
+		<a href="#" onclick="BlackhighlighterRead.previousStep(); return true;">go back and review the letter</a>
 			-or- &nbsp;
-		<a class="button" href="#" onclick="ReadLetter.reveal();">
+		<a class="button" href="#" onclick="BlackhighlighterRead.reveal();">
 			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />"I'm certain, so <b>Publish The Reveals to the World!</b>"</i>
 		</a>
 	</p></center>

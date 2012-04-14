@@ -1,10 +1,10 @@
-{# This is a django-templated HTML file #}
-{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+{# This is a swig-templated HTML file #}
+{# http://paularmstrong.github.com/swig/ #}
 
 {% comment %}
 
  compose_tab.html - "Compose" tab, included from write.html
- Copyright (C) 2009 HostileFork.com
+ Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -25,16 +25,16 @@
 
 <p>Write the full, <b>unabridged</b> version of your letter below.  None of what you write 
 will be sent over the network until you've had a chance to mark which parts you want to 
-protect.  (<a href="{% url network-named_url %}" target="_blank">"How can I verify this?"</a>)
+protect.  (<a href="{% url network_named_url %}" target="_blank">"How can I verify this?"</a>)
 Provide all relevant information for the recipient to follow up with you, just as you would
 in a typical private email.</p>
 
-{% comment %}
+{# {% comment %} #}<!--
 Contents will be copied from here to #editor-protect when the tab is switched.
 These contents are then overwritten if the user switches back
 Currently making sure textarea starts out EMPTY!  No spaces, newlines, or breaks between start and end tag.
 Browsers vary widely: http://dev.opera.com/articles/view/rich-html-editing-in-the-browser-part-1/
-{% endcomment %}
+-->{# {% endcomment %} #}
 <textarea id="editor-compose" style="width: 100%; height: 200px;"></textarea>
 
 <br />
@@ -42,7 +42,7 @@ Browsers vary widely: http://dev.opera.com/articles/view/rich-html-editing-in-th
 still be able to come back and make changes if necessary.)</p>
 
 <center><p>
-	<a class="button" href="#" onclick="WriteLetter.nextStep();">
+	<a class="button" href="#" onclick="BlackhighlighterWrite.nextStep();">
 		<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Next step: <b>Protect</b>
 	</a>
 </p></center>
