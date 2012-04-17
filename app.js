@@ -443,7 +443,7 @@ app.post('/reveal/$', function (req, res) {
 	// figuring out how MongoDB works with Node.js so trying to close the query loop
 	// first...
 	// Connect to the database with authorization
-	require('mongodb').connect(mongourl, function(err, conn){
+	mongodb.connect(mongourl, function(err, conn){
 		handleMongoDbError(res, err);
 
 		conn.collection('reveals', function(err, coll){

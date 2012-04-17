@@ -591,9 +591,9 @@ $(document).ready(function() {
 
 		var revealsByHash = {};
 
-		for (var revealKeyToHash in reveals) {
-			if (reveals.hasOwnProperty(revealKeyToHash)) {
-				var revealObjToHash = reveals[revealKeyToHash];
+		for (var revealNameToHash in revealsByName) {
+			if (revealsByName.hasOwnProperty(revealNameToHash)) {
+				var revealObjToHash = revealsByName[revealNameToHash];
 				var saltToHash = stripHyphensFromUUID(generateRandomUUID());
 				var contents = saltToHash;
 				for (var redactionIndex = 0; redactionIndex < revealObjToHash.redactions.length; redactionIndex++) {
