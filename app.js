@@ -29,13 +29,23 @@ require.paths.unshift('./node_modules');
 // UTILITY LIBRARIES
 //
 
+// Underscore contains common JavaScript helpers like you might find in a
+// library like jQuery (forEach, isString, etc)...but without being tied
+// into the presumption that you are running in a browser with a DOM, etc.
+//
 // http://documentcloud.github.com/underscore/
 var _ = require('underscore')._;
 
-// Is it worth it to convert to the "Step" form in order to make
-// the asynchronous code read more cleanly?
+// The default way of coding in node.js with asynchronous callbacks
+// produces a new level of nesting and indentation each time you add a
+// step to your process.  Using the Step library you can cleanly
+// express sequential asynchronous operations, and it has support for
+// spawning several parallel operations and waiting until all of them
+// have returned to move on to the next step.  It also catches
+// exceptions for you to keep the node server from going down.
 //
 //  https://github.com/creationix/step
+var Step = require('step');
 
 
 
@@ -309,18 +319,53 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 }
 
 function showOrVerify(req, res, tabstate) {
-	
-	// Connect to the database with authorization
-	mongodb.connect(mongourl, function(err, conn) {	
-		handleMongoDbError(res, err);
+	Step(
+		function connectToDatabaseWithAuthorization() {
+			mongodb.connect(mongourl, this);
+		},
+		function getCommitAndRevealsCollections(err, conn) {
+			conn.collection('commits', this.parallel());
+			conn.collection('reveals', this.parallel());
+		},
+		function queryForCommitAndReveals(err, commitsColl, revealsColl) {
+			handleMongoDbError(res, err);
 
-		// we dispatch two separate queries, and since the code is
-		// single-threaded we just check to run our handler only
-		// if we have both the commit and the reveals back
-		var commit = undefined;
-		var reveals = undefined;
-		
-		function weHaveTheCommitAndReveals() {
+			// REVIEW: necessary to use ObjectID conversion?
+			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
+			commitsColl.find(
+				{'_id': new mongodb.ObjectID(req.params.commit_id)},
+				{limit: 1, sort:[['_id', 'ascending']]},
+				this.parallel()
+			);
+			revealsColl.find(
+				{'commit_id': req.params.commit_id},
+				{sort:[['sha256', 'ascending']]},
+				this.parallel()
+			);
+		},
+		function convertResultCursors(err, commitCursor, revealsCursor) {
+			handleMongoDbError(res, err);
+			
+			commitCursor.toArray(this.parallel());
+			revealsCursor.toArray(this.parallel());
+		},
+		function generateResponseHtml(err, commitArray, revealsArray) {
+			handleMongoDbError(res, err);
+
+			var commit = undefined;
+			if (commitArray.length == 0) {
+				// NOTE: Raise a 404 if the letter ID isn't found in the database?
+				throw "No commit with requested _id";
+			} else if (commitArray.length > 1) {
+				// NOTE: Commits should be unique, that is enforced by the DB?
+				throw "Multiple commits with same _id.";
+			} else {
+				commit = commitArray[0];
+			}
+			
+			var reveals = revealsArray;
+			// is any checking necessary?
+			
 			res.render('read', {
 				commit_id: req.params.commit_id,
 				revealsDb: [],
@@ -330,53 +375,7 @@ function showOrVerify(req, res, tabstate) {
 				public_html: generateHtmlFromCommitAndReveals(commit, reveals)
 			});
 		}
-				
-		conn.collection('commits', function(err, coll) {
-			handleMongoDbError(res, err);
-			
-			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
-			coll.find({'_id': new mongodb.ObjectID(req.params.commit_id)}, {limit: 1, sort:[['_id', 'ascending']]}, function(err, cursor) {
-				handleMongoDbError(res, err);
-			
-				cursor.toArray(function(err, items) {
-					handleMongoDbError(res, err);
-
-					if (items.length == 0) {
-						// NOTE: Raise a 404 if the letter ID isn't found in the database?
-						throw "No commit with requested _id";
-					} else if (items.length > 1) {
-						// NOTE: Commits should be unique, that is enforced by the DB?
-						throw "Multiple commits with same _id.";
-					} else {
-						commit = items[0];
-					}
-					
-					if (reveals !== undefined) {
-						weHaveTheCommitAndReveals();
-					}					
-				});
-			});
-		});
-		
-		conn.collection('reveals', function(err, coll) {
-			handleMongoDbError(res, err);
-			
-			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
-			coll.find({'commit_id': req.params.commit_id}, {sort:[['sha256', 'ascending']]}, function(err, cursor) {
-				handleMongoDbError(res, err);
-			
-				cursor.toArray(function(err, items) {
-					handleMongoDbError(res, err);
-
-					reveals = items;
-					
-					if (commit !== undefined) {
-						weHaveTheCommitAndReveals();
-					}					
-				});
-			});
-		});
-	});
+	);
 }
 
 app.get('/verify/:commit_id([0-9a-f]+)/$', function (req, res) {
@@ -388,87 +387,123 @@ app.get('/show/:commit_id([0-9a-f]+)/$', function (req, res) {
 });
 
 app.post('/commit/$', function (req, res) {
-
-	// second parameter is default
-	var commit = JSON.parse(req.param('commit', null));
-
-	// We should verify that what we've been given fits the proper form for
-	// a commit, and doesn't have extra garbage being stored in the database.
-	// At the moment I'm just "trusting" that a well formed commit was given
-	// to us, which turns us into a generic JSON object store.
-	
-	// should we check to make sure the date in the request matches so we are on
-	// the same page as the client?	
-
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
-	var now = new Date();
-	// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
-	commit.commit_date = now; 
-
-	// Connect to the database with authorization
-	mongodb.connect(mongourl, function(err, conn){
-		handleMongoDbError(res, err);
-		
-		conn.collection('commits', function(err, coll){
+	var requestTime = new Date();
+			
+	Step(
+		function connectToDatabaseWithAuthorization() {
+			mongodb.connect(mongourl, this);
+		},
+		function getCommitCollection(err, conn) {
 			handleMongoDbError(res, err);
+			conn.collection('commits', this);
+		},
+		function addCommitToCollection(err, coll) {
+			// second parameter is default
+			var commit = JSON.parse(req.param('commit', null));
+			
+			// We should verify that what we've been given fits the proper form for
+			// a commit, and doesn't have extra garbage being stored in the database.
+			// At the moment I'm just "trusting" that a well formed commit was given
+			// to us, which turns us into a generic JSON object store.
+			
+			// should we check to make sure the date in the request matches so we are on
+			// the same page as the client?	
+			
+			// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
+			commit.commit_date = requestTime;
 
-			// Insert the object and then respond with a json object providing
-			// the show and verify URLs
-			coll.insert(commit, {safe:true}, function(err, records) {
-				handleMongoDbError(res, err);
+			// "safe" tells the JSON mongodb driver to do an added check on the
+			// getLastError to make sure that the asynchronous insert succeeded
+			//     http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
+			coll.insert(commit, {safe: true}, this);
+		},
+		function respondWithShowAndVerifyUrlsInJson(err, records) {
+			handleMongoDbError(res, err);
 				
-				res.json({
-					commit_id: records[0]._id, 
-					show_url: '/show/' + records[0]._id + '/',
-					verify_url: '/verify/' + records[0]._id + '/'
-				});				
-			});
-		});
-	});
+			res.json({
+				commit_id: records[0]._id, 
+				show_url: '/show/' + records[0]._id + '/',
+				verify_url: '/verify/' + records[0]._id + '/'
+			});				
+		}
+	);
 });
 
 app.post('/reveal/$', function (req, res) {
-
-	var reveals = JSON.parse(req.param('reveals', null));  // second parameter is default
-
-	// should we check to make sure the date in the request matches so we are on
-	// the same page as the client?	
-
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
-	var now = new Date();
+	var requestTime = new Date();
 
-	// The reveal process needs to check to make sure the certificate is valid before
-	// adding it to the reveal database.  Ideally this code would be shared with the
-	// code in the client.  For the moment I'm less concerned about that issue than
-	// figuring out how MongoDB works with Node.js so trying to close the query loop
-	// first...
-	// Connect to the database with authorization
-	mongodb.connect(mongourl, function(err, conn){
-		handleMongoDbError(res, err);
-
-		conn.collection('reveals', function(err, coll){
+	Step(
+		function connectToDatabaseWithAuthorization() {
+			mongodb.connect(mongourl, this.parallel());
+		},
+		function getCommitAndRevealsCollections(err, conn) {
 			handleMongoDbError(res, err);
 			
-			var insertionCount = 0;
+			conn.collection('commits', this.parallel());
+			conn.collection('reveals', this.parallel());
+		},
+		function queryForCommitAndOldReveals(err, commitsColl, revealsColl) {
+			handleMongoDbError(res, err);
+
+			this.parallel()(null, revealsColl);
+			// REVIEW: necessary to use ObjectID conversion?
+			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
+			commitsColl.find(
+				{'_id': new mongodb.ObjectID(req.params.commit_id)},
+				{limit: 1, sort:[['_id', 'ascending']]},
+				this.parallel()
+			);
+			revealsColl.find(
+				{'commit_id': req.params.commit_id},
+				{sort:[['sha256', 'ascending']]},
+				this.parallel()
+			);
+		},
+		function convertResultCursors(err, revealsColl, commitCursor, oldRevealsCursor) {
+			handleMongoDbError(res, err);
 			
-			_.each(reveals, function(reveal) {
+			this.parallel()(null, revealsColl);
+			commitCursor.toArray(this.parallel());
+			oldRevealsCursor.toArray(this.parallel());
+		},
+		function addNewRevealsIfTheyPassVerification(err, revealsColl, commitArray, oldRevealsArray) {
+			handleMongoDbError(res, err);
+
+			// second parameter is default
+			var newReveals = JSON.parse(req.param('reveals', null));
+
+			_.each(newReveals, function(newReveal) {
 				// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
-				reveal.reveal_date = now;
+				newReveal.reveal_date = requestTime;
 				
+				// The reveal process needs to check to make sure the certificate is valid before
+				// adding it to the reveal database.  Ideally this code would be shared with the
+				// code in the client.  For the moment I'm less concerned about that issue than
+				// figuring out how MongoDB works with Node.js so trying to close the query loop
+				// first...
+
 				// Is string matching not workable, and is it actually necessary 
 				// to convert to the ObjectID BSON type to properly run the join query?
-				/* reveal.commit_id = new mongodb.DBRef('commits', new mongodb.ObjectID(reveal.commit_id)); */
+				// newReveal.commit_id = new mongodb.DBRef('commits', new mongodb.ObjectID(reveal.commit_id)); 
 			});
-								
-			coll.insert(reveals, {safe:true}, function(err) {
-				handleMongoDbError(res, err);
-					
-				res.json({
-					insertion_count: reveals.length
-				});
+
+			this.parallel()(null, newReveals.length);
+			
+			// "safe" tells the JSON mongodb driver to do an added check on the
+			// getLastError to make sure that the asynchronous insert succeeded
+			//     http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
+			revealsColl.insert(newReveals, {safe: true}, this.parallel());
+		},
+		function respondWithInsertionCountAsJson(err, numReveals) {
+			handleMongoDbError(res, err);
+
+			res.json({
+				insertion_count: numReveals
 			});
-		});
-	});
+		}
+	);
 });
 
 
