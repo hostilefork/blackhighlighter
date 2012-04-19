@@ -1,4 +1,7 @@
-require.paths.unshift('./node_modules');
+// See notes about require.paths.unshift in app.js
+//
+// require.paths.unshift('./node_modules');
+
 var helpers = require('swig/lib/helpers');
 
 //

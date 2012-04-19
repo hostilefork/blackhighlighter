@@ -19,10 +19,27 @@
 //
 
 
-// If any paths do not start with a slash or a dot used by a require
-// this says where the files should be searched for...
-// This seems to anger node.js locally but is required by the cloud
-require.paths.unshift('./node_modules');
+
+// Initially cloud foundry supported node.js 0.4 which required you
+// to include the following line at the top of your files:
+//
+//    require.paths.unshift('./node_modules');
+//
+// This says where node should look for any module paths that don't
+// start with a slash or dot.  However, require.paths was removed
+// between node.js 0.4 and node.js 0.6  :-/
+//
+// If you push your app to cloud foundry and the manifest.yml calls for
+// "framework: name: node", you will get 0.4 by default.  To get
+// Node 0.6 make sure you push your app with a --runtime, like this:
+//
+//    vmc push --runtime=node06
+//
+// If it's necessary to dual support older versions of node that need 
+// require.paths, one could test process.version:
+//
+//     http://nodejs.org/docs/v0.4.9/api/process.html#process.version
+
 
 
 //
