@@ -195,7 +195,8 @@ app.set('view options', {
 	// These are provided to every template context by default
 	LIBS_URL: '/public/js/',
 	BLACKHIGHLIGHTER_MEDIA_URL: '/public/',
-	PROJECT_MEDIA_URL: '/public/'
+	PROJECT_MEDIA_URL: '/public/',
+	NODE_VERSION: process.version
  });
 
 app.configure('development', function() {

@@ -2,12 +2,13 @@
 applications:
   .:
     name: blackhighlighter
+    runtime: node06
     framework:
       name: node
       info:
         mem: 64M
         description: Node.js Application
-        exec: 
+        exec: n
     url: ${name}.${target-base}
     mem: 64M
     instances: 1
