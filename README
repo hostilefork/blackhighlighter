@@ -4,7 +4,18 @@ It has been ported from Django to Node.js
 
 The Django code is frozen in the django-blackhighlighter subdirectory
 
+
+CONVENTIONS
+-----------
+
 Node.js directory structure chosen to follow this suggestion:
 
 http://stackoverflow.com/questions/5178334/folder-structure-for-a-nodejs-project
 
+Where I am given a choice, filenames use spaces for dashes:
+
+http://www.codinghorror.com/blog/2006/04/of-spaces-underscores-and-dashes.html
+
+JSON properties use underscores, consistent with the majority of popular APIs:
+
+http://elasticsearch-users.115913.n3.nabble.com/JSON-API-CamelCase-or-td695216.html

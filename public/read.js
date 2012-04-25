@@ -18,10 +18,22 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
+// REVIEW: http://stackoverflow.com/questions/10302724/calling-methods-in-requirejs-modules-from-html-elements-such-as-onclick-handlers
 var BlackhighlighterRead = {};
 
-$(document).ready(function(){
-
+define([
+	'jquery',
+	'use!underscore',
+	'client-server-common',
+	'client-common',
+	// these libs have no results, purely additive...
+	'jqueryui',
+	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
+	'json2', // http://www.json.org/json2.js
+	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
+	'autogrow'
+], function($, _, common, clientCommon) {
+	
 	var Globals = {
 		// due to the fact that there's no "get currently active accordion section",
 		// we have to track it ourself.
@@ -214,7 +226,7 @@ $(document).ready(function(){
 
 
 	try {
-		if (!isArray(PARAMS.reveals)) {
+		if (!_.isArray(PARAMS.reveals)) {
 			throw "Expected server to give reveals[] as JSON array";
 		}
 		$.each(PARAMS.reveals, function(index, reveal) {
@@ -230,7 +242,7 @@ $(document).ready(function(){
 	// accept a lot of non-JSON-parser-compatible stuff (like comments and arrays without
 	// commas).  This function tries to reform the pseudo-JSON into real JSON.
 	function tidyInputForJsonParser(pseudoJson) {
-		if (!isString(pseudoJson)) {
+		if (!_.isString(pseudoJson)) {
 			throw 'Passed a non-string into tidyInputForJsonParser';
 		}
 		
@@ -344,7 +356,7 @@ $(document).ready(function(){
 						break;
 
 					case ',':
-						if (!isUndefined(commaFound)) {
+						if (!_.isUndefined(commaFound)) {
 							commaFound = true;
 						}
 						pushCharacter(current);
@@ -413,7 +425,8 @@ $(document).ready(function(){
 	function updateTabEnables() {
 		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));		
 		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
-		if (keysForObject(Globals.localRevealsByHash).length > 0) {
+		// REVIEW: hasOwnProperty(), does it matter? http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
+		if (_.keys(Globals.localRevealsByHash).length > 0) {
 			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
 			$('#buttons-show-before').hide();			
 			$('#buttons-show-after').show();
@@ -502,7 +515,8 @@ $(document).ready(function(){
 				clearErrorOnTab('reveal');
 				$('#progress-reveal').hide();
 				$('#json-reveal').empty().append(
-					document.createTextNode(JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localRevealsByHash), null, ' ')));
+					// REVIEW: used to sort values in array by key (hash), does this matter?
+					document.createTextNode(JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ')));
 				break;
 		
 			case 'tabs-done':
@@ -528,7 +542,6 @@ $(document).ready(function(){
 			throw 'invalid PARAMS.tabstate';
 	}	
 
-	
 	BlackhighlighterRead.viewReveal = function(revealKey) {
 		// first make sure we're on the verify tab
 		$('#tabs').tabs('select', tabIndexForId('tabs-verify'));
@@ -598,7 +611,7 @@ $(document).ready(function(){
 		clearErrorOnTab('verify');
 	
 		var revealInput = $('#certificates').get(0).value;
-		if (trimAllWhitespace(revealInput) === '') {
+		if (common.trimAllWhitespace(revealInput) === '') {
 			// if they haven't typed anything into the box
 			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
 		} else {
@@ -627,7 +640,7 @@ $(document).ready(function(){
 			if (parsedJson) {
 				try {
 					var reveals = null;
-					if (!isArray(parsedJson)) {
+					if (!_.isArray(parsedJson)) {
 						reveals = [parsedJson];
 					} else {
 						reveals = parsedJson;
@@ -668,7 +681,7 @@ $(document).ready(function(){
 				// http://grizzlyweb.com/webmaster/javascripts/refresh.asp
 				window.location.reload(true);
 			} else {
-				window.navigate(absoluteFromRelativeURL(PARAMS.show_url));
+				window.navigate(clientCommon.absoluteFromRelativeURL(PARAMS.show_url));
 			}
 		} else {
 			$('#buttons-reveal').show();
@@ -710,9 +723,10 @@ $(document).ready(function(){
 		$.ajax({
 			type: 'POST',
 			dataType: 'json', // expected response type from server
-			url: PARAMS.reveal_url,
+			url: common.makeRevealUrl(PARAMS.base_url),
 			data: {
-				'reveals': JSON.stringify(dropObjectKeysToMakeSortedArray(Globals.localRevealsByHash), null, ' ') // sends as UTF-8
+				// REVIEW: used to sort array by hash, does this matter?
+				'reveals': JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ') // sends as UTF-8
 			},
 			success: function(resultJson) {
 				if (resultJson.error) {
@@ -756,4 +770,5 @@ $(document).ready(function(){
 		});
 	};
 	
+	return BlackhighlighterRead;
 });

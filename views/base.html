@@ -4,7 +4,7 @@
 
 {% comment %}
 
- common.html - Common template file for all non-admin blackhighlighter pages
+ base.html - Common template file for all non-admin blackhighlighter pages
  Copyright (C) 2012 HostileFork.com
 
  This program is free software: you can redistribute it and/or modify
@@ -103,15 +103,46 @@ You will probably want to copy and customize this file.
 
 
 {% block scripts %}
-{% if false %}
-		<!-- Google has these online, so it saves on bandwidth to use their hosting -->
-		<script type="text/javascript" src="{{ LIBS_URL }}jquery/jquery-1.7.2.min.js"></script>
-		<script type="text/javascript" src="{{ LIBS_URL }}jquery-ui/jquery-ui-1.8.18.min.js"></script>
-{% else %}
+	<script src="{{ LIBS_URL }}/require.js"></script>
+    <script>
+    require({
+        baseUrl: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}',
+		
+		{# Note: no .js on these paths!  It appends that automatically. #}
+        paths: {
+			{# LOADER PLUGINS #}
+			{# http://requirejs.org/docs/api.html#plugins #} 
+			"wrap": "{{ LIBS_URL }}wrap",
+			"use": "{{ LIBS_URL }}use",
 
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js"></script>
-{% endif %}
+			{# LIBRARIES #}
+            jquery: 'http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min', 
+			jqueryui: 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min',
+			underscore: '{{ LIBS_URL }}underscore',
+			sha256: '{{ LIBS_URL }}sha256', // http://www.webtoolkit.info/javascript-sha256.html
+			json2: '{{ LIBS_URL }}json2', // http://www.json.org/json2.js
+			innerxhtml: '{{ LIBS_URL}}innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
+			autogrow: '{{ LIBS_URL }}jquery-autogrow/jquery.autogrow',
+			nicedit: '{{ LIBS_URL }}nicEdit/nicEdit',
+			niceditFixed: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}nicedit-overrides'
+        },
+		
+		{# "high priority" modules, which will be loaded before any others #}
+		{# Note: downloaded in parallel, cannot interdepend! #}
+        priority: ['jquery'],
+		{# https://github.com/tbranyen/use.js #}
+	    {# Similar to: https://github.com/gartz/RequireJS-Wrapper-Plugin #}
+		{# Wrapper for non-AMD modules that put declarations into global scope #}
+		use: {
+			"underscore": {
+				attach: "_"
+			},
+			"sha256": {
+				attach: "sha256export"
+			}
+		}
+    }, ['{{ MAIN_SCRIPT }}']); // script "entry point"
+    </script>
 		
 		<!-- If debugging in a browser without decent debugging infrastructure, Firebug Lite can be helpful -->
 		<!-- http://getfirebug.com/lite.html -->

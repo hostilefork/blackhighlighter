@@ -18,14 +18,27 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
+// REVIEW: http://stackoverflow.com/questions/10302724/calling-methods-in-requirejs-modules-from-html-elements-such-as-onclick-handlers
 var BlackhighlighterWrite = {};
 
-$(document).ready(function() {
+// Main script file, brings page to life in $(document).onload handler
+define([
+	'jquery',
+	'use!underscore',
+	'client-server-common',
+	'client-common',
+	// these libs have no results, purely additive...
+	'jqueryui',
+	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
+	'json2', // http://www.json.org/json2.js
+	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
+	'autogrow',
+	'niceditFixed'
+], function($, _, common, clientCommon) {
 
 	var Globals = {
 		commitObj: undefined,
 		protectedObjs: undefined,
-		verify_url: undefined,
 		commit_id: undefined,
 		successfulCommit: false,
 		lastTabId: 'tabs-compose' // we start on compose tab, and don't get a select notification for it
@@ -102,7 +115,7 @@ $(document).ready(function() {
 		var lastWasTextNode = false;
 		for (var childIndex = 0; childIndex < node.childNodes.length; childIndex++) {
 			var child = node.childNodes[childIndex];
-			var nodeType = isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
+			var nodeType = _.isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
 			if (nodeType == Node.TEXT_NODE) {
 				if (lastWasTextNode) {
 					return true;
@@ -143,7 +156,7 @@ $(document).ready(function() {
 		}
 
 		ensureJsonCommitCollapsed();
-		clearUserSelection();
+		clientCommon.clearUserSelection();
 		
 		if (protectedEl.hasClass("suggested_protection")) {
 			protectedEl.removeClass("suggested_protection");
@@ -223,7 +236,7 @@ $(document).ready(function() {
 			// we must unselect the selection, or the XORing will make it look
 			// bad and not all blacked out
 			// http://www.webreference.com/js/column12/selectionobject.html
-			clearUserSelection();
+			clientCommon.clearUserSelection();
 		}
 		
 		Globals.commitObj = undefined;
@@ -310,7 +323,7 @@ $(document).ready(function() {
 		// (such as identifying people's names) would probably want to be server-side instead 
 		// of JavaScript, but this should be a server on your local network.
 	
-		var nodeType = isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
+		var nodeType = _.isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
 
 		// search all textnodes that aren't under protected spans
 		switch (nodeType) {
@@ -469,7 +482,7 @@ $(document).ready(function() {
 
 		function processChild(child) {
 			function pushStringSpan(stringSpan) {
-				if (!isString(stringSpan)) {
+				if (!_.isString(stringSpan)) {
 					throw 'Pushing non-string as string span';
 				}
 				if (stringSpan.length === 0) {
@@ -477,7 +490,7 @@ $(document).ready(function() {
 				}
 				var numSpans = Globals.commitObj.spans.length;
 						
-				if ((numSpans > 0) && isString(Globals.commitObj.spans[numSpans-1])) {
+				if ((numSpans > 0) && _.isString(Globals.commitObj.spans[numSpans-1])) {
 					Globals.commitObj.spans[numSpans-1] += stringSpan;
 				} else {
 					Globals.commitObj.spans.push(stringSpan);
@@ -485,17 +498,17 @@ $(document).ready(function() {
 			}
 			
 			function pushPlaceholderSpan(placeholder) {
-				if (isUndefined(placeholder.displayLength)) {
+				if (_.isUndefined(placeholder.display_length)) {
 					throw 'Invalid placeholder pushed';
 				}
 				Globals.commitObj.spans.push(placeholder);	
 			}
 			
-			var nodeType = isUndefined(child.nodeType) ? Node.ATTRIBUTE_NODE : child.nodeType;
+			var nodeType = _.isUndefined(child.nodeType) ? Node.ATTRIBUTE_NODE : child.nodeType;
 			switch (nodeType) {
 				case Node.ELEMENT_NODE:
 					// https://developer.mozilla.org/en/Case_Sensitivity_in_class_and_id_Names 
-					if ((child.tagName.toLowerCase() == 'span') && ($(child).hasClass('protected'))) {
+					if ((child.tagName.toLowerCase() == 'span') && $(child).hasClass('protected')) {
 						// Each protected span adds a placeholder to the commit and a redaction to
 						// the reveal certificate
 						
@@ -530,7 +543,7 @@ $(document).ready(function() {
 						// http://www.javascripter.net/faq/convert3.htm
 						// we track the order but do not put it into the commit or reveal as it is implicit
 						var placeholder = {
-							'displayLength': content.length.toString(10)
+							'display_length': content.length
 						};
 						placeholders.push({
 							'obj': placeholder,
@@ -566,7 +579,7 @@ $(document).ready(function() {
 							if (true) {
 								throw 'Rich text and HTML instructions not currently supported for security reasons: <' + child.tagName + '>';
 							} else {
-								pushStringSpan(outerXHTML(child));
+								pushStringSpan(clientCommon.outerXHTML(child));
 							}
 						}
 					}
@@ -594,7 +607,7 @@ $(document).ready(function() {
 		for (var revealNameToHash in revealsByName) {
 			if (revealsByName.hasOwnProperty(revealNameToHash)) {
 				var revealObjToHash = revealsByName[revealNameToHash];
-				var saltToHash = stripHyphensFromUUID(generateRandomUUID());
+				var saltToHash = common.stripHyphensFromUUID(common.generateRandomUUID());
 				var contents = saltToHash;
 				for (var redactionIndex = 0; redactionIndex < revealObjToHash.redactions.length; redactionIndex++) {
 					contents += revealObjToHash.redactions[redactionIndex];
@@ -619,7 +632,7 @@ $(document).ready(function() {
 		// Check that process did not produce two sequential string spans in commit
 		var lastWasString = false;
 		for (var commitCheckIndex = 0; commitCheckIndex < Globals.commitObj.spans.length; commitCheckIndex++) {
-			if (isString(Globals.commitObj.spans[commitCheckIndex])) {
+			if (_.isString(Globals.commitObj.spans[commitCheckIndex])) {
 				if (lastWasString) {
 					throw "Two sequential string spans in commit -- error in generateCommitAndProtectedObjects()"; 
 				}
@@ -633,13 +646,15 @@ $(document).ready(function() {
 		if (Globals.commitObj.spans.length === 0) {
 			Globals.commitObj = null;
 		} else if (Globals.commitObj.spans.length == 1) {
-			if (isString(Globals.commitObj.spans[0]) && (trimAllWhitespace(Globals.commitObj.spans[0]) === '')) {
+			if (_.isString(Globals.commitObj.spans[0]) && (common.trimAllWhitespace(Globals.commitObj.spans[0]) === '')) {
 				Globals.commitObj = null;
 			}	
 		}
 
 		// Protected objects is an array for JSON, not a map
-		Globals.protectedObjs = dropObjectKeysToMakeSortedArray(revealsByHash);
+		// REVIEW: This used to be done sorted by hash, which underscore doesn't do.
+		// Does it matter?  (Certificates should sort by name, if anything.)
+		Globals.protectedObjs = _.values(revealsByHash);
 	}
 
 	// This was tricky to figure out but it's based on how jquery ui demo does "View Source"
@@ -654,12 +669,12 @@ $(document).ready(function() {
 	$('#demo-source').find('> a').click(function() {
 		if ($(this).hasClass('source-closed')) {
 			$('#json-commit').empty();			
-			if (syncEditors() || isUndefined(Globals.commitObj) || isUndefined(Globals.protectedObjs)) {
+			if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
 				generateCommitAndProtectedObjects();
 			}
 			if (Globals.commitObj !== null) {
 				$('#json-commit').append(document.createTextNode(
-					escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))));
+					common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))));
 			}
 			
 			$(this).removeClass('source-closed');
@@ -685,7 +700,7 @@ $(document).ready(function() {
 			}
 		} else {
 			// If any editor contents changed, regenerate the commit and protected objects
-			if (syncEditors() || isUndefined(Globals.commitObj) || isUndefined(Globals.protectedObjs)) {
+			if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
 				generateCommitAndProtectedObjects();
 			}
 				
@@ -742,12 +757,12 @@ $(document).ready(function() {
 					
 					protectedHtml += '<p>';
 					protectedHtml += '/* BEGIN REVEAL CERTIFICATE */' + '<br />';
-					protectedHtml += '/* To use this, visit: ' + absoluteFromRelativeURL(Globals.verify_url) + ' */' + '<br />';
+					protectedHtml += '/* To use this, visit: ' + common.makeVerifyUrl(PARAMS.base_url, Globals.commit_id) + ' */' + '<br />';
 					
 					if (Globals.protectedObjs.length == 1) {
 						var reveal = Globals.protectedObjs[0];
 						reveal.commit_id = Globals.commit_id;
-						protectedHtml +=  escapeNonBreakingSpacesInString(JSON.stringify(reveal, null, ' ')) + '<br />';
+						protectedHtml +=  common.escapeNonBreakingSpacesInString(JSON.stringify(reveal, null, ' ')) + '<br />';
 					} else if (Globals.protectedObjs.length > 1) {
 						if (true) {
 							throw "UI for multiple redaction pens is not yet implemented.";
@@ -781,7 +796,7 @@ $(document).ready(function() {
 	});
 
 	BlackhighlighterWrite.highlightProtectedText = function() {
-		highlightAllOfElement($('#json-protected').get(0));
+		clientCommon.highlightAllOfElement($('#json-protected').get(0));
 	};
 		
 	$('#tabs').bind('tabsfocus', function(event, ui) {
@@ -829,14 +844,14 @@ $(document).ready(function() {
 		if (Globals.successfulCommit) {
 			throw "Duplicate commit attempt detected.";
 		}
-		if (!isUndefined(finalizeCommitUI.timerId)) {
+		if (!_.isUndefined(finalizeCommitUI.timerId)) {
 			throw "Commit progress timer not cleared out by last attempt";
 		}
 
 		clearErrorOnTab('commit');
 
 		// If any editor contents changed, regenerate the commit and protected objects
-		if (syncEditors() || (isUndefined(Globals.commitObj)) || (isUndefined(Globals.protectedObjs))) {
+		if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
 			generateCommitAndProtectedObjects();
 		}
 		
@@ -855,14 +870,14 @@ $(document).ready(function() {
 		// don't allow tab switching back to compose or protect during Ajax request
 		// if request succeeds, we don't re-enable them because the letter is readable at the post URL
 		$('#tabs').tabs('disable', tabIndexForId('tabs-compose'));
-		
+				
 		// http://docs.jquery.com/Ajax/jQuery.ajax
 		$.ajax({
 			type: 'POST',
 			dataType: 'json', // expected response type from server
-			url: PARAMS.commit_url,
+			url: common.makeCommitUrl(PARAMS.base_url),
 			data: {
-				'commit': escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))
+				'commit': common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))
 			},
 			success: function(result){
 				if (result.error) {
@@ -870,13 +885,14 @@ $(document).ready(function() {
 					finalizeCommitUI();
 				} else {
 					Globals.successfulCommit = true;
-					Globals.commit_id = result.commit_id;
-					Globals.verify_url = result.verify_url;
+					Globals.commitObj.commit_date = result.commit_date;
+					
+					Globals.commit_id = common.makeIdFromCommit(Globals.commitObj);
 
 					// The JSON response tells us where the show_url is for our new letter
-					var absURL = absoluteFromRelativeURL(result.show_url);
+					var showUrl = common.makeShowUrl(PARAMS.base_url, Globals.commit_id);
 					innerXHTML($('#url-public').get(0), 
-						'<a href="' + absURL + '" target="_blank">' + absURL + '</a>');
+						'<a href="' + showUrl + '" target="_blank">' + showUrl + '</a>');
 				}
 				if (finalizeCommitUI.timerId === null) {
 					finalizeCommitUI();

@@ -39,6 +39,72 @@
 // require.paths, one could test process.version:
 //
 //     http://nodejs.org/docs/v0.4.9/api/process.html#process.version
+//
+
+
+
+// 
+// CONFIGURE REQUIREJS
+//
+// One of the biggest "meta" issues in programming is how modules are 
+// organized and included.  To use a JavaScript file in a web page you
+// use a <script> tag and all of the scripts are loaded asynchronously.
+// While you don't really need to put any structure on those files and
+// can just make global functions, there are informal best-practices to do 
+// information-hiding and some codified standards like jQuery plugins.
+//
+// Node.js comes with a loading function called "require" which
+// synchronously loads script code from the local disk.  It has some
+// amount of convention so you don't have to necessarily specify the
+// full path to a module, and you also omit the ".js" extension.  If one
+// is to take advantage of the ability to share code between client and
+// server code with node.js, you need some kind of adapter.  The most
+// thoroughly-considered adapter introduces an inclusive standard that
+// meansa you write your modules in a way that isn't compatible with
+// either require or the <script> method:
+//
+//     http://requirejs.org/docs/node.html#3
+//
+// It's all pretty much a train wreck, and evokes this xkcd:
+//
+//     http://xkcd.com/927/
+//
+// But I'm going to use this for now because at least it's documented, 
+// and if it turns out to be a bust there are enough people using it
+// that someone will presumably write the "how to change your code
+// from requirejs to the real answer".  :-/
+//
+// You can use require ordinarily in the node modules, unless that
+// module is intended to be shared between the browser and server.
+// If you want to include one of those shared modules, then use the
+// the keyword requirejs to import it.
+//
+
+var requirejs = require('requirejs');
+
+requirejs.config({
+    //Pass the top-level main.js/index.js require
+    //function to requirejs so that node modules
+    //are loaded relative to the top-level JS file.
+    nodeRequire: require,
+	
+	// Note: do not include the '.js' at the end of these paths!
+	paths: {
+		'use': 'public/js/use',
+		'sha256': "public/js/sha256"
+	},
+	
+	// https://github.com/tbranyen/use.js
+	// Similar to: https://github.com/gartz/RequireJS-Wrapper-Plugin
+	use: {
+		'underscore': {
+			attach: '_'
+		},
+		'sha256': {
+			attach: 'sha256export'
+		}
+	}
+});
 
 
 
@@ -219,36 +285,16 @@ app.use(express.bodyParser());
 
 
 //
-// DATA FORMAT NOTES
+// COMMON ROUTINES BETWEEN CLIENT AND SERVER
 //
-// "PublicOne PublicTwo [RedactedOne] PublicThree [RedactedTwo] PublicFour"
+// Writing a JavaScript library so that it can be included properly via
+// a <script> tag in a browser as well as work with the "require"
+// statement is a bit of a puzzle that I haven't figured out yet.
+// Just throwing things against a wall and seeing what sticks for the
+// moment, but hopefully someone will show me the "right" way.
 //
-// The commit looks like this, and when put into the database it will have
-// added to it a MongoDB _id as well as a commit_date
-// 
-// { "spans": [
-//		"PublicOne PublicTwo ", 
-// 		{ "displayLength": "11", "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
-// 		" PublicThree ",
-//		{ "displayLength": "11", "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" }, 
-//		" PublicFour"
-//	] }
-//
-// A single revealJson looks like this, and when put into the database it will
-// have added to it a mongodb _id as well as a commit_date
-//
-// { "commit_id": "4f89521b67032a424a000002",
-//		"redactions": [ "RedactedOne", "RedactedTwo" ], 
-//		"salt": "26716853c86b247fc81834822b0ca058",
-//		"sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
-// }
-//
-// (Note: Hash values are made up, will fix in real documentation.)
-//
-// The /reveal/ HTTP POST handler historically accepted an array of reveals,
-// because there was no selective UI for picking which reveals that had been
-// locally entered were to be shown.
-//
+
+var common = requirejs('./public/client-server-common');
 
 
 
@@ -279,7 +325,7 @@ app.use("/public", express.static(__dirname + '/public'));
 // entirely in JavaScript on the client's machine.  The /commit/ HTTP POST
 // handler does the actual server-side work of saving the document.
 app.get('/write/$', function (req, res) {
-    res.render('write', {});
+    res.render('write', { MAIN_SCRIPT: "write" });
 });
 
 function generateHtmlFromCommitAndReveals(commit, reveals) {
@@ -319,9 +365,9 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 				resultHtml += reveal.redactions[redactionIndexByHash[commitSpan.sha256]++];
 				resultHtml += '</span>'
 			} else {				
-				var displayLength = parseInt(commitSpan.displayLength, 10);
+				var display_length = parseInt(commitSpan.display_length, 10);
 				var placeholderString = '';
-				for (var fillIndex = 0; fillIndex < displayLength; fillIndex++) {
+				for (var fillIndex = 0; fillIndex < display_length; fillIndex++) {
 					placeholderString += '?';
 				}
 				
@@ -351,7 +397,7 @@ function showOrVerify(req, res, tabstate) {
 			// REVIEW: necessary to use ObjectID conversion?
 			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
 			commitsColl.find(
-				{'_id': new mongodb.ObjectID(req.params.commit_id)},
+				{'commit_id': req.params.commit_id},
 				{limit: 1, sort:[['_id', 'ascending']]},
 				this.parallel()
 			);
@@ -385,6 +431,7 @@ function showOrVerify(req, res, tabstate) {
 			// is any checking necessary?
 			
 			res.render('read', {
+				MAIN_SCRIPT: 'read',
 				commit_id: req.params.commit_id,
 				revealsDb: [],
 				tabstate: tabstate,
@@ -396,11 +443,11 @@ function showOrVerify(req, res, tabstate) {
 	);
 }
 
-app.get('/verify/:commit_id([0-9a-f]+)/$', function (req, res) {
+app.get('/verify/:commit_id([0-9a-f]+)$', function (req, res) {
 	showOrVerify(req, res, 'verify');
 });
 
-app.get('/show/:commit_id([0-9a-f]+)/$', function (req, res) {
+app.get('/show/:commit_id([0-9a-f]+)$', function (req, res) {
 	showOrVerify(req, res, 'show');
 });
 
@@ -426,11 +473,12 @@ app.post('/commit/$', function (req, res) {
 			// to us, which turns us into a generic JSON object store.
 			
 			// should we check to make sure the date in the request matches so we are on
-			// the same page as the client?	
+			// the same page as the client?				
 			
 			// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
 			commit.commit_date = requestTime;
-
+			commit.commit_id = common.makeIdFromCommit(commit);
+			
 			// "safe" tells the JSON mongodb driver to do an added check on the
 			// getLastError to make sure that the asynchronous insert succeeded
 			//     http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
@@ -438,12 +486,12 @@ app.post('/commit/$', function (req, res) {
 		},
 		function respondWithShowAndVerifyUrlsInJson(err, records) {
 			handleMongoDbError(res, err);
-				
+
+			// res.send(common.canonicalJsonFromCommit(records[0]), { 'Content-Type': 'application/json' });
+			
 			res.json({
-				commit_id: records[0]._id, 
-				show_url: '/show/' + records[0]._id + '/',
-				verify_url: '/verify/' + records[0]._id + '/'
-			});				
+				commit_date: records[0].commit_date
+			});
 		}
 	);
 });
@@ -469,7 +517,7 @@ app.post('/reveal/$', function (req, res) {
 			// REVIEW: necessary to use ObjectID conversion?
 			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
 			commitsColl.find(
-				{'_id': new mongodb.ObjectID(req.params.commit_id)},
+				{'commit_id': req.params.commit_id},
 				{limit: 1, sort:[['_id', 'ascending']]},
 				this.parallel()
 			);
@@ -488,6 +536,12 @@ app.post('/reveal/$', function (req, res) {
 		},
 		function addNewRevealsIfTheyPassVerification(err, revealsColl, commitArray, oldRevealsArray) {
 			handleMongoDbError(res, err);
+
+			//
+			// The /reveal/ HTTP POST handler historically accepted an array of reveals,
+			// because there was no selective UI for picking which reveals that had been
+			// locally entered were to be shown.
+			//
 
 			// second parameter is default
 			var newReveals = JSON.parse(req.param('reveals', null));

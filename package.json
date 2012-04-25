@@ -17,6 +17,7 @@
 		"redaction"
 	],
 	"dependencies": {
+		"requirejs": "1.0.x",
 		"express": "2.5.x",
 		"swig": "0.11.x",
 		"mongodb": "0.9.x",

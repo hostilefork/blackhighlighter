@@ -43,7 +43,7 @@ blackhighlighter|READ
  
 	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
 
-	PARAMS.letter_uuid = "{{ letter_uuid }}";
+	PARAMS.commit_id = "{{ commit_id }}";
 	PARAMS.tabstate = "{{ tabstate }}";
 	
 	{# Tried to use this but it didn't work, passing as JSON.stringify instead #}
@@ -51,30 +51,13 @@ blackhighlighter|READ
 	PARAMS.commit = {{ commit|json_encode|raw }};
 	PARAMS.reveals = {{ reveals|json_encode|raw }};
 
-	PARAMS.reveal_url = "{% url blackhighlighter.views.reveal letter_uuid %}";
-	PARAMS.show_url = "{% url blackhighlighter.views.show letter_uuid %}";
+	PARAMS.base_url = "{% url blackhighlighter.views.base %}";
 {% endblock params_javascript %}
 
 
 {% block scripts %}
 	{% parent %} {# inherit parent scripts, do not overwrite them! #}
 
-	<!-- http://www.webtoolkit.info/javascript-sha256.html -->
-	<script src="{{ LIBS_URL }}sha256.js" type="text/javascript"></script>
-
-	<!-- http://www.json.org/json2.js -->
-	<script src="{{ LIBS_URL }}json2.js" type="text/javascript"></script>
-
-	<!-- http://www.stevetucker.co.uk/page-innerxhtml.php -->
-	<script src="{{ LIBS_URL }}innerxhtml.js" type="text/javascript"></script>
-
-	<script type="text/javascript" src="{{ LIBS_URL }}jquery-autogrow/jquery.autogrow.js"></script>
-
-	<!-- Common useful routines used in my code -->
-	<script type="text/javascript" src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}common.js"></script>
-
-	<!-- Main script file, brings page to life in $(document).onload handler -->
-	<script src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}read.js" type="text/javascript"></script>
 {% endblock scripts %}
 
 
@@ -89,15 +72,15 @@ blackhighlighter|READ
 		</ul>
 		
 		<div id="tabs-verify">
-{% include "read_verify.html" %}
+{% include "read-verify.html" %}
 		</div>
 		
 		<div id="tabs-show">
-{% include "read_show.html" %}
+{% include "read-show.html" %}
 		</div>
 		
 		<div id="tabs-reveal">
-{% include "read_reveal.html" %}
+{% include "read-reveal.html" %}
 		</div>
 
 	</div>

@@ -36,6 +36,8 @@ exports.url = function (indent, parentBlock, parser) {
 	var myArg = '';
     output.push('_output += "http://blackhighlighter.hostilefork.cloudfoundry.me/";'); // temporary
 	switch (this.args[0]) {
+		case 'blackhighlighter.views.base':
+			break;
 		case 'blackhighlighter.views.commit':
 			output.push('_output += "commit/";');
 			break;

@@ -40,22 +40,13 @@ blackhighlighter|WRITE
 	{% parent %} {# inherit any existing parameter block #}
 	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
 
-	PARAMS.commit_url = "{% url blackhighlighter.views.commit %}";
+	PARAMS.base_url = "{% url blackhighlighter.views.base %}";
 {% endblock params_javascript %}
 
 
 {% block scripts %}
 	{% parent %} {# inherit parent scripts, do not overwrite them! #}
-
-	<!-- http://www.webtoolkit.info/javascript-sha256.html -->
-	<script src="{{ LIBS_URL }}sha256.js" type="text/javascript"></script>
-
-	<!-- http://www.json.org/json2.js -->
-	<script src="{{ LIBS_URL }}json2.js" type="text/javascript"></script>
-
-	<!-- innerXHTML, because... hey, why not be future proof and use XHTML? -->
-	<script src="{{ LIBS_URL }}innerxhtml.js" type="text/javascript"></script>
-
+	
 	<!-- Compatibility Layer so that Internet Explorer will support W3C ranges -->
 	<!-- http://code.google.com/p/ierange/ -->
 	<!-- NOTE: Conditional comment is actually an IE "feature" -->
@@ -64,18 +55,6 @@ blackhighlighter|WRITE
 	<script src="{{ LIBS_URL }}ierange-m2.js" type="text/javascript" ></script>
     <![endif]-->
 
-	<!-- nicEdit single include generated from nicEdit website -->
-	<!-- http://nicedit.com/download.php -->
-	<script src="{{ LIBS_URL }}nicEdit/nicEdit.js" type="text/javascript" ></script>
-
-	<!-- Common useful routines used in my code -->
-	<script type="text/javascript" src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}common.js"></script>
-
-	<!-- These modifications must be included after nicEdit.js, see file for explanations -->
-	<script src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}nicEditOverrides.js" type="text/javascript"></script>
-
-	<!-- Main script file, brings page to life in $(document).onload handler -->
-	<script src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}write.js" type="text/javascript"></script>
 {% endblock scripts %}
 
 
@@ -90,15 +69,15 @@ blackhighlighter|WRITE
 		</ul>
 		
 		<div id="tabs-compose">
-{% include "write_compose.html" %}
+{% include "write-compose.html" %}
 		</div>
 		
 		<div id="tabs-protect">
-{% include "write_protect.html" %}
+{% include "write-protect.html" %}
 		</div>
 		
 		<div id="tabs-commit">
-{% include "write_commit.html" %}
+{% include "write-commit.html" %}
 		</div>
 	</div>
 
