@@ -20,50 +20,35 @@ var helpers = require('swig/lib/helpers');
 // https://docs.djangoproject.com/en/dev/ref/templates/builtins/#url
 //
 // I've added a simple substitute for the url tag, rather than hardcode
-// urls into the templates.  Presumably some method for this kind of thing
-// has been found.  UPDATE: found a post about it
+// the site url into the templates.  The actual generation of derived
+// URLs from that is done by shared JavaScript now in client-server-common.js
+// although I don't know what the long term solution should be.  Here's
+// some notes on DRY route reversal in express to be like Django:
 //
 //     http://stackoverflow.com/questions/10027574/express-js-reverse-url-route-django-style
 //
 exports.url = function (indent, parentBlock, parser) {
-	/*var myArg = '';
-	if (args.length == 2) {
-		myArg = parser.parseVariable(this.args[1]);
-	}*/
-    output = []; // causes some awful nested expansion problem, don't understand it
-	/* output.push(helpers.setVar('__myArg', myArg)); */
+	// You don't output a string which represents the content you want to inject
+	// into the template, rather a string that contains JavaScript code that
+	// puts the content into a variable named "_output".  WHY is this variable
+	// name a hardcoded implicit thing and not something provided by:
+    //     https://github.com/paularmstrong/swig/blob/master/lib/helpers.js	
+	var outputVarName = '_output';
+    var output = [];
 	
-	var myArg = '';
-    output.push('_output += "http://blackhighlighter.hostilefork.cloudfoundry.me/";'); // temporary
-	switch (this.args[0]) {
-		case 'blackhighlighter.views.base':
-			break;
-		case 'blackhighlighter.views.commit':
-			output.push('_output += "commit/";');
-			break;
-		case 'blackhighlighter.views.reveal':
-			output.push('_output += "reveal/";');
-			break;
-		case 'blackhighlighter.views.show':
-			output.push('_output += "show/";');
-			myArg = parser.parseVariable(this.args[1]);
-			output.push(helpers.setVar('__myArg', myArg));
-			output.push('_output += __myArg + "/";');
-			break;
-		case 'blackhighlighter.views.verify':
-			output.push('_output += "verify/";');
-			myArg = parser.parseVariable(this.args[1]);
-			output.push(helpers.setVar('__myArg', myArg));
-			output.push('_output += __myArg + "/";');
-			break;
-		default:
-			output.push('_output += "INCOMPLETE_MYTAGS_JS_IMPLEMENTATION/";');
-			break;
+	if ((this.args.length === 1) && (this.args[0] == 'blackhighlighter.views.base')) {
+		// In theory, this should get information out of the cloud foundry
+		// site configuration, as with process.env.VCAP_SERVICES parsing,
+		// but I'm not sure where in the environment to find this url.
+		output.push(outputVarName + ' += "http://blackhighlighter.hostilefork.cloudfoundry.me/";');
+	} else {
+		// Exceptions would be ideal, but that's still getting sorted out
+		// For the moment, this finds the smoking gun more quickly
+		output.push(outputVarName + ' += "INVALID PARAMETERS PASSED TO {% url %}, SEE MYTAGS.JS";');
 	}
-		
     return output.join('');
 };
-exports.url.ends = false;
+exports.url.ends = false; // no ending tag
 
 
 // Paul Armstrong has said he does not want Swig to include Django's multi-line
@@ -78,4 +63,4 @@ exports.url.ends = false;
 exports.comment = function (indent, parentBlock, parser) {
     return '';
 };
-exports.comment.ends = true;
+exports.comment.ends = true; // needs ending tag

@@ -112,7 +112,6 @@ You will probably want to copy and customize this file.
         paths: {
 			{# LOADER PLUGINS #}
 			{# http://requirejs.org/docs/api.html#plugins #} 
-			"wrap": "{{ LIBS_URL }}wrap",
 			"use": "{{ LIBS_URL }}use",
 
 			{# LIBRARIES #}
@@ -130,6 +129,7 @@ You will probably want to copy and customize this file.
 		{# "high priority" modules, which will be loaded before any others #}
 		{# Note: downloaded in parallel, cannot interdepend! #}
         priority: ['jquery'],
+		
 		{# https://github.com/tbranyen/use.js #}
 	    {# Similar to: https://github.com/gartz/RequireJS-Wrapper-Plugin #}
 		{# Wrapper for non-AMD modules that put declarations into global scope #}

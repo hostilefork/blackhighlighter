@@ -146,9 +146,9 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 		// 
 		// { "spans": [
 		//		"PublicOne PublicTwo ", 
-		// 		{ "display_length": "11", "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
+		// 		{ "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
 		// 		" PublicThree ",
-		//		{ "display_length": "11", "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" }, 
+		//		{ "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" }, 
 		//		" PublicFour"
 		//	] }
 		//
