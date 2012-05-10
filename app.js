@@ -371,6 +371,26 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 	return resultHtml;
 }
 
+function generateCertificateStubsFromCommit(commit) {
+	
+	var mapSha256ToTrue = {};
+	for (var commitSpanIndex = 0; commitSpanIndex < commit.spans.length; commitSpanIndex++) {
+		var commitSpan = commit.spans[commitSpanIndex];
+		
+		if (_.isString(commitSpan)) {
+			// Not redacted.
+		} else {
+			mapSha256ToTrue[commitSpan.sha256] = true;
+		}
+	}
+			
+	var result = [];
+	_.each(mapSha256ToTrue, function(trueValue, key) {
+		result.push({sha256: key});
+	});
+	return result;
+}
+
 function showOrVerify(req, res, tabstate) {
 	Step(
 		function connectToDatabaseWithAuthorization() {
@@ -422,10 +442,10 @@ function showOrVerify(req, res, tabstate) {
 			res.render('read', {
 				MAIN_SCRIPT: 'read',
 				commit_id: req.params.commit_id,
-				revealsDb: [],
+				all_certificates: generateCertificateStubsFromCommit(commit),
 				tabstate: tabstate,
 				commit: commit,
-				reveals: reveals,
+				revealed_certificates: reveals,
 				public_html: generateHtmlFromCommitAndReveals(commit, reveals)
 			});
 		}

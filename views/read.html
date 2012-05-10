@@ -49,7 +49,7 @@ blackhighlighter|READ
 	{# Tried to use this but it didn't work, passing as JSON.stringify instead #}
 	{# https://github.com/paularmstrong/swig/blob/master/docs/filters.md#json_encode #}
 	PARAMS.commit = {{ commit|json_encode|raw }};
-	PARAMS.reveals = {{ reveals|json_encode|raw }};
+	PARAMS.reveals = {{ revealed_certificates|json_encode|raw }};
 
 	PARAMS.base_url = "{% url blackhighlighter.views.base %}";
 {% endblock params_javascript %}

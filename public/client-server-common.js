@@ -18,20 +18,11 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
-var bar = "does this get exported?";
 
 // The module standard being used is the "asynchronous module definition"
 //     https://github.com/amdjs/amdjs-api/wiki/AMD
 define(['use!underscore', 'use!sha256'], function(_, SHA256){
     return {
-	
-		// SHA test
-		
-		testLibs: function() {
-			console.log("Underscore is " + _);
-			console.log("SHA256 is " + SHA256);
-			console.log("foo is " + foo);
-		},
 		
 		// URL api
 		makeCommitUrl: function(base_url) {

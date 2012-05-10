@@ -40,7 +40,7 @@ exports.url = function (indent, parentBlock, parser) {
 		// In theory, this should get information out of the cloud foundry
 		// site configuration, as with process.env.VCAP_SERVICES parsing,
 		// but I'm not sure where in the environment to find this url.
-		output.push(outputVarName + ' += "http://blackhighlighter.hostilefork.cloudfoundry.me/";');
+		output.push(outputVarName + ' += "http://blackhighlighter.cloudfoundry.com/";');
 	} else {
 		// Exceptions would be ideal, but that's still getting sorted out
 		// For the moment, this finds the smoking gun more quickly

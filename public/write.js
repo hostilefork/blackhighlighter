@@ -477,7 +477,7 @@ define([
 		
 		var revealsByName = {};
 		var placeholders = [];
-		
+		var mergeableLineBreakPending = false;
 		var redactionOrder = 1;
 
 		function processChild(child) {
@@ -488,6 +488,9 @@ define([
 				if (stringSpan.length === 0) {
 					throw 'Pushing zero length string span';
 				}
+				
+				handleMergeableLineBreaks();
+
 				var numSpans = Globals.commitObj.spans.length;
 						
 				if ((numSpans > 0) && _.isString(Globals.commitObj.spans[numSpans-1])) {
@@ -501,14 +504,42 @@ define([
 				if (_.isUndefined(placeholder.display_length)) {
 					throw 'Invalid placeholder pushed';
 				}
+				handleMergeableLineBreaks();
 				Globals.commitObj.spans.push(placeholder);	
 			}
 			
+			function handleMergeableLineBreaks() {
+				if (mergeableLineBreakPending) {
+					mergeableLineBreakPending = false;
+					pushStringSpan('\n');
+				}	
+			}
+			
+			function pushMergeableLineBreak() {
+				mergeableLineBreakPending = true;
+			}
+			
+			function pushUnmergeableLineBreak() {
+				mergeableLineBreakPending = false;
+				pushStringSpan('\n');
+			}
+			
+			function revealNameForSpan(span) {
+				// The server supports multiple reveals per letter, but currently there's no
+				// good interface for this... so we just have a single reveal name.  We'd
+				// have to sniff the color of the redaction region or some other property
+				// that was added during the marking....
+				return 'black';
+			}
+			
 			var nodeType = _.isUndefined(child.nodeType) ? Node.ATTRIBUTE_NODE : child.nodeType;
+			
+			// https://developer.mozilla.org/en/Case_Sensitivity_in_class_and_id_Names 
+			var tagNameLowerCase = _.isUndefined(child.tagName) ? undefined : child.tagName.toLowerCase(); 
+			
 			switch (nodeType) {
 				case Node.ELEMENT_NODE:
-					// https://developer.mozilla.org/en/Case_Sensitivity_in_class_and_id_Names 
-					if ((child.tagName.toLowerCase() == 'span') && $(child).hasClass('protected')) {
+					if ((tagNameLowerCase == 'span') && $(child).hasClass('protected')) {
 						// Each protected span adds a placeholder to the commit and a redaction to
 						// the reveal certificate
 						
@@ -521,22 +552,14 @@ define([
 							throw "Zero length redaction found, illegal";
 						}
 							
-						// The server supports multiple reveals per letter, but currently there's no
-						// good interface for this... so we just have a single key for the reveal
-						var revealName = 'defaultPen';
+						var revealName = revealNameForSpan(child);
 
 						var reveal = revealsByName[revealName];
-						if (!reveal) {
+						if (_.isUndefined(reveal)) {
 							reveal = {
-								'redactions': []
+								'redactions': [],
+								'name': revealName
 							};
-							
-							// We aren't currently naming the reveals, but we might do something
-							// like this when there are multiple reveals per letter in the UI
-							if (false) {
-								reveal.name = revealName;
-							}
-							
 							revealsByName[revealName] = reveal;
 						}
 						
@@ -556,30 +579,42 @@ define([
 						
 						pushPlaceholderSpan(placeholder);
 					} else {
-						if (child.tagName.toLowerCase() == 'br') {
-							if ($(child).contents().length === 0) {
-								pushStringSpan('\n');
-							} else {
-								throw 'Malformed <br> tag has child nodes';
+						switch (tagNameLowerCase) {
+							case 'br': {
+								if ($(child).contents().length === 0) {
+									pushUnmergeableLineBreak();
+								} else {
+									throw 'Malformed <br> tag has child nodes';
+								}
 							}
-						} else if (child.tagName.toLowerCase() == 'p') {
-							// Though Firefox doesn't seem to inject paragraphs each time you press
-							// enter, Opera does.  We translate these into two newlines.
-							$(child).contents().each(function(i) { processChild(this); });
-							pushStringSpan('\n\n');
+							break;
 							
-						} else if (child.tagName.toLowerCase() == 'div') {
-							// Chrome use "div" instead of paragraphs
-							$(child).contents().each(function(i) { processChild(this); });
-							pushStringSpan('\n\n');
+							case 'p': {
+								// Though Firefox doesn't seem to inject paragraphs each time you press
+								// enter, Opera does.  We translate these into two newlines.
+								pushMergeableLineBreak();
+								$(child).contents().each(function(i) { processChild(this); });
+								pushMergeableLineBreak();
+							}
+							break;
 							
-						} else {
-							// REVIEW: it is technically possible to pass HTML inside of the strings
-							// however that opens a can of worms so we just do UTF8 JSON strings
-							if (true) {
-								throw 'Rich text and HTML instructions not currently supported for security reasons: <' + child.tagName + '>';
-							} else {
-								pushStringSpan(clientCommon.outerXHTML(child));
+							case 'div': {
+								// Chrome use "div" instead of paragraphs.  Each "div" introduces a line
+								// break which is merged with that from other sibling divs.
+								pushMergeableLineBreak();
+								$(child).contents().each(function(i) { processChild(this); });
+								pushMergeableLineBreak();
+							}
+							break;
+							
+							default: {
+								// REVIEW: it is technically possible to pass HTML inside of the strings
+								// however that opens a can of worms so we just do UTF8 JSON strings
+								if (true) {
+									throw 'Rich text and HTML instructions not currently supported for security reasons: <' + child.tagName + '>';
+								} else {
+									pushStringSpan(clientCommon.outerXHTML(child));
+								}
 							}
 						}
 					}

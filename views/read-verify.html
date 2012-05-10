@@ -37,10 +37,10 @@
 {% endcomment %}
 
 <div id="accordion">
-{% for reveal in reveals %}
-	<div title='{{ reveal.sha256 }}'>
+{% for certificate in all_certificates %}
+	<div title='{{ certificate.sha256 }}'>
 	{% if true %}
-		<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ reveal.reveal_date }}</a>
+		<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ certificate.reveal_date }}</a>
 	{% else %}
 		<a href="#">Certificate {{ forloop.counter }}: Not Revealed to Public</a>
 	{% endif %}
