@@ -329,6 +329,11 @@ var common = requirejs('./public/client-server-common');
 // http://stackoverflow.com/questions/5924072/express-js-cant-get-my-static-files-why
 app.use("/public", express.static(__dirname + '/public'));
 
+// No homepage for now.
+app.get('/', function (req, res) {
+	res.send('Blackhighlighter app currently in private demo, no public URLs...yet!');
+});
+
 // The /write/ handler is relatively simple, as document authoring happens
 // entirely in JavaScript on the client's machine.  The /commit/ HTTP POST
 // handler does the actual server-side work of saving the document.
