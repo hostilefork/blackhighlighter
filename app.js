@@ -174,17 +174,36 @@ var mongourl = generate_mongo_url(mongo);
 
 var mongodb = require('mongodb');
 
-// How to deal with internally-generated exceptions and errors, as 
+
+
+//
+// ERROR HANDLING
+//
+// Node is unusual because if its single-threaded server crashes in any given handler,
+// it will take down the whole server process.  A general error handling strategy is
+// needed.  How do we deal with internally-generated exceptions and errors, as 
 // well as exceptions thrown by library code?
-//     http://stackoverflow.com/questions/5816436/error-handling-in-asynchroneous-node-js-calls
-function handleMongoDbError(res, err) {
+//
+// http://stackoverflow.com/questions/5816436/error-handling-in-asynchroneous-node-js-calls
+//
+function SuppressableError() {
+	// http://www.nczonline.net/blog/2009/03/10/the-art-of-throwing-javascript-errors-part-2/
+	this.message = "This Error Should Be Suppressed, see SuppressableError() in app.js";
+}
+SuppressableError.prototype = new Error();
+
+// We call this in each step of a Step() besides the first.  Should I tweak or derive
+// from Step() so that this is done automatically?  If so, what if a step wanted to
+// do at least some of its own exception handling? 
+function handleResErr(res, err) {
 	if (err) {
-		console.log("MongoDb error: " + JSON.stringify(err));			
-		res.json({errortype: 'mongodb', errordata: err});
-		throw "MongoDB error";
+		if (!(err instanceof SuppressableError)) {
+			console.log("Caught error: " + JSON.stringify(err));			
+			res.json({error_handler: 'handleError() in app.js', error_data: err});
+		}
+		throw new SuppressableError;
 	}
 }
-
 
 
 //
@@ -397,11 +416,13 @@ function showOrVerify(req, res, tabstate) {
 			mongodb.connect(mongourl, this);
 		},
 		function getCommitAndRevealsCollections(err, conn) {
+			handleResErr(res, err);
+			
 			conn.collection('commits', this.parallel());
 			conn.collection('reveals', this.parallel());
 		},
 		function queryForCommitAndReveals(err, commitsColl, revealsColl) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			// REVIEW: necessary to use ObjectID conversion?
 			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
@@ -417,13 +438,13 @@ function showOrVerify(req, res, tabstate) {
 			);
 		},
 		function convertResultCursors(err, commitCursor, revealsCursor) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 			
 			commitCursor.toArray(this.parallel());
 			revealsCursor.toArray(this.parallel());
 		},
 		function generateResponseHtml(err, commitArray, revealsArray) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			var commit = undefined;
 			if (commitArray.length == 0) {
@@ -469,10 +490,11 @@ app.post('/commit/$', function (req, res) {
 			mongodb.connect(mongourl, this);
 		},
 		function getCommitCollection(err, conn) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 			conn.collection('commits', this);
 		},
 		function addCommitToCollection(err, coll) {
+			handleResErr(res, err)
 			// second parameter is default
 			var commit = JSON.parse(req.param('commit', null));
 			
@@ -494,7 +516,7 @@ app.post('/commit/$', function (req, res) {
 			coll.insert(commit, {safe: true}, this);
 		},
 		function respondWithShowAndVerifyUrlsInJson(err, records) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			// res.send(common.canonicalJsonFromCommit(records[0]), { 'Content-Type': 'application/json' });
 			
@@ -514,13 +536,13 @@ app.post('/reveal/$', function (req, res) {
 			mongodb.connect(mongourl, this.parallel());
 		},
 		function getCommitAndRevealsCollections(err, conn) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 			
 			conn.collection('commits', this.parallel());
 			conn.collection('reveals', this.parallel());
 		},
 		function queryForCommitAndOldReveals(err, commitsColl, revealsColl) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			this.parallel()(null, revealsColl);
 			// REVIEW: necessary to use ObjectID conversion?
@@ -537,14 +559,14 @@ app.post('/reveal/$', function (req, res) {
 			);
 		},
 		function convertResultCursors(err, revealsColl, commitCursor, oldRevealsCursor) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 			
 			this.parallel()(null, revealsColl);
 			commitCursor.toArray(this.parallel());
 			oldRevealsCursor.toArray(this.parallel());
 		},
 		function addNewRevealsIfTheyPassVerification(err, revealsColl, commitArray, oldRevealsArray) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			//
 			// The /reveal/ HTTP POST handler historically accepted an array of reveals,
@@ -578,7 +600,7 @@ app.post('/reveal/$', function (req, res) {
 			revealsColl.insert(newReveals, {safe: true}, this.parallel());
 		},
 		function respondWithInsertionCountAsJson(err, numReveals) {
-			handleMongoDbError(res, err);
+			handleResErr(res, err);
 
 			res.json({
 				insertion_count: numReveals
