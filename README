@@ -8,10 +8,10 @@ The Django code is frozen in the django-blackhighlighter subdirectory
 NOTE ABOUT THE LICENSE
 ----------------------
 
-I'm a pretty strong believer in the Stallman-style of "Software Freedom".  It would be
-a better world if those who adapted free software (and then deployed it to users) would
-share their adaptations back with the community.  His arguments have always seemed pretty
-solid to me:
+I'm a pretty strong believer in the Stallman-style of "Software Freedom".  It would
+be a better world if those who adapted free software (and then deployed it to
+users) would share their adaptations back with the community.  His arguments have
+always seemed pretty solid to me:
 
 http://www.gnu.org/philosophy/shouldbefree.html
 
@@ -22,8 +22,8 @@ is terribly profound code or anything, but it does take time to sort out and wri
 
 If you are interested in applying Blackhighlighter in your project and the license is
 too restrictive and a barrier to doing so, please contact me.  I'd loosen it if there
-was a good reason to.  Note that as people like Jack Slocum have learned, it's better to
-relax a license than to tighten it after you've set expectations in your community:
+was a good reason to.  Note that as people like Jack Slocum have learned, it's better
+to relax a license than tighten it after you've set expectations in your community:
 
 http://hostilefork.com/2009/06/15/extjs-licensing-fiasco/
 
