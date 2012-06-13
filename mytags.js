@@ -44,7 +44,7 @@ exports.url = function (indent, parentBlock, parser) {
 	} else {
 		// Exceptions would be ideal, but that's still getting sorted out
 		// For the moment, this finds the smoking gun more quickly
-		output.push(outputVarName + ' += "INVALID PARAMETERS PASSED TO {% url %}, SEE MYTAGS.JS";');
+		output.push(outputVarName + ' += "http://blackhighlighter.cloudfoundry.com/docs/notimplemented/";');
 	}
     return output.join('');
 };

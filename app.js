@@ -329,9 +329,18 @@ var common = requirejs('./public/client-server-common');
 // http://stackoverflow.com/questions/5924072/express-js-cant-get-my-static-files-why
 app.use("/public", express.static(__dirname + '/public'));
 
-// No homepage for now.
+// No homepage for now
 app.get('/', function (req, res) {
 	res.send('Blackhighlighter app currently in private demo, no public URLs...yet!');
+});
+
+// No online documentation for now
+app.get('/docs/*', function(req, res) {
+	res.send('User documentation links have not been written yet, if you want to ' +
+		'learn more about this project, please visit ' +
+		'<a href="http://hostilefork.com/blackhighlighter">' +
+			'hostilefork.com/blackhighlighter' +
+		'</a>');
 });
 
 // The /write/ handler is relatively simple, as document authoring happens
