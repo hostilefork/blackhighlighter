@@ -1,6 +1,6 @@
 //
 // app.js - blackhighlighter main Node.JS server-side application code 
-// Copyright (C) 2012 HostileFork.com
+// Copyright (C) 2012-2014 HostileFork.com
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,6 @@
 //
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
-
 
 
 // Initially cloud foundry supported node.js 0.4 which required you
@@ -96,7 +95,6 @@ requirejs.config({
 });
 
 
-
 //
 // UTILITY LIBRARIES
 //
@@ -125,11 +123,13 @@ var Step = require('step');
 // BASIC HTTP SETUP
 //
 // The Virtual Cloud tells us our port and host, but if we are running
-// locally we default to localhost and port 3000.
+// locally we default to localhost and port 8080 (used by nodejitsu).
 //
 
-var port = (process.env.VMC_APP_PORT || 3000);
-var host = (process.env.VCAP_APP_HOST || 'localhost');
+// JavaScriptOR (||) variable assignment:
+// http://stackoverflow.com/questions/2100758/
+var port = (process.env.PORT || 3000);
+var host = (process.env.HOST || 'localhost');
 var http = require('http');
 
 
@@ -144,35 +144,13 @@ var http = require('http');
 // http://mongodb.github.com/node-mongodb-native/
 //
 
-if (process.env.VCAP_SERVICES) {
-	var env = JSON.parse(process.env.VCAP_SERVICES);
-	var mongo = env['mongodb-1.8'][0]['credentials'];
-} else {
-	var mongo = {
-		"hostname":"localhost",
-		"port":27017,
-		"username":"",
-		"password":"", 
-		"name":"",
-		"db":""
-	}
-}
-
-var generate_mongo_url = function(obj) {
-	obj.hostname = (obj.hostname || 'localhost');
-	obj.port = (obj.port || 27017);
-	obj.db = (obj.db || 'test');
-
-	if(obj.username && obj.password) {
-		return "mongodb://" + obj.username + ":" + obj.password + "@" + obj.hostname + ":" + obj.port + "/" + obj.db;
-	} else {
-		return "mongodb://" + obj.hostname + ":" + obj.port + "/" + obj.db;
-	}
-}
-
-var mongourl = generate_mongo_url(mongo);
-
 var mongodb = require('mongodb');
+var MongoClient = mongodb.MongoClient;
+var mongoConnectURI = (
+    process.env.MONGO_CONNECT_URI
+    // http://docs.mongodb.org/manual/reference/default-mongodb-port/
+    || "mongodb://localhost:27017"
+);
 
 
 
@@ -239,39 +217,45 @@ function handleResErr(res, err) {
 //
 
 var express = require('express');
-var app = express.createServer();
+var app = express();
 var swig = require('swig');
 
 // Register the template engine
-app.register('.html', swig);
+app.engine('html', swig.renderFile);
 app.set('view engine', 'html');
+app.set('views', __dirname + '/views');
 
-// Initialize Swig, for full list of options see:
-//     https://github.com/paularmstrong/swig/blob/master/docs/getting-started.md#init
-swig.init({
-	// Set the view directory
-	// NOTE: There's also app.set('views', ...); but that didn't seem to work
-	root: __dirname + '/views',
-	
-	allowErrors: true,
-
-	// See mytags.js for why this requirement is necessary
-	tags: require('./mytags')
+// Initialize Swig default options, for full list of options see:
+//     http://paularmstrong.github.io/swig/docs/api/#SwigOpts
+swig.setDefaults({
+	loader: swig.loaders.fs(__dirname + '/views')
 });
 
-app.set('view options', {
+// Load custom template tags
+//     http://paularmstrong.github.io/swig/docs/api/#setTag
+//     http://paularmstrong.github.io/swig/docs/extending/#tags
+var mytags = require('./mytags');
+swig.setTag('url', mytags.url.parse, mytags.url.compile, mytags.url.ends);
+swig.setTag('comment', mytags.comment.parse, mytags.comment.compile, mytags.comment.ends);
+
+/*
 	// Make sure you aren't using Express's built-in "layout extending".
 	// This was commented out in the GitHub for Swig's Express example,
 	// but it seems to be necessary to get the {% block %} inheritance
 	// to work at all!
 	layout: false,
-	
+*/
+
+app.locals({
 	// These are provided to every template context by default
 	LIBS_URL: '/public/js/',
 	BLACKHIGHLIGHTER_MEDIA_URL: '/public/',
 	PROJECT_MEDIA_URL: '/public/',
 	NODE_VERSION: process.version
- });
+
+	// optionals, set in your environment somewhere...
+	/* HOSTING_SERVICE: string */
+});
 
 app.configure('development', function() {
 	app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
@@ -302,8 +286,7 @@ app.use(express.bodyParser());
 // moment, but hopefully someone will show me the "right" way.
 //
 
-var common = requirejs('./public/client-server-common');
-
+var common = requirejs('public/client-server-common');
 
 
 //
@@ -427,7 +410,8 @@ function generateCertificateStubsFromCommit(commit) {
 function showOrVerify(req, res, tabstate) {
 	Step(
 		function connectToDatabaseWithAuthorization() {
-			mongodb.connect(mongourl, this);
+			console.log(mongoConnectURI);
+			mongodb.connect(mongoConnectURI, this);
 		},
 		function getCommitAndRevealsCollections(err, conn) {
 			handleResErr(res, err);
@@ -501,7 +485,7 @@ app.post('/commit/$', function (req, res) {
 			
 	Step(
 		function connectToDatabaseWithAuthorization() {
-			mongodb.connect(mongourl, this);
+			mongodb.connect(mongoConnectURI, this);
 		},
 		function getCommitCollection(err, conn) {
 			handleResErr(res, err);
@@ -547,7 +531,7 @@ app.post('/reveal/$', function (req, res) {
 
 	Step(
 		function connectToDatabaseWithAuthorization() {
-			mongodb.connect(mongourl, this.parallel());
+			mongodb.connect(mongoConnectURI, this.parallel());
 		},
 		function getCommitAndRevealsCollections(err, conn) {
 			handleResErr(res, err);

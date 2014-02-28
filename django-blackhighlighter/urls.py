@@ -23,12 +23,12 @@
 
 # Letter templates expect the following named URLs to be declared by the hosting URL scheme
 #
-# 	homepage-named_url
-#	credits-named_url
-#	network-named_url
-#	cryptography-named_url
-#	certificates-named-url
-#	legal-named_url
+# 	homepage_named_url
+#	credits_named_url
+#	network_named_url
+#	cryptography_named_url
+#	certificates_named_url
+#	legal_named_url
 
 from django.conf.urls.defaults import *
 from django.conf import settings

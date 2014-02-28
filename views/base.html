@@ -178,12 +178,16 @@ You will probably want to copy and customize this file.
 								
 {% block credits %}
 	<center>
-		Running on Node.js {{ NODE_VERSION }} and Cloud Foundry: (<a href="{% url credits_named_url %}" target="_blank">full credits</a>)
+		Running on Node.js {{ NODE_VERSION }}
+		{% if HOSTING_SERVICE %}
+		and {{ HOSTING_SERVICE }}
+		{% endif %}
+		: (<a href="{% url credits_named_url %}" target="_blank">full credits</a>)
 	</center>
 {% endblock credits %}
 {% block copyright %}
 	<center>
-		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2012 <a href="http://hostilefork.com/blackhighlighter/" target="_blank">hostilefork.com</a> with all original code released under Affero GPL v3.0
+		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2009-2012 <a href="http://hostilefork.com/blackhighlighter/" target="_blank">hostilefork.com</a> with all original code released under Affero GPL v3.0
 	</center>
 {% endblock copyright %}
 
@@ -192,7 +196,9 @@ You will probably want to copy and customize this file.
 							<div class="yui-u">
 
 {% block sidebar %}
-	<p><b>NOTE:</b> This is a demonstration installation of the <a href="http://hostilefork.com/blackhighlighter/">blackhighlighter</a> app.  I wanted a sandbox for people to try out the functionality, to show that it actually works and to perhaps motivate others to contribute to the project.  It is running on a very inexpensive server hosting account and I do not have the capacity to store letters permanently.  In fact, I'll probably be wiping the database rather often.  So please use this for testing only!  (That's why it says "sandbox") :)</p>
+	<p><b>NOTE:</b> This is a demonstration installation of the <a href="http://hostilefork.com/blackhighlighter/">blackhighlighter</a> app.  I wanted a sandbox for people to try out the functionality, to show that it actually works and to perhaps motivate others to contribute to the project.</p>
+	<p>This was actually developed as a proof-of-concept in 2009.  It was my first time using Python, Django, jQuery UI, or trying to do anything with the Rich edit control in the browser (<i>AND</i> cross-browser).  It was put aside for a few years until 2012, when one of the Cloud Foundry developers at VMWare expressed interest in seeing it ported to NodeJS.  I picked it back up to do that without changing any of the UI besides patching it a bit to work with some browser changes.  A couple years later I picked it back up again to see if it could be redeployed and updated for all the changes to Express, Swig, Mongodb that had happened in the meantime... and deploy it on Nodejitsu.</p>
+	<p>So if it looks like the UI could go in a less-2009 direction, I do agree.  :)  I've just been using it more for server-side experimentation than getting too deeply into updating the front end...yet!</p>
 {% endblock sidebar %}
 						
 							</div>

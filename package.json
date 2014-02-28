@@ -1,10 +1,14 @@
 {
 	"_comment_ThisFileFormatDescription": "http://package.json.nodejitsu.com/",
-	"_comment_JsonSucksForConfigFiles": "http://stackoverflow.com/questions/244777/can-i-comment-a-json-file",
-
+	"_comment_JsonSucksForCommentingConfigs": "http://stackoverflow.com/questions/244777/",
 	"name": "blackhighlighter",
+	"subdomain": "blackhighlighter",
+	"domains": [
+		"blackhighlighter.org",
+		"www.blackhighlighter.org"
+	],
 	"preferGlobal": "false",
-	"version": "0.0.1",
+	"version": "0.0.1-51",
 	"author": "Hostile Fork <hostilefork@gmail.com>",
 	"description": "protected public discussion server for node.js",
 	"repository": {
@@ -17,20 +21,29 @@
 		"redaction"
 	],
 	"dependencies": {
-		"requirejs": "1.0.x",
-		"express": "2.5.x",
-		"swig": "0.11.x",
-		"mongodb": "0.9.x",
-		"underscore": "1.3.x",
-		"step": "0.0.x"
+		"requirejs": "*",
+		"express": "*",
+		"swig": "*",
+		"mongodb": "*",
+		"underscore": "*",
+		"step": "0.0.x",
+		"use": "1.0.x"
 	},
 	"noAnalyze": true,
-	"devDependencies": {
-	},
-	"bundleDependencies": [
-	],
+	"devDependencies": {},
+	"bundleDependencies": [],
 	"license": "AGPL",
-	"engine": {
-		"node": ">=0.6"
-	}
+	"engines": {
+		"node": "0.10.x"
+	},
+	"scripts": {
+		"start": "app.js"
+	},
+	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
+	"files": [
+		"app.js",
+		"mytags.js",
+		"public",
+		"views"
+	]
 }

@@ -375,7 +375,7 @@ def reveal(request, letter_uuid):
 # Before breaking blackhighlighter into its own app, I used to have these in
 # the urls like this:
 #
-#   url(r'^about/credits/$', direct_to_template, {'template': 'credits.html'}, 'credits-named_url'),
+#   url(r'^about/credits/$', direct_to_template, {'template': 'credits.html'}, 'credits_named_url'),
 # 
 # However, I switched this to exposing views from blackhighlighter instead of
 # templates.  The reason being there's no template loader parameterized by app,
