@@ -30,14 +30,17 @@
 		"use": "1.0.x"
 	},
 	"noAnalyze": true,
-	"devDependencies": {},
+	"devDependencies": {
+		"test": ">=0.0.5"
+	},
 	"bundleDependencies": [],
 	"license": "AGPL",
 	"engines": {
 		"node": "0.10.x"
 	},
 	"scripts": {
-		"start": "app.js"
+		"start": "app.js",
+		"test": "node test/all.js" }
 	},
 	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
 	"files": [

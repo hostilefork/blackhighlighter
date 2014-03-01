@@ -238,13 +238,6 @@ var mytags = require('./mytags');
 swig.setTag('url', mytags.url.parse, mytags.url.compile, mytags.url.ends);
 swig.setTag('comment', mytags.comment.parse, mytags.comment.compile, mytags.comment.ends);
 
-/*
-	// Make sure you aren't using Express's built-in "layout extending".
-	// This was commented out in the GitHub for Swig's Express example,
-	// but it seems to be necessary to get the {% block %} inheritance
-	// to work at all!
-	layout: false,
-*/
 
 app.locals({
 	// These are provided to every template context by default
@@ -254,7 +247,7 @@ app.locals({
 	NODE_VERSION: process.version
 
 	// optionals, set in your environment somewhere...
-	/* HOSTING_SERVICE: string */
+	// HOSTING_SERVICE: string
 });
 
 app.configure('development', function() {
