@@ -40,7 +40,7 @@
 	},
 	"scripts": {
 		"start": "app.js",
-		"test": "node test/all.js" }
+		"test": "node test/all.js"
 	},
 	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
 	"files": [

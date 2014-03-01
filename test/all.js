@@ -1,8 +1,10 @@
-assert = require('assert')
+// Just starting setting up testing for now; modularization will have to 
+// be different in order to do *useful* tests.  But Journey of 1,000 miles,
+// single step, all that...
 
-exports['test that stops execution on first failure'] = function() {
-  assert.equal(2 + 2, 5, 'assert fails and test execution stop here')
-  assert.equal(3 + 2, 5, 'will never pass this since test failed above')
+// using assert passed to the test function that just logs failures
+exports['test that logs all failures'] = function(assert) {
+  assert.equal(1 + 1, 2, 'assert failure is logged')
 }
 
 if (module == require.main) require('test').run(exports)
