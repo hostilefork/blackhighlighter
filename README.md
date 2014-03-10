@@ -19,6 +19,8 @@ Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.ho
 
 ### TECHNOLOGIES USED
 
+This is a placeholder for content that will ultimately become the credits page.
+
 **Server Side**
 
 * Node.JS
@@ -27,7 +29,7 @@ Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.ho
 
 * Express and Swig
 
-* Async.js
+* Q Promise Library
 
 *(Note: The server was initially written in Python using the Django web framework.  Due to the fact that verification code must run on both in the web browser and on the server, this was ported to Node.JS in order to share the JavaScript portions of the certificate code.  It was a largely simplifying change, and accelerated by the existence of a largely-compatible templating language to Django for Node.  Currently the Django code is frozen in the django-blackhighlighter subdirectory, for comparison purposes.  It will eventually be removed.)*
 
@@ -83,3 +85,7 @@ http://www.codinghorror.com/blog/2006/04/of-spaces-underscores-and-dashes.html
 JSON properties use underscores, consistent with the majority of popular APIs:
 
 http://elasticsearch-users.115913.n3.nabble.com/JSON-API-CamelCase-or-td695216.html
+
+At the moment I'm working on the Node.JS side with using the "comma first" convention.  To me, programs should be semantic graphs...and if they're textual then I think better ideas than commas exist (e.g. Rebol and Red).  But due to reasonings given here, I'm trying it out:
+
+https://gist.github.com/isaacs/357981

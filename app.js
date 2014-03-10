@@ -21,18 +21,6 @@
 //
 
 
-// Initially cloud foundry supported node.js 0.4 which required you
-// to include the following line at the top of your files:
-//
-//    require.paths.unshift('./node_modules');
-//
-// See my notes in this StackOverflow answer for how to get cloud
-// foundry to use node 0.6 via "vmc push" or manifest.yml
-//
-//     http://stackoverflow.com/a/10229138/211160
-
-
-
 // 
 // CONFIGURE REQUIREJS
 //
@@ -80,8 +68,8 @@ requirejs.config({
 	
 	// Note: do not include the '.js' at the end of these paths!
 	paths: {
-		'use': 'public/js/use',
-		'sha256': "public/js/sha256"
+		'use': 'public/js/use'
+		, 'sha256': "public/js/sha256"
 	},
 	
 	// https://github.com/tbranyen/use.js
@@ -89,8 +77,8 @@ requirejs.config({
 	use: {
 		'underscore': {
 			attach: '_'
-		},
-		'sha256': {
+		}
+		, 'sha256': {
 			attach: 'sha256export'
 		}
 	}
@@ -210,26 +198,19 @@ function resSendJsonForErr(res, err) {
 // I use Swig ( http://paularmstrong.github.com/swig/ ).
 //
 // I chose Express because it seemed like the de facto standard.  I chose Swig
-// because I do not care to edit the HTML portions of my templates as any kind of
-// shorthand (plain HTML is fine, thanks).  Also because of my previous
-// familiarity with Django--which Swig was designed to be compatible with--due
-// to shared philosophy:
+// because I was originally porting Blackhighlighter from Django, which Swig
+// was designed to be (mostly) compatible with--due to shared philosophy:
 //
-//     https://docs.djangoproject.com/en/dev/topics/templates/
+// https://docs.djangoproject.com/en/dev/topics/templates/
 //
 // Swig also fares well in terms of metrics when compared with the competition
 // (but do note this table was made by Swig's author):
 //
-//     http://paularmstrong.github.com/node-templates/
-//
-// To get Express integrated with Cloud Foundry I referred to slide 99 of
-// "Becoming a Node.js ninja on CloudFoundry":
-//
-//     http://www.slideshare.net/chanezon/cloud-foundry-open-tour-beijing-becoming-a-nodejs-ninja-on-cloud-foundry
+// http://paularmstrong.github.io/node-templates/
 //
 // To get Swig integrated with Express I referred to this sample code:
 //
-//     https://github.com/paularmstrong/swig/blob/master/examples/express/server.js
+// https://github.com/paularmstrong/swig/blob/master/examples/express/server.js
 //
 
 var express = require('express');
@@ -251,16 +232,26 @@ swig.setDefaults({
 //     http://paularmstrong.github.io/swig/docs/api/#setTag
 //     http://paularmstrong.github.io/swig/docs/extending/#tags
 var mytags = require('./mytags');
-swig.setTag('url', mytags.url.parse, mytags.url.compile, mytags.url.ends);
-swig.setTag('comment', mytags.comment.parse, mytags.comment.compile, mytags.comment.ends);
+swig.setTag(
+	'url'
+	, mytags.url.parse
+	, mytags.url.compile
+	, mytags.url.ends
+);
+swig.setTag(
+	'comment'
+	, mytags.comment.parse
+	, mytags.comment.compile
+	, mytags.comment.ends
+);
 
 
 app.locals({
 	// These are provided to every template context by default
-	LIBS_URL: '/public/js/',
-	BLACKHIGHLIGHTER_MEDIA_URL: '/public/',
-	PROJECT_MEDIA_URL: '/public/',
-	NODE_VERSION: process.version
+	LIBS_URL: '/public/js/'
+	, BLACKHIGHLIGHTER_MEDIA_URL: '/public/'
+	, PROJECT_MEDIA_URL: '/public/'
+	, NODE_VERSION: process.version
 
 	// optionals, set in your environment somewhere...
 	// HOSTING_SERVICE: string
@@ -325,19 +316,19 @@ app.use("/public", express.static(__dirname + '/public'));
 // No homepage for now
 app.get('/', function (req, res) {
 	res.send(
-		'Blackhighlighter app currently in private demo' +
-		'no public URLs...yet!'
+		'Blackhighlighter app currently in private demo'
+		+ 'no public URLs...yet!'
 	);
 });
 
 
 // No online documentation for now
 app.get('/docs/*', function(req, res) {
-	res.send('User documentation links have not been written yet, if you want to ' +
-		'learn more about this project, please visit ' +
-		'<a href="http://hostilefork.com/blackhighlighter">' +
-			'hostilefork.com/blackhighlighter' +
-		'</a>');
+	res.send('For now, if you want to '
+		+ 'learn more about this project, please visit '
+		+ '<a href="http://hostilefork.com/blackhighlighter">'
+		+	'hostilefork.com/blackhighlighter'
+		+ '</a>');
 });
 
 
@@ -370,62 +361,60 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 	});
 	
 	// No efficient way to do this?
-	//     http://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
+	// http://stackoverflow.com/questions/1295584/
 	var redactionIndexByHash = {};
 	_.each(revealsByHash, function(reveal, hash) {
 		redactionIndexByHash[hash] = 0;
 	});
 	
-	var resultHtml = '';
-	for (var spanIndex = 0; spanIndex < commit.spans.length; spanIndex++) {
-		var commitSpan = commit.spans[spanIndex];
-		
+	var result = '';
+	_.each(commit.spans, function (commitSpan) {
 		if (_.isString(commitSpan)) {
 			// line breaks must be converted to br nodes
-			var commitSpanSplit = commitSpan.split('\n');
-			resultHtml += commitSpanSplit[0];
-			for (var splitIndex = 1; splitIndex < commitSpanSplit.length; splitIndex++) {
-				resultHtml += '<br />';
-				resultHtml += commitSpanSplit[splitIndex];
-			}
+			result += commitSpan.split('\n').join('<br />');
 		} else {
 			var revealGroup = revealsByHash[commitSpan.sha256]; 
 			if (revealGroup) {
 				var reveal = revealGroup[0];
-				resultHtml += '<span class="placeholder revealed" title="' + commitSpan.sha256 + '">';
-				resultHtml += reveal.redactions[redactionIndexByHash[commitSpan.sha256]++];
-				resultHtml += '</span>'
+				result += 
+					'<span class="placeholder revealed" title="'
+					+ commitSpan.sha256 + '">'
+					+ reveal.redactions[redactionIndexByHash[commitSpan.sha256]]
+					+ '</span>';
+
+				redactionIndexByHash[commitSpan.sha256]++;
 			} else {				
 				var display_length = parseInt(commitSpan.display_length, 10);
-				var placeholderString = '';
-				for (var fillIndex = 0; fillIndex < display_length; fillIndex++) {
-					placeholderString += '?';
-				}
+
+				// http://stackoverflow.com/a/1877479/211160
+				var placeholderString = Array(display_length + 1).join('?');
 				
-				// REVIEW: use hex digest as title for query, or do something more clever?
-				// e.g. we could add a method onto the element or keep a sidestructure
-				var placeholder = '<span class="placeholder protected" title="' + commitSpan.sha256 + '">' +
-					placeholderString + '</span>';
-				resultHtml += placeholder;
+				// REVIEW: use hex digest as title for query, or do something
+				// more clever?  e.g. we could add a method onto the element
+				// or keep a sidestructure
+				var placeholder = 
+					'<span class="placeholder protected" title="'
+					+ commitSpan.sha256 + '">'
+					+ placeholderString + '</span>';
+
+				result += placeholder;
 			}
 		}
-	}
-	return resultHtml;
+	});
+	return result;
 }
 
 
 function generateCertificateStubsFromCommit(commit) {
 	
 	var mapSha256ToTrue = {};
-	for (var spanIndex = 0; spanIndex < commit.spans.length; spanIndex++) {
-		var commitSpan = commit.spans[spanIndex];
-		
+	_.each(commit.spans, function (commitSpan) {		
 		if (_.isString(commitSpan)) {
 			// Not redacted.
 		} else {
 			mapSha256ToTrue[commitSpan.sha256] = true;
 		}
-	}
+	});
 			
 	var result = [];
 	_.each(mapSha256ToTrue, function(trueValue, key) {
@@ -451,8 +440,7 @@ function showOrVerify(req, res, tabstate) {
 		// 2: Get commits and reveals collections in parallel
 		return [
 			Q.ninvoke(conn, 'collection', 'commits')
-		,
-			Q.ninvoke(conn, 'collection', 'reveals')
+			, Q.ninvoke(conn, 'collection', 'reveals')
 		];
 
 	}).spread(function (commitsCollection, revealsCollection) {
@@ -462,14 +450,15 @@ function showOrVerify(req, res, tabstate) {
 		// REVIEW: necessary to use ObjectID conversion?
 		// http://stackoverflow.com/questions/4902569/
 		return [
-			Q.ninvoke(commitsCollection, 'find',
-				{'commit_id': commit_id},
-				{limit: 1, sort:[['_id', 'ascending']]}
+			Q.ninvoke(
+				commitsCollection, 'find'
+				, {'commit_id': commit_id}
+				, {limit: 1, sort:[['_id', 'ascending']]}
 			)
-		,
-			Q.ninvoke(revealsCollection, 'find', 
-				{'commit_id': commit_id},
-				{sort:[['sha256', 'ascending']]}
+			, Q.ninvoke(
+				revealsCollection, 'find'
+				, {'commit_id': commit_id}
+				, {sort:[['sha256', 'ascending']]}
 			)
 		];
 
@@ -478,8 +467,7 @@ function showOrVerify(req, res, tabstate) {
 		// 4: Convert the result cursors to arrays
 		return [
 			Q.ninvoke(commitsCursor, 'toArray')
-		,
-			Q.ninvoke(revealsCursor, 'toArray')
+			, Q.ninvoke(revealsCursor, 'toArray')
 		];
 
 	}).spread(function (commitsArray, revealsArray) {
@@ -498,13 +486,13 @@ function showOrVerify(req, res, tabstate) {
 
 		// 6: Generate response HTML
 		res.render('read', {
-			MAIN_SCRIPT: 'read',
-			commit_id: commit_id,
-			all_certificates: generateCertificateStubsFromCommit(commit),
-			tabstate: tabstate,
-			commit: commit,
-			revealed_certificates: reveals,
-			public_html: generateHtmlFromCommitAndReveals(commit, reveals)
+			MAIN_SCRIPT: 'read'
+			, commit_id: commit_id
+			, all_certificates: generateCertificateStubsFromCommit(commit)
+			, tabstate: tabstate
+			, commit: commit
+			, revealed_certificates: reveals
+			, public_html: generateHtmlFromCommitAndReveals(commit, reveals)
 		});
 
 	}).catch(function (err) {
@@ -533,7 +521,6 @@ app.get('/show/:commit_id([0-9a-f]+)$', function (req, res) {
 
 
 app.post('/commit/$', function (req, res) {
-	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
 
 	// Difference between req.param and req.params:
@@ -627,7 +614,6 @@ app.post('/commit/$', function (req, res) {
 
 
 app.post('/reveal/$', function (req, res) {
-	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
 
 	// The /reveal/ HTTP POST handler once would take an array to allow you
@@ -686,8 +672,8 @@ app.post('/reveal/$', function (req, res) {
 	var claimedHash = common.claimedHashForReveal(reveal);
 	if (actualHash != claimedHash) {
 		throw ClientError(
-			'Actual reveal content hash is ' + contentHash +
-			' while claimed hash is ' + claimedHash
+			'Actual reveal content hash is ' + contentHash
+			+ ' while claimed hash is ' + claimedHash
 		);
 	}
 
@@ -706,26 +692,25 @@ app.post('/reveal/$', function (req, res) {
 		// 2: Get commits and reveals collections in parallel
 		return [
 			Q.ninvoke(conn, 'collection', 'commits')
-		,
-			Q.ninvoke(conn, 'collection', 'reveals')
+			, Q.ninvoke(conn, 'collection', 'reveals')
 		];
 
 	}).spread(function (commitsCollection, revealsCollection) {
 
 		// 3: Query for specific commit and reveals objects in parallel
+
+		// REVIEW: necessary to use ObjectID conversion?
+		// http://stackoverflow.com/questions/4902569/
+
 		return [
 			revealsCollection
-		,
-			// REVIEW: necessary to use ObjectID conversion?
-			// http://stackoverflow.com/questions/4902569/
-			Q.ninvoke(commitsCollection, 'find',
-				{'commit_id': commit_id},
-				{limit: 1, sort:[['_id', 'ascending']]}
+			, Q.ninvoke(commitsCollection, 'find'
+				, {'commit_id': commit_id}
+				, {limit: 1, sort:[['_id', 'ascending']]}
 			)
-		,
-			Q.ninvoke(revealsCollection, 'find', 
-				{'commit_id': commit_id},
-				{sort:[['sha256', 'ascending']]}
+			, Q.ninvoke(revealsCollection, 'find' 
+				, {'commit_id': commit_id}
+				, {sort:[['sha256', 'ascending']]}
 			)
 		];
 
@@ -734,10 +719,8 @@ app.post('/reveal/$', function (req, res) {
 		// 4: Convert the result cursors to arrays
 		return [
 			revealsCollection
-		,
-			Q.ninvoke(commitsCursor, 'toArray')
-		,
-			Q.ninvoke(oldRevealsCursor, 'toArray')
+			, Q.ninvoke(commitsCursor, 'toArray')
+			, Q.ninvoke(oldRevealsCursor, 'toArray')
 		];
 
 	}).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
@@ -762,16 +745,16 @@ app.post('/reveal/$', function (req, res) {
 
 		var commit = commitsArray[0];
 
-		// Now make sure the hash matches an existing span hash
+		// Now make sure the hash matches at least one existing span hash
 		// Note: Some spans are strings!  So .sha256 is not defined for them.
 		var matchedSpan = null;
-		_.each(commit.spans, function(span) {
+		_.every(commit.spans, function(span) {
 			if (span.sha256 == reveal.sha256) {
-				if (matchedSpan) {
-					throw new Error("Duplicate span hashes in " + commit_id);
-				}
-				matchedSpan = commit;
+				matchedSpan = span;
+				// http://stackoverflow.com/a/8779920/211160
+				return false;
 			}
+			return true;
 		});
 		if (!matchedSpan) {
 			throw new ClientError("Reveal's hash matches no span in commit.");
