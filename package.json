@@ -8,7 +8,7 @@
 		"www.blackhighlighter.org"
 	],
 	"preferGlobal": "false",
-	"version": "0.0.1-51",
+	"version": "0.0.1-82",
 	"author": "Hostile Fork <hostilefork@gmail.com>",
 	"description": "protected public discussion server for node.js",
 	"repository": {
@@ -18,7 +18,9 @@
 	"keywords": [
 		"server",
 		"cryptography",
-		"redaction"
+		"redaction",
+		"transparency",
+		"accountability"
 	],
 	"dependencies": {
 		"requirejs": "*",
@@ -26,7 +28,7 @@
 		"swig": "*",
 		"mongodb": "*",
 		"underscore": "*",
-		"step": "0.0.x",
+		"q": "*",
 		"use": "1.0.x"
 	},
 	"noAnalyze": true,

@@ -1,3 +1,5 @@
+"use strict";
+
 //
 // app.js - blackhighlighter main Node.JS server-side application code 
 // Copyright (C) 2012-2014 HostileFork.com
@@ -108,15 +110,11 @@ var _ = require('underscore')._;
 
 // The default way of coding in node.js with asynchronous callbacks
 // produces a new level of nesting and indentation each time you add a
-// step to your process.  Using the Step library you can cleanly
-// express sequential asynchronous operations, and it has support for
-// spawning several parallel operations and waiting until all of them
-// have returned to move on to the next step.  It also catches
-// exceptions for you to keep the node server from going down.
-//
-//  https://github.com/creationix/step
-var Step = require('step');
-
+// step to your process.  Originally I used the Step library to address this,
+// but decided to convert to the Q Promises library instead:
+// 
+// http://stackoverflow.com/questions/22138759/
+var Q = require('q');
 
 
 // 
@@ -157,29 +155,47 @@ var mongoConnectURI = (
 //
 // ERROR HANDLING
 //
-// Node is unusual because if its single-threaded server crashes in any given handler,
-// it will take down the whole server process.  A general error handling strategy is
-// needed.  How do we deal with internally-generated exceptions and errors, as 
-// well as exceptions thrown by library code?
+// Node is unusual because if its single-threaded-server crashes in any given
+// handler, it will take down the whole server process.  A general error
+// handling strategy is needed.  How do we deal with exceptions that are thrown
+// on invalid inputs from the client, vs. internal errors.
 //
-// http://stackoverflow.com/questions/5816436/error-handling-in-asynchroneous-node-js-calls
+// http://stackoverflow.com/questions/5816436/
 //
-function SuppressableError() {
-	// http://www.nczonline.net/blog/2009/03/10/the-art-of-throwing-javascript-errors-part-2/
-	this.message = "This Error Should Be Suppressed, see SuppressableError() in app.js";
-}
-SuppressableError.prototype = new Error();
+// For now just strings, but we want the stack trace in there too
+//
+// http://www.devthought.com/2011/12/22/a-string-is-not-an-error/
+//
+// See note here about how arguments.callee is not to be used in strict mode:
+//
+// https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
+//
+function BlackhighlighterError(msg) {
+	Error.call(this);
+	Error.captureStackTrace(this, BlackhighlighterError);
+	this.message = msg;
+	this.name = 'BlackhighlighterError';
+};
+BlackhighlighterError.prototype.__proto__ = Error.prototype;
 
-// We call this in each step of a Step() besides the first.  Should I tweak or derive
-// from Step() so that this is done automatically?  If so, what if a step wanted to
-// do at least some of its own exception handling? 
-function handleResErr(res, err) {
-	if (err) {
-		if (!(err instanceof SuppressableError)) {
-			console.log("Caught error: " + JSON.stringify(err));			
-			res.json({error_handler: 'handleError() in app.js', error_data: err});
-		}
-		throw new SuppressableError;
+function resSendJsonForErr(res, err) {
+
+	if (!err) {
+		// Legacy from Step; changing to not call this when there is no error
+		throw new Error("resSendJsonForErr called without an error parameter");
+	} 
+
+	if (err instanceof Error) {
+		console.error(err.stack);
+	} else {
+		console.warn("Non-error subclass thrown, bad style...");
+	}
+
+	if (err instanceof BlackhighlighterError) {
+		console.error(err.message);
+		res.json(400, { error: err.toString() });
+	} else {
+		res.json(500, { error: err.toString() });
 	}
 }
 
@@ -188,9 +204,9 @@ function handleResErr(res, err) {
 // EXPRESS AND SWIG SETUP
 //
 // Express is a layer which provides things like URL redirects and content 
-// negotiation for the web ( http://expressjs.com/ ).  It does not prescribe any
-// particular "templating engine", which lets you author web content as a hybrid
-// of boilerplate with dynamic portions weaved in from code.  For that
+// negotiation for the web ( http://expressjs.com/ ).  It does not prescribe
+// any particular "templating engine", which lets you author web content as a
+// hybrid of boilerplate with dynamic portions weaved in from code.  For that
 // I use Swig ( http://paularmstrong.github.com/swig/ ).
 //
 // I chose Express because it seemed like the de facto standard.  I chose Swig
@@ -302,13 +318,18 @@ var common = requirejs('public/client-server-common');
 //
 
 // Serve out all files in the public directory statically
-// http://stackoverflow.com/questions/5924072/express-js-cant-get-my-static-files-why
+// http://stackoverflow.com/questions/5924072/
 app.use("/public", express.static(__dirname + '/public'));
+
 
 // No homepage for now
 app.get('/', function (req, res) {
-	res.send('Blackhighlighter app currently in private demo, no public URLs...yet!');
+	res.send(
+		'Blackhighlighter app currently in private demo' +
+		'no public URLs...yet!'
+	);
 });
+
 
 // No online documentation for now
 app.get('/docs/*', function(req, res) {
@@ -319,6 +340,7 @@ app.get('/docs/*', function(req, res) {
 		'</a>');
 });
 
+
 // The /write/ handler is relatively simple, as document authoring happens
 // entirely in JavaScript on the client's machine.  The /commit/ HTTP POST
 // handler does the actual server-side work of saving the document.
@@ -326,37 +348,41 @@ app.get('/write/$', function (req, res) {
     res.render('write', { MAIN_SCRIPT: "write" });
 });
 
+
 function generateHtmlFromCommitAndReveals(commit, reveals) {
-	// u'\u00A0' is the non breaking space, should be preserved in db strings via UTF8
+	// u'\u00A0' is the non breaking space
+	// ...it should be preserved in db strings via UTF8
 	
 	// REVIEW: for each one that has been unredacted make
 	// a hovery bit so that you can get a tip on when it was made public?
 	// how will auditing be done?
 
 	// http://documentcloud.github.com/underscore/#groupBy
-	var revealsGroupedByHash = _.groupBy(reveals, function(reveal) { return reveal.sha256; });
+	var revealsByHash = _.groupBy(reveals, function(reveal) { 
+		return reveal.sha256;
+	});
 	
 	// No efficient way to do this?
 	//     http://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
 	var redactionIndexByHash = {};
-	_.each(revealsGroupedByHash, function(reveal, hash) {
+	_.each(revealsByHash, function(reveal, hash) {
 		redactionIndexByHash[hash] = 0;
 	});
 	
 	var resultHtml = '';
-	for (var commitSpanIndex = 0; commitSpanIndex < commit.spans.length; commitSpanIndex++) {
-		var commitSpan = commit.spans[commitSpanIndex];
+	for (var spanIndex = 0; spanIndex < commit.spans.length; spanIndex++) {
+		var commitSpan = commit.spans[spanIndex];
 		
 		if (_.isString(commitSpan)) {
 			// line breaks must be converted to br nodes
 			var commitSpanSplit = commitSpan.split('\n');
 			resultHtml += commitSpanSplit[0];
-			for (var commitSpanSplitIndex = 1; commitSpanSplitIndex < commitSpanSplit.length; commitSpanSplitIndex++) {
+			for (var splitIndex = 1; splitIndex < commitSpanSplit.length; splitIndex++) {
 				resultHtml += '<br />';
-				resultHtml += commitSpanSplit[commitSpanSplitIndex];
+				resultHtml += commitSpanSplit[splitIndex];
 			}
 		} else {
-			var revealGroup = revealsGroupedByHash[commitSpan.sha256]; 
+			var revealGroup = revealsByHash[commitSpan.sha256]; 
 			if (revealGroup) {
 				var reveal = revealGroup[0];
 				resultHtml += '<span class="placeholder revealed" title="' + commitSpan.sha256 + '">';
@@ -380,11 +406,12 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 	return resultHtml;
 }
 
+
 function generateCertificateStubsFromCommit(commit) {
 	
 	var mapSha256ToTrue = {};
-	for (var commitSpanIndex = 0; commitSpanIndex < commit.spans.length; commitSpanIndex++) {
-		var commitSpan = commit.spans[commitSpanIndex];
+	for (var spanIndex = 0; spanIndex < commit.spans.length; spanIndex++) {
+		var commitSpan = commit.spans[spanIndex];
 		
 		if (_.isString(commitSpan)) {
 			// Not redacted.
@@ -400,204 +427,279 @@ function generateCertificateStubsFromCommit(commit) {
 	return result;
 }
 
+
 function showOrVerify(req, res, tabstate) {
-	Step(
-		function connectToDatabaseWithAuthorization() {
-			console.log(mongoConnectURI);
-			mongodb.connect(mongoConnectURI, this);
-		},
-		function getCommitAndRevealsCollections(err, conn) {
-			handleResErr(res, err);
-			
-			conn.collection('commits', this.parallel());
-			conn.collection('reveals', this.parallel());
-		},
-		function queryForCommitAndReveals(err, commitsColl, revealsColl) {
-			handleResErr(res, err);
+	Q.try(function() {
 
-			// REVIEW: necessary to use ObjectID conversion?
-			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
-			commitsColl.find(
-				{'commit_id': req.params.commit_id},
-				{limit: 1, sort:[['_id', 'ascending']]},
-				this.parallel()
-			);
-			revealsColl.find(
-				{'commit_id': req.params.commit_id},
-				{sort:[['sha256', 'ascending']]},
-				this.parallel()
-			);
-		},
-		function convertResultCursors(err, commitCursor, revealsCursor) {
-			handleResErr(res, err);
-			
-			commitCursor.toArray(this.parallel());
-			revealsCursor.toArray(this.parallel());
-		},
-		function generateResponseHtml(err, commitArray, revealsArray) {
-			handleResErr(res, err);
+		// 1: Connect to database with authorization
+		return Q.ninvoke(mongodb, 'connect', mongoConnectURI);
 
-			var commit = undefined;
-			if (commitArray.length == 0) {
-				// NOTE: Raise a 404 if the letter ID isn't found in the database?
-				throw "No commit with requested _id";
-			} else if (commitArray.length > 1) {
-				// NOTE: Commits should be unique, that is enforced by the DB?
-				throw "Multiple commits with same _id.";
-			} else {
-				commit = commitArray[0];
-			}
-			
-			var reveals = revealsArray;
-			// is any checking necessary?
-			
-			res.render('read', {
-				MAIN_SCRIPT: 'read',
-				commit_id: req.params.commit_id,
-				all_certificates: generateCertificateStubsFromCommit(commit),
-				tabstate: tabstate,
-				commit: commit,
-				revealed_certificates: reveals,
-				public_html: generateHtmlFromCommitAndReveals(commit, reveals)
-			});
+	}).then(function (conn) {
+
+		// 2: Get commits and reveals collections in parallel
+		return [
+			Q.ninvoke(conn, 'collection', 'commits')
+		,
+			Q.ninvoke(conn, 'collection', 'reveals')
+		];
+
+	}).spread(function (commitsCollection, revealsCollection) {
+
+		// 3: Query for specific commit and reveals objects in parallel
+		//
+		// REVIEW: necessary to use ObjectID conversion?
+		// http://stackoverflow.com/questions/4902569/
+		return [
+			Q.ninvoke(commitsCollection, 'find',
+				{'commit_id': req.params.commit_id},
+				{limit: 1, sort:[['_id', 'ascending']]}
+			)
+		,
+			Q.ninvoke(revealsCollection, 'find', 
+				{'commit_id': req.params.commit_id},
+				{sort:[['sha256', 'ascending']]}
+			)
+		];
+
+	}).spread(function (commitsCursor, revealsCursor) {
+
+		// 4: Convert the result cursors to arrays
+		return [
+			Q.ninvoke(commitsCursor, 'toArray')
+		,
+			Q.ninvoke(revealsCursor, 'toArray')
+		];
+
+	}).spread(function (commitsArray, revealsArray) {
+
+		// 5: Check the arrays for validity and extract needed data
+		if (commitsArray.length == 0) {
+
+			// NOTE: Raise a 404 if the letter isn't found in the database?
+			throw new BlackhighlighterError("No commit with requested _id");
+
+		} else if (commitsArray.length > 1) {
+
+			// NOTE: Commits should be unique, that is enforced by the DB?
+			throw new BlackhighlighterError("Multiple commits with same _id.");
+
 		}
-	);
+
+		// REVIEW: is the length the only thing we need to check?
+		return [commitsArray[0], revealsArray];
+
+	}).spread(function (commit, reveals) {
+
+		// 6: Generate response HTML
+		res.render('read', {
+			MAIN_SCRIPT: 'read',
+			commit_id: req.params.commit_id,
+			all_certificates: generateCertificateStubsFromCommit(commit),
+			tabstate: tabstate,
+			commit: commit,
+			revealed_certificates: reveals,
+			public_html: generateHtmlFromCommitAndReveals(commit, reveals)
+		});
+
+	}).catch(function (err) {
+
+		// REVIEW: We weren't asked for JSON.  We were asked for HTML.
+		// This is not the right thing to do in case of an error here!
+
+		resSendJsonForErr(res, err);
+
+	}).finally(function () {
+
+		// add general cleanup code here if necessary
+
+	}).done();
 }
+
 
 app.get('/verify/:commit_id([0-9a-f]+)$', function (req, res) {
 	showOrVerify(req, res, 'verify');
 });
 
+
 app.get('/show/:commit_id([0-9a-f]+)$', function (req, res) {
 	showOrVerify(req, res, 'show');
 });
 
+
 app.post('/commit/$', function (req, res) {
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
-			
-	Step(
-		function connectToDatabaseWithAuthorization() {
-			mongodb.connect(mongoConnectURI, this);
-		},
-		function getCommitCollection(err, conn) {
-			handleResErr(res, err);
-			conn.collection('commits', this);
-		},
-		function addCommitToCollection(err, coll) {
-			handleResErr(res, err)
-			// second parameter is default
-			var commit = JSON.parse(req.param('commit', null));
-			
-			// We should verify that what we've been given fits the proper form for
-			// a commit, and doesn't have extra garbage being stored in the database.
-			// At the moment I'm just "trusting" that a well formed commit was given
-			// to us, which turns us into a generic JSON object store.
-			
-			// should we check to make sure the date in the request matches so we are on
-			// the same page as the client?				
-			
-			// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
-			commit.commit_date = requestTime;
-			commit.commit_id = common.makeIdFromCommit(commit);
-			
-			// "safe" tells the JSON mongodb driver to do an added check on the
-			// getLastError to make sure that the asynchronous insert succeeded
-			//     http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
-			coll.insert(commit, {safe: true}, this);
-		},
-		function respondWithShowAndVerifyUrlsInJson(err, records) {
-			handleResErr(res, err);
 
-			// res.send(common.canonicalJsonFromCommit(records[0]), { 'Content-Type': 'application/json' });
-			
-			res.json({
-				commit_date: records[0].commit_date
-			});
-		}
-	);
+	// Second parameter to JSON.parse is if you want a "default" result
+	var commit = JSON.parse(req.param('commit', null));
+	
+	Q.try(function() {
+
+		// 1: Connect to database with authorization
+		return Q.ninvoke(mongodb, 'connect', mongoConnectURI);
+
+	}).then(function (conn) {
+
+		// 2: Get the commits collection from the database
+		return Q.ninvoke(conn, 'collection', 'commits');
+
+	}).then(function (coll) {
+
+		// 3: Add commit to collection
+		//
+		// We should verify that what we've been given fits the proper form for
+		// a commit, with no extra garbage being stored in the database.
+		// At the moment I'm just "trusting" that a well formed commit was given
+		// to us, which turns us into a generic JSON object store.
+		//
+		// (Though should we check to make sure the date in the request matches
+		// so we are on the same page as the client?)
+		//
+		// mongodb JS driver knows about Date()?
+		// or do we need to use the .toJSON() method?
+		commit.commit_date = requestTime;
+		commit.commit_id = common.makeIdFromCommit(commit);
+
+		// "safe" tells the JSON mongodb driver to do an added check on the
+		// getLastError to make sure that the asynchronous insert succeeded
+		//
+		// http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
+		return Q.ninvoke(coll, "insert", commit, {safe: true});
+
+	}).then(function (records) {
+
+		// 4. Give back "Show" and "Verify" URLs in JSON
+		res.json({
+			commit_date: records[0].commit_date
+		});
+
+	}).catch(function (err) {
+
+		resSendJsonForErr(res, err);
+
+	}).finally(function () {
+
+		// add general cleanup code here if necessary
+
+	}).done();
 });
+
 
 app.post('/reveal/$', function (req, res) {
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
 
-	Step(
-		function connectToDatabaseWithAuthorization() {
-			mongodb.connect(mongoConnectURI, this.parallel());
-		},
-		function getCommitAndRevealsCollections(err, conn) {
-			handleResErr(res, err);
-			
-			conn.collection('commits', this.parallel());
-			conn.collection('reveals', this.parallel());
-		},
-		function queryForCommitAndOldReveals(err, commitsColl, revealsColl) {
-			handleResErr(res, err);
+	//
+	// The /reveal/ HTTP POST handler historically accepted an array
+	// of reveals, because there was no selective UI for picking which
+	// reveals that had been locally entered were to be shown.
+	//
 
-			this.parallel()(null, revealsColl);
+	// second parameter is default
+	var newReveals = JSON.parse(req.param('reveals', null));
+
+	Q.try(function() {
+
+		// 1: Connect to database with authorization
+		return Q.ninvoke(mongodb, 'connect', mongoConnectURI);
+
+	}).then(function (conn) {
+
+		// 2: Get commits and reveals collections in parallel
+
+		return [
+			Q.ninvoke(conn, 'collection', 'commits')
+		,
+			Q.ninvoke(conn, 'collection', 'reveals')
+		];
+
+	}).spread(function (commitsCollection, revealsCollection) {
+
+		// 3: Query for specific commit and reveals objects in parallel
+		return [
+			revealsCollection
+		,
 			// REVIEW: necessary to use ObjectID conversion?
-			// http://stackoverflow.com/questions/4902569/node-js-mongodb-select-document-by-id-node-mongodb-native
-			commitsColl.find(
+			// http://stackoverflow.com/questions/4902569/
+			Q.ninvoke(commitsCollection, 'find',
 				{'commit_id': req.params.commit_id},
-				{limit: 1, sort:[['_id', 'ascending']]},
-				this.parallel()
-			);
-			revealsColl.find(
+				{limit: 1, sort:[['_id', 'ascending']]}
+			)
+		,
+			Q.ninvoke(revealsCollection, 'find', 
 				{'commit_id': req.params.commit_id},
-				{sort:[['sha256', 'ascending']]},
-				this.parallel()
-			);
-		},
-		function convertResultCursors(err, revealsColl, commitCursor, oldRevealsCursor) {
-			handleResErr(res, err);
+				{sort:[['sha256', 'ascending']]}
+			)
+		];
+
+	}).spread(function (revealsCollection, commitsCursor, oldRevealsCursor) {
+
+		// 4: Convert the result cursors to arrays
+		return [
+			revealsCollection
+		,
+			Q.ninvoke(commitsCursor, 'toArray')
+		,
+			Q.ninvoke(oldRevealsCursor, 'toArray')
+		];
+
+	}).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
+
+		// 5: Add new reveals if they pass verification
+		_.each(newReveals, function(newReveal) {
+			// mongodb JS driver knows about Date(), or do we need to use
+			// the .toJSON() method?
+			newReveal.reveal_date = requestTime;
 			
-			this.parallel()(null, revealsColl);
-			commitCursor.toArray(this.parallel());
-			oldRevealsCursor.toArray(this.parallel());
-		},
-		function addNewRevealsIfTheyPassVerification(err, revealsColl, commitArray, oldRevealsArray) {
-			handleResErr(res, err);
+			// The reveal process needs to check to make sure the 
+			// certificate is valid before adding it to the reveal database.
+			// Ideally this code would be shared with the code in the
+			// client.  For the moment I'm less concerned about that issue
+			// than figuring out how MongoDB works with Node.js...
+			// first...
 
-			//
-			// The /reveal/ HTTP POST handler historically accepted an array of reveals,
-			// because there was no selective UI for picking which reveals that had been
-			// locally entered were to be shown.
-			//
+			// THIS REALLY NEEDS TO BE DONE!  The client will catch it, but
+			// people shouldn't spam with bad reveals.
 
-			// second parameter is default
-			var newReveals = JSON.parse(req.param('reveals', null));
+			// Is string matching not workable, and is it actually necessary 
+			// to convert to the ObjectID BSON type to properly run the join query?
+			if (false) {
+				newReveal.commit_id = new mongodb.DBRef(
+					'commits', new mongodb.ObjectID(reveal.commit_id)
+				);
+			}
+		});
 
-			_.each(newReveals, function(newReveal) {
-				// mongodb JS driver knows about Date() or do we need to use the .toJSON() method?
-				newReveal.reveal_date = requestTime;
-				
-				// The reveal process needs to check to make sure the certificate is valid before
-				// adding it to the reveal database.  Ideally this code would be shared with the
-				// code in the client.  For the moment I'm less concerned about that issue than
-				// figuring out how MongoDB works with Node.js so trying to close the query loop
-				// first...
-
-				// Is string matching not workable, and is it actually necessary 
-				// to convert to the ObjectID BSON type to properly run the join query?
-				// newReveal.commit_id = new mongodb.DBRef('commits', new mongodb.ObjectID(reveal.commit_id)); 
-			});
-
-			this.parallel()(null, newReveals.length);
-			
+		return [
+			newReveals.length
+		,
 			// "safe" tells the JSON mongodb driver to do an added check on the
 			// getLastError to make sure that the asynchronous insert succeeded
-			//     http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
-			revealsColl.insert(newReveals, {safe: true}, this.parallel());
-		},
-		function respondWithInsertionCountAsJson(err, numReveals) {
-			handleResErr(res, err);
+			//
+			// http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
+			Q.ninvoke(revealsCollection, 'insert', newReveals, {safe: true})
+		];
 
-			res.json({
-				insertion_count: numReveals
-			});
-		}
-	);
+	}).spread(function (numReveals, insertedRecords) {
+
+		// 6: Respond with insertion count as JSON
+		//
+		// The pre-promise code ignored the inserted records, and just told us
+		// the length requested, assuming success.  Should it check that we got
+		// what we expected?
+		res.json({
+			insertion_count: numReveals
+		});
+
+	}).catch(function (err) {
+
+		resSendJsonForErr(res, err);
+
+	}).finally(function () {
+
+		// add general cleanup code here if necessary
+
+	}).done();
 });
 
 
@@ -605,8 +707,8 @@ app.post('/reveal/$', function (req, res) {
 //
 // START LISTENING FOR SERVER REQUESTS
 //
-// Once we've got all the handlers set up, we can tell Express to start listening
-// for connections.
+// Once we've got all the handlers set up, we can tell Express to start
+// listening for connections.
 //
 
 app.listen(port, host);

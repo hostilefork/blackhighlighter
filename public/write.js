@@ -936,28 +936,24 @@ define([
 			error: function (XMLHttpRequest, textStatus, errorThrown) {
 				finalizeCommitUI();
 				
-				// "this" contains the options for this ajax request
-				if (errorThrown) {
-					throw errorThrown;
-				} else {
-					switch (textStatus) {
-						case 'timeout':
-							notifyErrorOnTab('commit', 'The request timed out.  Check your network connection and try again.');
-							break;
-							
-						case 'error':
-							notifyErrorOnTab('commit', 'There was an error on the server side during your request.');
-							break;
-							
-						case 'notmodified':
-						case 'parsererror':
-							notifyErrorOnTab('commit', 'Unexpected error code during Ajax POST: ' + textStatus);
-							break;
-							
-						default:
-							notifyErrorOnTab('Unexpected error code during Ajax POST: ' + textStatus);
-							break;
-					}
+				// Note that "this" contains the options for this ajax request
+				switch (textStatus) {
+					case 'timeout':
+						notifyErrorOnTab('commit', 'The request timed out.  Check your network connection and try again.');
+						break;
+						
+					case 'error':
+						notifyErrorOnTab('commit', 'There was an error on the server side during your request.');
+						break;
+						
+					case 'notmodified':
+					case 'parsererror':
+						notifyErrorOnTab('commit', 'Unexpected error code during Ajax POST: ' + textStatus);
+						break;
+						
+					default:
+						notifyErrorOnTab('Unexpected error code during Ajax POST: ' + textStatus);
+						break;
 				}
 			}
 		});
