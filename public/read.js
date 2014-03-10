@@ -167,32 +167,26 @@ define([
 	
 	BlackhighlighterRead.addReveal = function(reveal, server) {
 
-		var contents = reveal.salt;
-		var numRedactionsInReveal = 0;
-		for (var redactionSpanIndex = 0; redactionSpanIndex < reveal.redactions.length; redactionSpanIndex++) {
-			contents += reveal.redactions[redactionSpanIndex];
-			numRedactionsInReveal++;		
-		}
-		
-		var contentHash = SHA256(contents);
-		var claimedHash = reveal.sha256;
-		if (contentHash != claimedHash) {
+		var actualHash = common.actualHashForReveal(reveal);
+		var claimedHash = common.claimedHashForReveal(reveal);
+
+		if (actualHash != claimedHash) {
 			throw 'Invalid certificate: content hash is ' + contentHash + ' while claimed hash is ' + claimedHash;
 		}
 
 		var numPlaceholdersForKey = 0;
-		for (var commitSpanIndex = 0; commitSpanIndex < Globals.commit.spans.length; commitSpanIndex++) {
-			var commitSpan = Globals.commit.spans[commitSpanIndex];
+		_.each(Globals.commit.spans, function (commitSpan) {
 			if (commitSpan.sha256 == claimedHash) {
 				numPlaceholdersForKey++;
 			}
-		}
+		});
 		// warn user if certificate is useless, need better UI
 		if (numPlaceholdersForKey === 0) {
 			throw 'Certificate does not match any placeholders.';
 		}
-		if (numPlaceholdersForKey != numRedactionsInReveal) {
-			throw 'Certificate contains ' + numRedactionsInReveal + ' redactions for key when letter needs ' + 
+		if (numPlaceholdersForKey != reveal.redactions.length) {
+			throw 'Certificate contains ' + reveal.redactions.length +
+				' redactions for key when letter needs ' + 
 				numPlaceholdersForKey + ' for that key';
 		}
 	
@@ -718,16 +712,31 @@ define([
 		finalizeRevealUI.timerId = window.setTimeout(finalizeRevealUI.timerCallback, 3000);
 
 		Globals.successfulReveal = false;
+
+		// If there is more than one reveal in the UI, we'd need to have a
+		// way to indicate which one we are revealing in the request.  (or
+		// make multiple requests if we intend to do more than one).  For
+		// protocol simplicity in error reporting, the server now accepts
+		// only one reveal per XMLHttpRequest.
+		if (_.keys(Globals.localRevealsByHash).length != 1) {
+			throw 'Multiple reveals feature not currently supported by client';
+		}
 		
 		// http://docs.jquery.com/Ajax/jQuery.ajax
 		$.ajax({
-			type: 'POST',
-			dataType: 'json', // expected response type from server
-			url: common.makeRevealUrl(PARAMS.base_url),
+			type: 'POST'
+		,
+			dataType: 'json' // expected response type from server
+		,
+			url: common.makeRevealUrl(PARAMS.base_url)
+		,
+			// sends as UTF-8
 			data: {
-				// REVIEW: used to sort array by hash, does this matter?
-				'reveals': JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ') // sends as UTF-8
-			},
+				reveal: JSON.stringify(
+					_.values(Globals.localRevealsByHash)[0], null, ' '
+				)
+			}
+		,
 			success: function(resultJson) {
 				if (resultJson.error) {
 					notifyErrorOnTab('reveal', resultJson.error.msg);
@@ -738,33 +747,31 @@ define([
 				if (finalizeRevealUI.timerId === null) {
 					finalizeRevealUI();
 				}
-			},
+			}
+		,
 			error: function (XMLHttpRequest, textStatus, errorThrown) {
 				finalizeRevealUI();
 				
 				// "this" contains the options for this ajax request
-				if (errorThrown) {
-					notifyErrorOnTab('The jQuery AJAX subsystem threw an error: ' + errorThrown);
-				} else {
-					switch (textStatus) {
-						case 'timeout':
-							notifyErrorOnTab('reveal', 'The POST reveal request timed out on ' + PARAMS.reveal_url + 
-								' --- check your network connection and try again.');
-							break;
-							
-						case 'error':
-							notifyErrorOnTab('reveal', 'There was an error with the web server during your request.');
-							break;
-							
-						case 'notmodified':
-						case 'parsererror':
-							notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
-							break;
-							
-						default:
-							notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
-							break;
-					}
+
+				switch (textStatus) {
+					case 'timeout':
+						notifyErrorOnTab('reveal', 'The POST reveal request timed out on ' + PARAMS.reveal_url + 
+							' --- check your network connection and try again.');
+						break;
+						
+					case 'error':
+						notifyErrorOnTab('reveal', 'There was an error with the web server during your request.');
+						break;
+						
+					case 'notmodified':
+					case 'parsererror':
+						notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
+						break;
+						
+					default:
+						notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
+						break;
 				}
 			}
 		});

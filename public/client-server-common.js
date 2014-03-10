@@ -130,10 +130,10 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 		//
 		// DATA FORMAT NOTES
 		//
-		// "PublicOne PublicTwo [RedactedOne] PublicThree [RedactedTwo] PublicFour"
+		// "PublicOne PublicTwo [HiddenOne] PublicThree [HiddenTwo] PublicFour"
 		//
-		// The commit looks like this, and when put into the database it will have
-		// added to it a MongoDB _id as well as a commit_date
+		// The commit looks like this, and when put into the database it will
+		// have added to it a MongoDB _id as well as a commit_date
 		// 
 		// { "spans": [
 		//		"PublicOne PublicTwo ", 
@@ -143,39 +143,45 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 		//		" PublicFour"
 		//	] }
 		//
-		// We must be able to check that the server doesn't change the content of the
-		// commit out from under you.  Additionally, a client who only has been 
-		// given a URL needs to be able to do this check.  That means the URL must
-		// encode enough information to test an unrevealed commit.  To do this, we
-		// make a cryptographic hash of a string made by appending together the
-		// spans along with the commit_date.
+		// We must be able to check that the server doesn't change the content
+		// of the commit out from under you.  Additionally, a client who *only*
+		// has been given a URL needs to be able to do this check.  That means
+		// the URL must encode enough information to test an unrevealed commit.
+		// To do this, we make a cryptographic hash of a string made by
+		// appending together the spans along with the commit_date.
 		//
-		// (Note: Because letters without redactions do not have reveal certificates,
-		// the only thing differentiating two unredacted letters is the commit_date.
-		// Hence the client cannot know the actual URL until after the server has
-		// decided the commit time.)
+		// (Note: Because letters without redactions do not have reveal
+		// certificates, the only thing differentiating two unredacted letters
+		// is the commit_date.  Hence the client cannot know the actual URL
+		// until after the server has decided the commit time.)
 		//
-		// A single revealJson looks like this, and when put into the database it will
-		// have added to it a mongodb _id as well as a commit_date
+		// A single revealJson looks like this, and when put into the database
+		// it will have added to it a mongodb _id as well as a commit_date
 		//
-		// { "commit_id": "4f89521b67032a424a000002",
-		//		"redactions": [ "RedactedOne", "RedactedTwo" ], 
-		//		"salt": "26716853c86b247fc81834822b0ca058",
-		//		"sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
+		// {
+		//     "commit_id": "4f89521b67032a424a000002",
+		//     "name": "black",
+		//     "redactions": [ "HiddenOne", "HiddenTwo" ], 
+		//     "salt": "26716853c86b247fc81834822b0ca058",
+		//     "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
 		// }
 		//
 		// (Note: Hash values are made up, will fix in real documentation.)
 		
 		canonicalJsonFromCommit: function(commit) {
-			// There are some things to consider here regarding Unicode Normalization
-			// and canonical JSON: http://wiki.laptop.org/go/Canonical_JSON
-			
-			// In general, having a dependency on a library that may change (like
-			// how escaping of strings is done by JSON.stringify) could cause false
-			// negatives.  These could be investigated after the fact and rectified
-			// against a correct answer.
-			// REVIEW: Discuss this with peers to make sure there's no risk of false
-			// positives, and see if there are better ways to avoid false negatives.
+			// There are some things to consider here regarding Unicode
+			// Normalization and canonical JSON:
+			//
+			// http://wiki.laptop.org/go/Canonical_JSON
+			//
+			// In general, having a dependency on a library that may change
+			// (like how escaping of strings is done by JSON.stringify) could
+			// cause false negatives.  These could be investigated after the
+			// fact and rectified against a correct answer.
+			//
+			// REVIEW: Discuss this with peers to make sure there's no risk of
+			// false positives, and see if there are better ways to avoid false
+			// negatives.
 			
 			var result = '{"commit_date":';
 			result += JSON.stringify(commit.commit_date);
@@ -208,6 +214,19 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 		
 		makeIdFromCommit: function(commit) {
 			return SHA256(this.canonicalJsonFromCommit(commit));
+		},
+
+		actualHashForReveal: function(reveal) {
+			var contents = reveal.salt;
+			_.each(reveal.redactions, function (redactionSpan) {
+				contents += redactionSpan;
+			});
+			return SHA256(contents);
+		},
+
+		// Helper function just for readability
+		claimedHashForReveal: function(reveal) {
+			return reveal.sha256;
 		}
     };
 });

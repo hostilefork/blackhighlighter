@@ -170,13 +170,13 @@ var mongoConnectURI = (
 //
 // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 //
-function BlackhighlighterError(msg) {
+function ClientError(msg) {
 	Error.call(this);
-	Error.captureStackTrace(this, BlackhighlighterError);
+	Error.captureStackTrace(this, ClientError);
 	this.message = msg;
-	this.name = 'BlackhighlighterError';
+	this.name = 'ClientError';
 };
-BlackhighlighterError.prototype.__proto__ = Error.prototype;
+ClientError.prototype.__proto__ = Error.prototype;
 
 function resSendJsonForErr(res, err) {
 
@@ -191,7 +191,7 @@ function resSendJsonForErr(res, err) {
 		console.warn("Non-error subclass thrown, bad style...");
 	}
 
-	if (err instanceof BlackhighlighterError) {
+	if (err instanceof ClientError) {
 		console.error(err.message);
 		res.json(400, { error: err.toString() });
 	} else {
@@ -350,6 +350,13 @@ app.get('/write/$', function (req, res) {
 
 
 function generateHtmlFromCommitAndReveals(commit, reveals) {
+	// Note: We do this on the server side rather than in JavaScript code on
+	// the client for purposes of search engines, and also based on the
+	// general principle that while writing and verifying a blackhighlighter
+	// letter requires a JavaScript-enabled browser, reading it should not!
+	// (though without the JavaScript the current page might look a bit bad,
+	// this could be used for some kind of "raw" page generator as well)
+
 	// u'\u00A0' is the non breaking space
 	// ...it should be preserved in db strings via UTF8
 	
@@ -429,6 +436,11 @@ function generateCertificateStubsFromCommit(commit) {
 
 
 function showOrVerify(req, res, tabstate) {
+
+	// Difference between req.param and req.params:
+	// http://stackoverflow.com/a/9243020/211160
+	var commit_id = req.param('commit_id', null);
+
 	Q.try(function() {
 
 		// 1: Connect to database with authorization
@@ -451,12 +463,12 @@ function showOrVerify(req, res, tabstate) {
 		// http://stackoverflow.com/questions/4902569/
 		return [
 			Q.ninvoke(commitsCollection, 'find',
-				{'commit_id': req.params.commit_id},
+				{'commit_id': commit_id},
 				{limit: 1, sort:[['_id', 'ascending']]}
 			)
 		,
 			Q.ninvoke(revealsCollection, 'find', 
-				{'commit_id': req.params.commit_id},
+				{'commit_id': commit_id},
 				{sort:[['sha256', 'ascending']]}
 			)
 		];
@@ -474,15 +486,9 @@ function showOrVerify(req, res, tabstate) {
 
 		// 5: Check the arrays for validity and extract needed data
 		if (commitsArray.length == 0) {
-
-			// NOTE: Raise a 404 if the letter isn't found in the database?
-			throw new BlackhighlighterError("No commit with requested _id");
-
+			throw new ClientError("No commit with requested _id");
 		} else if (commitsArray.length > 1) {
-
-			// NOTE: Commits should be unique, that is enforced by the DB?
-			throw new BlackhighlighterError("Multiple commits with same _id.");
-
+			throw new Error("Multiple commits with same _id.");
 		}
 
 		// REVIEW: is the length the only thing we need to check?
@@ -493,7 +499,7 @@ function showOrVerify(req, res, tabstate) {
 		// 6: Generate response HTML
 		res.render('read', {
 			MAIN_SCRIPT: 'read',
-			commit_id: req.params.commit_id,
+			commit_id: commit_id,
 			all_certificates: generateCertificateStubsFromCommit(commit),
 			tabstate: tabstate,
 			commit: commit,
@@ -530,9 +536,52 @@ app.post('/commit/$', function (req, res) {
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
 
-	// Second parameter to JSON.parse is if you want a "default" result
-	var commit = JSON.parse(req.param('commit', null));
-	
+	// Difference between req.param and req.params:
+	// http://stackoverflow.com/a/9243020/211160
+	var commit = JSON.parse(req.param('commit', null));	
+
+	// We don't want to put "extra junk" in the MongoDB database, as it
+	// will just store whatever objects we put in it (no schema).
+	//
+	// REVIEW: This seems pretty tedious, but what else can we do when
+	// storing JSON from a potentially hostile/hacked client?
+
+	// Must be an object
+	if (!_.isObject(commit)) {
+		throw new ClientError('commit must be an object');
+	}
+
+	// Verify it doesn't have more than just "spans"
+	if (!_.isEqual(_.keys(commit).sort(), ["spans"])) { 
+		throw new ClientError('commit should have a .spans key, only');
+	}
+
+	// Spans can be either strings or objects with 2 keys
+	_.each(commit.spans, function (commitSpan) {
+		if (_.isString(commitSpan)) {
+			return;
+		}
+		if (!_.isObject(commitSpan)) {
+			throw new ClientError('commit spans must be string or object');
+		}
+		if (!_.isEqual(
+			_.keys(commitSpan).sort(), ["display_length", "sha256"])
+		) {
+			throw new ClientError(
+				'span objects can only have sha256 and display_length'
+			);
+		}
+		if (!_.isNumber(commitSpan.display_length)) {
+			throw new ClientError('display_length must be a number');
+		}
+		if (!_.isString(commitSpan.sha256)) {
+			throw new ClientError('sha256 of span must be string');
+		}
+	});
+
+	// Okay, the written content itself may be junk, but at least it's 
+	// all "in-band" junk.  Start the database work...
+
 	Q.try(function() {
 
 		// 1: Connect to database with authorization
@@ -546,29 +595,21 @@ app.post('/commit/$', function (req, res) {
 	}).then(function (coll) {
 
 		// 3: Add commit to collection
-		//
-		// We should verify that what we've been given fits the proper form for
-		// a commit, with no extra garbage being stored in the database.
-		// At the moment I'm just "trusting" that a well formed commit was given
-		// to us, which turns us into a generic JSON object store.
-		//
-		// (Though should we check to make sure the date in the request matches
-		// so we are on the same page as the client?)
+
+		// Should we check to make sure the date in the request matches
+		// so we are on the same page as the client about time?
 		//
 		// mongodb JS driver knows about Date()?
 		// or do we need to use the .toJSON() method?
 		commit.commit_date = requestTime;
 		commit.commit_id = common.makeIdFromCommit(commit);
-
-		// "safe" tells the JSON mongodb driver to do an added check on the
-		// getLastError to make sure that the asynchronous insert succeeded
-		//
-		// http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
 		return Q.ninvoke(coll, "insert", commit, {safe: true});
 
 	}).then(function (records) {
 
 		// 4. Give back "Show" and "Verify" URLs in JSON
+
+		// We know the async insertion actually succeeded due to {safe: true}
 		res.json({
 			commit_date: records[0].commit_date
 		});
@@ -589,14 +630,71 @@ app.post('/reveal/$', function (req, res) {
 	// http://www.robertprice.co.uk/robblog/archive/2011/5/JavaScript_Date_Time_And_Node_js.shtml
 	var requestTime = new Date();
 
-	//
-	// The /reveal/ HTTP POST handler historically accepted an array
-	// of reveals, because there was no selective UI for picking which
-	// reveals that had been locally entered were to be shown.
-	//
+	// The /reveal/ HTTP POST handler once would take an array to allow you
+	// to reveal more than one redaction "color" at a time.  But the current
+	// main demo is only one color (black) so that would be uncommon, and
+	// also it creates protocol complexity in error reporting if you were to
+	// send two reveals... with one bad, and one good. 
 
-	// second parameter is default
-	var newReveals = JSON.parse(req.param('reveals', null));
+	// Difference between req.param and req.params:
+	// http://stackoverflow.com/a/9243020/211160
+	var reveal = JSON.parse(req.param('reveal', null));
+
+	// We don't want to put "extra junk" in the MongoDB database, as it
+	// will just store whatever objects we put in it (no schema).
+	//
+	// REVIEW: This seems pretty tedious, but what else can we do when
+	// storing JSON from a potentially hostile/hacked client?
+
+	// Must be an object
+	if (!_.isObject(reveal)) {
+		throw new ClientError('reveal must be an object');
+	}
+
+	// Verify the keyset
+	// REVIEW: Should "naming" each redaction in a certificate be optional?
+	if (!_.isEqual(_.keys(reveal).sort(), 
+		["commit_id", "name", "redactions", "salt", "sha256"])
+	) { 
+		throw new ClientError('reveal has extra or missing keys');
+	}
+
+	// Verify the values
+	if (!_.isString(reveal.commit_id)) {
+		throw new ClientError('commit_id should be a string');
+	}
+	if (!_.isString(reveal.salt)) {
+		throw new ClientError('salt should be a string');
+	}
+	if (!_.isString(reveal.sha256)) {
+		throw new ClientError('sha256 should be a string');
+	}
+	if (!_.isString(reveal.name)) {
+		throw new ClientError('name should be a string');
+	}
+	if (!_.isArray(reveal.redactions)) {
+		throw new ClientError('redactions should be an array');
+	}
+	_.each(reveal.redactions, function (redactionSpan) {
+		if (!_.isString(redactionSpan)) {
+			throw new ClientError('all redaction spans must be strings');
+		}
+	});
+
+	// Now make sure the reveal isn't lying about its contents hash
+	var actualHash = common.actualHashForReveal(reveal);
+	var claimedHash = common.claimedHashForReveal(reveal);
+	if (actualHash != claimedHash) {
+		throw ClientError(
+			'Actual reveal content hash is ' + contentHash +
+			' while claimed hash is ' + claimedHash
+		);
+	}
+
+	// Okay the reveal is "well-formed".  For more we have to start talking
+	// to the database...
+
+	var commit_id = reveal.commit_id;
 
 	Q.try(function() {
 
@@ -606,7 +704,6 @@ app.post('/reveal/$', function (req, res) {
 	}).then(function (conn) {
 
 		// 2: Get commits and reveals collections in parallel
-
 		return [
 			Q.ninvoke(conn, 'collection', 'commits')
 		,
@@ -622,12 +719,12 @@ app.post('/reveal/$', function (req, res) {
 			// REVIEW: necessary to use ObjectID conversion?
 			// http://stackoverflow.com/questions/4902569/
 			Q.ninvoke(commitsCollection, 'find',
-				{'commit_id': req.params.commit_id},
+				{'commit_id': commit_id},
 				{limit: 1, sort:[['_id', 'ascending']]}
 			)
 		,
 			Q.ninvoke(revealsCollection, 'find', 
-				{'commit_id': req.params.commit_id},
+				{'commit_id': commit_id},
 				{sort:[['sha256', 'ascending']]}
 			)
 		];
@@ -645,50 +742,62 @@ app.post('/reveal/$', function (req, res) {
 
 	}).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
 
-		// 5: Add new reveals if they pass verification
-		_.each(newReveals, function(newReveal) {
-			// mongodb JS driver knows about Date(), or do we need to use
-			// the .toJSON() method?
-			newReveal.reveal_date = requestTime;
-			
-			// The reveal process needs to check to make sure the 
-			// certificate is valid before adding it to the reveal database.
-			// Ideally this code would be shared with the code in the
-			// client.  For the moment I'm less concerned about that issue
-			// than figuring out how MongoDB works with Node.js...
-			// first...
+		// 5: Add new reveal if it passes verification
 
-			// THIS REALLY NEEDS TO BE DONE!  The client will catch it, but
-			// people shouldn't spam with bad reveals.
-
-			// Is string matching not workable, and is it actually necessary 
-			// to convert to the ObjectID BSON type to properly run the join query?
-			if (false) {
-				newReveal.commit_id = new mongodb.DBRef(
-					'commits', new mongodb.ObjectID(reveal.commit_id)
+		// Ensure it hasn't *already* been revealed
+		_.each(oldRevealsArray, function(oldReveal) {
+			if (reveal.sha256 == oldReveal.sha256) {
+				throw new ClientError(
+					"Reveal " + reveal.sha256 + " was already published."
 				);
 			}
 		});
 
-		return [
-			newReveals.length
-		,
-			// "safe" tells the JSON mongodb driver to do an added check on the
-			// getLastError to make sure that the asynchronous insert succeeded
-			//
-			// http://www.mongodb.org/display/DOCS/getLastError+Command#getLastErrorCommand-UsinggetLastErrorfromDrivers
-			Q.ninvoke(revealsCollection, 'insert', newReveals, {safe: true})
-		];
+		// Make sure there's exactly one commit with that ID
+		if (commitsArray.length == 0) {
+			throw new ClientError("No commit with requested _id");
+		} else if (commitsArray.length > 1) {
+			throw new Error("Multiple commits with same _id.");
+		}
 
-	}).spread(function (numReveals, insertedRecords) {
+		var commit = commitsArray[0];
 
-		// 6: Respond with insertion count as JSON
-		//
-		// The pre-promise code ignored the inserted records, and just told us
-		// the length requested, assuming success.  Should it check that we got
-		// what we expected?
+		// Now make sure the hash matches an existing span hash
+		// Note: Some spans are strings!  So .sha256 is not defined for them.
+		var matchedSpan = null;
+		_.each(commit.spans, function(span) {
+			if (span.sha256 == reveal.sha256) {
+				if (matchedSpan) {
+					throw new Error("Duplicate span hashes in " + commit_id);
+				}
+				matchedSpan = commit;
+			}
+		});
+		if (!matchedSpan) {
+			throw new ClientError("Reveal's hash matches no span in commit.");
+		}
+
+		// mongodb JS driver knows about Date(), or do we need to use
+		// the .toJSON() method?
+		reveal.reveal_date = requestTime;
+
+		// Is string matching not workable, and is it actually necessary 
+		// to convert to the ObjectID BSON type to properly run the join query?
+		if (false) {
+			reveal.commit_id = new mongodb.DBRef(
+				'commits', new mongodb.ObjectID(reveal.commit_id)
+			);
+		}
+
+		return Q.ninvoke(revealsCollection, 'insert', reveal, {safe: true});
+
+	}).then(function (insertedRecords) {
+
+		// 6: Respond with reveal's insertion date
+
+		// We know asynchronous insert actually succeeded due to {safe: true}
 		res.json({
-			insertion_count: numReveals
+			reveal_date: insertedRecords[0].reveal_date
 		});
 
 	}).catch(function (err) {

@@ -8,7 +8,7 @@
 		"www.blackhighlighter.org"
 	],
 	"preferGlobal": "false",
-	"version": "0.0.1-82",
+	"version": "0.0.1-103",
 	"author": "Hostile Fork <hostilefork@gmail.com>",
 	"description": "protected public discussion server for node.js",
 	"repository": {

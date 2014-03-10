@@ -104,9 +104,10 @@ exports.url = {
 			utils.throwError("url tag requires an argument");
 		}
 
-		// In theory, this should get information out of process.env
+		// In theory, this should get information out of process.env, or
+		// maybe client should just know who they're talking to?
 		// Revisit when it's time to fix
-		var baseUrl = "http://blackhighlighter.nodejitsu.com";
+		var baseUrl = "/";
 		var needsLetterId = false;
 
 		switch (args[0]) {
@@ -121,7 +122,7 @@ exports.url = {
 				utils.throwError(args[0] + " requires a letter_uuid");
 			}
 
-			baseUrl += "/show/";
+			baseUrl += "show/";
 			needsLetterId = true;
 			break;
 
@@ -130,7 +131,7 @@ exports.url = {
 				utils.throwError(args[0] + " requires a letter_uuid");
 			}
 
-			baseUrl += "/verify/";
+			baseUrl += "verify/";
 			needsLetterId = true;
 			break;
 
@@ -139,12 +140,12 @@ exports.url = {
 				utils.throwError(args[0] + " requires a letter_uuid");
 			}
 
-			baseUrl += "/commit/";
+			baseUrl += "commit/";
 			needsLetterId = true;
 			break;
 
 		default:
-			baseUrl += "/not/implemented/yet/see/mytag.js/" + args[0];
+			baseUrl += "not/implemented/yet/see/mytag.js/" + args[0];
 			break;
 
 		}
