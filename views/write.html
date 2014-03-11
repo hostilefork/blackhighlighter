@@ -29,13 +29,6 @@ blackhighlighter|WRITE
 {% endblock title %}
 
 
-{% block css %}
-	{% parent %} {# inherit parent css, do not overwrite it! #}
-
-	<link rel="stylesheet" type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" />
-{% endblock css %}
-
-
 {% block params_javascript %}
 	{% parent %} {# inherit any existing parameter block #}
 	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
@@ -62,21 +55,21 @@ blackhighlighter|WRITE
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 	<div id="tabs">
-		<ul> <!-- YUI base.css resets put dots on the tabs if we don't list-style: none -->
-			<li style="list-style: none;"><a href="#tabs-compose">Compose</a></li>		
-			<li style="list-style: none;"><a href="#tabs-protect">Protect</a></li>	
-			<li style="list-style: none;"><a href="#tabs-commit">Commit</a></li>
+		<ul class="tabs">
+			<li><a href="#tabs-compose">Compose</a></li>		
+			<li><a href="#tabs-protect">Protect</a></li>	
+			<li><a href="#tabs-commit">Commit</a></li>
 		</ul>
 		
-		<div id="tabs-compose">
+		<div class="tabs-content" id="tabs-compose">
 {% include "write-compose.html" %}
 		</div>
 		
-		<div id="tabs-protect">
+		<div class="tabs-content" id="tabs-protect">
 {% include "write-protect.html" %}
 		</div>
 		
-		<div id="tabs-commit">
+		<div class="tabs-content" id="tabs-commit">
 {% include "write-commit.html" %}
 		</div>
 	</div>

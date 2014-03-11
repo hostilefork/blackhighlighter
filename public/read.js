@@ -31,7 +31,7 @@ define([
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
 	'json2', // http://www.json.org/json2.js
 	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-	'autogrow'
+	'autosize'
 ], function($, _, common, clientCommon) {
 	
 	var Globals = {
@@ -46,35 +46,28 @@ define([
 		successfulReveal: undefined
 	};
 
+	// Theme all the button-type-things but not the <a href="#" ..> style
+	$("input:submit, button").button();
 
-	// http://www.jankoatwarpspeed.com/post/2009/03/11/How-to-create-Skype-like-buttons-using-jQuery.aspx
-	// lines broken differently to please javascript lint
-	$('.button').hover(function(){
-		$('.button img').animate(
-			// first jump  
-			{top: '-10px'}, 200).animate(
-			{top: '-4px'}, 200).animate(
-			// second jump
-			{top: '-7px'}, 100).animate(
-			{top: '-4px'}, 100).animate(
-			// the last jump
-			{top: '-6px'}, 100).animate(
-			{top: '-4px'}, 100);
+	// Make all the indeterminate progress bars animate.  They're hidden.
+	$(".indeterminate-progress").progressbar({value: false});
+
+	// The JSON in the reveal is static and populated later
+	// This just sets up a collapsible accordion to contain it, start closed
+	$('#reveal-json-accordion').accordion({
+		collapsible: true,
+		active: false,
+
+		// autoHeight doesn't seem to work by itself; mumbo-jumbo needed
+		// http://stackoverflow.com/a/15413662/211160
+		heightStyle: "content",
+		autoHeight: false,
+        clearStyle: true
 	});
-	
-	// This was tricky to figure out but it's how jquery ui demo does "View Source"
-	// See it used on http://jqueryui.com/demos/accordion/
-	// Invisible divs inserted after other divs at runtime, sigh!
-	// Tricky function is updateDemoSource in demos.js - which only works after
-	// you've run updateDemoNotes.
-	// Unravel it and you get something about like this
-	$('#demo-source').find('> a').click(function() {
-		$(this).toggleClass('source-closed').toggleClass('source-open').next().toggle();
-		return false;
-	}).end().find('> div').hide();
-	
-	// http://www.aclevercookie.com/demos/autogrow_textarea.html
-	$('textarea.expanding').autogrow();
+
+
+	// http://www.jacklmoore.com/autosize/
+	$('textarea.expanding').autosize();
 
 	
 	// jquery UI does tabs by index, not ID.  using this to increase readability
@@ -90,7 +83,6 @@ define([
 
 	// Bring tabs to life.
 	$('#tabs').tabs();
-	
 	
 	function notifyErrorOnTab(tab, msg) {
 		$('#error-' + tab + '-msg').empty().append(document.createTextNode(msg));
@@ -137,15 +129,12 @@ define([
 	$('#accordion').hide();
 	
 	// Bring accordion to life
-	// http://jqueryui.com/demos/accordion/
-	// Note: demo code sample is incorrect
-	// http://dev.jqueryui.com/ticket/4468
+	// http://jqueryui.com/accordion/
 	$('#accordion').accordion({ 
-		'collapsible': true,
-		'header': 'a'
+		'collapsible': true
 	});
 	
-	$('#accordion').bind('accordionchange', function(event, ui) {
+	$('#accordion').on('accordionchange', function(event, ui) {
 		// ui.newHeader // jQuery object, activated header
 		// ui.oldHeader // jQuery object, previous header
 		// ui.newContent // jQuery object, activated content
@@ -163,7 +152,7 @@ define([
 	});
 
 	// Pass -1 to close all (only possible with collapsible:true).
-	$('#accordion').accordion('activate', -1);
+	$('#accordion').accordion('option', 'active', false);
 	
 	BlackhighlighterRead.addReveal = function(reveal, server) {
 
@@ -171,7 +160,8 @@ define([
 		var claimedHash = common.claimedHashForReveal(reveal);
 
 		if (actualHash != claimedHash) {
-			throw 'Invalid certificate: content hash is ' + contentHash + ' while claimed hash is ' + claimedHash;
+			throw 'Invalid certificate: content hash is ' + actualHash 
+				+ ' while claimed hash is ' + claimedHash;
 		}
 
 		var numPlaceholdersForKey = 0;
@@ -417,8 +407,9 @@ define([
 	
 	
 	function updateTabEnables() {
-		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));		
+		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
+
 		// REVIEW: hasOwnProperty(), does it matter? http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
 		if (_.keys(Globals.localRevealsByHash).length > 0) {
 			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
@@ -435,14 +426,9 @@ define([
 	
 	var lastTabId = 'tabs-verify'; // we start on verify tab, and don't get a select message
 	// Bind function for what happens on tab select
-	$('#tabs').bind('tabsselect', function(event, ui) {
+	$('#tabs').on('tabsactivate', function(event, ui) {
 
-		// Objects available in the function context:
-		// ui.tab     // anchor element of the selected (clicked) tab
-		// ui.panel   // element, that contains the selected/clicked tab contents
-		// ui.index   // zero-based index of the selected (clicked) tab
-
-		switch(ui.panel.id) {
+		switch(ui.newPanel.attr('id')) {
 			case 'tabs-verify':
 				$('#progress-verify').hide();
 				clearErrorOnTab('verify');
@@ -520,16 +506,16 @@ define([
 			default:
 				throw 'no match for tab in read.js';
 		}
-		lastTabId = ui.panel.id;
+		lastTabId = ui.newPanel.attr('id');
 	});
 
 	switch (PARAMS.tabstate) {
 		case 'verify':
-			$('#tabs').tabs('select', tabIndexForId('tabs-verify'));
+			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-verify'));
 			break;
 			
 		case 'show':
-			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
+			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
 			break;
 			
 		default:
@@ -538,7 +524,7 @@ define([
 
 	BlackhighlighterRead.viewReveal = function(revealKey) {
 		// first make sure we're on the verify tab
-		$('#tabs').tabs('select', tabIndexForId('tabs-verify'));
+		$('#tabs').tabs('option', 'active', tabIndexForId('tabs-verify'));
 		if (Globals.lastAccordionId != revealKey) {
 			$('#accordion').accordion('activate', accordionIndexForId(revealKey));
 		}
@@ -563,12 +549,12 @@ define([
 	
 
 	BlackhighlighterRead.previousStep = function() {
-		$('#tabs').tabs('select', tabIndexForId(lastTabId)-1);
+		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) - 1);
 	};
 
 
 	BlackhighlighterRead.nextStep = function() {
-		$('#tabs').tabs('select', tabIndexForId(lastTabId)+1);
+		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) + 1);
 	};
 	
 	BlackhighlighterRead.clearRevealInputField = function() {
@@ -585,7 +571,7 @@ define([
 		
 		if (Globals.successfulVerify) {
 			BlackhighlighterRead.clearRevealInputField();
-			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
+			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
 		}
 		
 		$('#progress-verify').hide();
@@ -607,7 +593,7 @@ define([
 		var revealInput = $('#certificates').get(0).value;
 		if (common.trimAllWhitespace(revealInput) === '') {
 			// if they haven't typed anything into the box
-			$('#tabs').tabs('select', tabIndexForId('tabs-show'));
+			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
 		} else {
 			$('#tabs').tabs('disable', tabIndexForId('tabs-show'));
 			$('#tabs').tabs('disable', tabIndexForId('tabs-reveal'));
@@ -701,11 +687,13 @@ define([
 	
 		$('#tabs').tabs('disable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('disable', tabIndexForId('tabs-show'));
+
 		// jquery UI does not support an indeterminate progress bar yet
 		// http://docs.jquery.com/UI/API/1.7/Progressbar
 		// Currently using an animated GIF from http://www.ajaxload.info/
 		$('#progress-reveal').show();
 		$('#buttons-reveal').hide();
+		$('#reveal-json-accordion').hide();
 		
 		// We set a timer to make sure there is enough of a delay that the
 		// user feels confident that something actually happened

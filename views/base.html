@@ -35,7 +35,7 @@ You will probably want to copy and customize this file.
 
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta name="keywords" content="" />
 		<meta name="description" content="" />
 
@@ -54,56 +54,19 @@ You will probably want to copy and customize this file.
 
 {% block css %}
 {% comment %}
-	I went and picked the first CSS layout that behaved like I wanted.  I found it at:
-
-		http://layouts.ironmyers.com/100_percent_Layouts/layout/?id=49
-
- 	For better or worse, it uses the YUI CSS framework.  What is a CSS framework, you ask?
-
-		http://en.wikipedia.org/wiki/CSS_framework
-  
-	It looks silly to me, but the premise is that different browsers made different choices;
-	such as with spacing or whether a "h1" header should be 10 or 20 pixels tall.  To get
-	around this, YUI has a "reset" that un-styles all the elements, and then it adds them
-	all back in a way that will give you the same values in various browsers.
-
-	Whether this is good or bad is beyond me.  It is, however, not compatible with jquery ui.
-	This despite the fact that in this discussion someone says that it is:
-   
-		http://www.filamentgroup.com/lab/styling_buttons_and_toolbars_with_the_jquery_ui_css_framework/ 
-
-	Example incompatibilities are seen with the way the margins look on alert messages, or
-	the sudden appearance of outlining bullets on the tabs.  I've worked around these but
-	would be happy enough with a solution that didn't involve using YUI-CSS.
-	
-	REVIEW: I have been debating whether having the credits and copyright span the whole
-	page is better, or if having them only be as wide as the left panel is better.  I
-	commented out the part that made it span the whole page.
+	In 2009, this was kind of my first big "web UI" application attempt.  I
+	pretty much copypasta'd the CSS to get layouts that came from people who
+	seemed to know what they were doing, and the one I found used YUI CSS.
+	I've since removed that dependency, but haven't really gone out hunting
+	to modernize it further yet.
 {% endcomment %}
-		<link rel="stylesheet" type="text/css" href="{{ LIBS_URL }}yui-css/reset-fonts-grids2.css" />
-		<link rel="stylesheet" type="text/css" href="{{ LIBS_URL }}yui-css/base.css" />
-
-		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/themes/blitzer/ui.all.css" rel="stylesheet" />
-{% comment %}
-	"There is a trick that was written about a while ago (maybe on ALA) that 
-	 resets the font sizes for the entire site so that 1.0em is the same as 10px.
-	 body { font-size: 62.5% }"
-	See: http://www.blogherald.com/2006/09/08/css-tips-and-tricks/
-
-	jQuery UI uses this.  After shrinking your page, it sets things to 1.3em to bring
-	them back up to "normal" size.  However...
-
-	"This is pretty bogus, because text inside input boxes doesn't rescale
-	 (at least, not in FireFox,) and it obviously applies to the entire page, when 
-	 in fact you may want it to just apply to the UI widgets only."
-	See: http://fbloggs.wordpress.com/2009/03/03/how-to-scale-the-jquery-ui-font-size-for-just-the-ui-widgets/
-{% endcomment %}
-		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/demos.css" rel="stylesheet" />
+		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/theme/jquery-ui-1.10.4.custom.css" rel="stylesheet" />
+		<link type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" rel="stylesheet" />
 {% endblock css %}
 
 
 {% block scripts %}
-	<script src="{{ LIBS_URL }}/require.js"></script>
+	<script type="text/javascript" src="{{ LIBS_URL }}require.js"></script>
     <script>
     require({
         baseUrl: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}',
@@ -115,13 +78,13 @@ You will probably want to copy and customize this file.
 			"use": "{{ LIBS_URL }}use",
 
 			{# LIBRARIES #}
-            jquery: 'http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min', 
-			jqueryui: 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min',
+            jquery: 'http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min', 
+			jqueryui: '{{ LIBS_URL }}jquery-ui/jquery-ui-1.10.4.custom',
 			underscore: '{{ LIBS_URL }}underscore',
 			sha256: '{{ LIBS_URL }}sha256', // http://www.webtoolkit.info/javascript-sha256.html
 			json2: '{{ LIBS_URL }}json2', // http://www.json.org/json2.js
 			innerxhtml: '{{ LIBS_URL}}innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-			autogrow: '{{ LIBS_URL }}jquery-autogrow/jquery.autogrow',
+			autosize: '{{ LIBS_URL }}jquery-autosize/jquery.autosize',
 			nicedit: '{{ LIBS_URL }}nicEdit/nicEdit',
 			niceditFixed: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}nicedit-overrides'
         },
@@ -149,32 +112,14 @@ You will probably want to copy and customize this file.
 		<!-- <script type="text/javascript" src="http://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js"></script> -->
 {% endblock scripts %}
 
-	
 	</head>
 	<body>
-		<div id="doc3" class="yui-t7">
-			<div id="hd">
-					<p>
-						{% if user.is_authenticated %}
-						<b>{{user.username}}</b>
-						<a href="/accounts/profile/">My Account</a>
-						<a href="/accounts/logout/?next={{ request.path }}">Sign out</a>
-						{% else %}
-						<a href="/accounts/login/?next={{ request.path }}">Sign in</a>
-						{% endif %}
-					</p>
-			</div>
-			<div id="bd">
-				<div id="yui-main"> {# Was 475px for demo... #}
-					<div class="yui-b">
-						<div class="yui-ge">
-							<div class="yui-u first">
 					
 {% block content %}
 	<p>Content</p>
 {% endblock content %}
 
-								<div>
+	<div>
 								
 {% block credits %}
 	<center>
@@ -187,37 +132,11 @@ You will probably want to copy and customize this file.
 {% endblock credits %}
 {% block copyright %}
 	<center>
-		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2009-2012 <a href="http://hostilefork.com/blackhighlighter/" target="_blank">hostilefork.com</a> with all original code released under Affero GPL v3.0
+		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2009-2014 <a href="http://hostilefork.com/blackhighlighter/" target="_blank">hostilefork.com</a> with all original code released under Affero GPL v3.0
 	</center>
 {% endblock copyright %}
 
-								</div>
-							</div>
-							<div class="yui-u">
+	</div>
 
-{% block sidebar %}
-	<p><b>NOTE:</b> This is a demonstration installation of the <a href="http://hostilefork.com/blackhighlighter/">blackhighlighter</a> app.  I wanted a sandbox for people to try out the functionality, to show that it actually works and to perhaps motivate others to contribute to the project.</p>
-	<p>This was actually developed as a proof-of-concept in 2009.  It was my first time using Python, Django, jQuery UI, or trying to do anything with the Rich edit control in the browser (<i>AND</i> cross-browser).  It was put aside for a few years until 2012, when one of the Cloud Foundry developers at VMWare expressed interest in seeing it ported to NodeJS.  I picked it back up to do that without changing any of the UI besides patching it a bit to work with some browser changes.  A couple years later I picked it back up again to see if it could be redeployed and updated for all the changes to Express, Swig, Mongodb that had happened in the meantime... and deploy it on Nodejitsu.</p>
-	<p>So if it looks like the UI could go in a less-2009 direction, I do agree.  :)  I've just been using it more for server-side experimentation than getting too deeply into updating the front end...yet!</p>
-{% endblock sidebar %}
-						
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="yui-b">
-				
-{# {% block credits %} #}
-{# {% endblock credits %} #}
-
-				</div>
-			</div>
-			<div id="ft">
-
-{# {% block copyright %} #}
-{# {% endblock copyright %} #}
-
-			</div>
-		</div>
 	</body>
 </html>

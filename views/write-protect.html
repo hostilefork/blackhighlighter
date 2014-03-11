@@ -39,18 +39,9 @@ changes to the text by clicking on the "Compose" tab.</p>
 	Contents will be copied here from editor-compose textarea when tab is switched
 	When tab is switched back to compose, any protection changes are copied back
 -->{# {% endcomment %} #}
-<textarea id="editor-protect" style="width: 100%; height: 200px;"></textarea>
-
-{# For the moment, using demo-source toggle from jquery UI demos.css #}
-<div id="demo-source"><a href="#" class="source-closed">if curious, you can view the JSON in the commitment</a>
-	<div>
-		<div id='json-commit'>
-{# Filled on demand #}
-		</div>
-	</div>
+<div class="textarea-wrapper">
+	<textarea id="editor-protect" class="document-display"></textarea>
 </div>
-
-<br />
 
 <p>When you're satisfied that everything you didn't mark out is okay to publish
 on the internet so anyone can see it, continue.</p>
@@ -68,14 +59,23 @@ on the internet so anyone can see it, continue.</p>
 	<!-- button has weird margins, needs spacing (using nbsp for now)... better fix? -->
 		<a href="#" onclick="BlackhighlighterWrite.previousStep()">go back and edit</a>
 		-or- &nbsp; 
-		<a class="button" href="#" onclick="BlackhighlighterWrite.commit()">
-			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" /><b>Publish the Public Portions</b>
-		</a>
+		<button onclick="BlackhighlighterWrite.commit()">
+			<b>Publish the Public Portions</b>
+		</button>
 	</p></center>
 </div>
 
+{# This is an accordion widget #}
+<div id="commit-json-accordion"><h3>View the redacted JSON that will be sent to the server</h3>
+	<div>
+		<div id='json-commit'>
+{# Filled on demand #}
+		</div>
+	</div>
+</div>
+
 <div id="progress-commit">
-	<center><img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}ajax-loader.gif" /></center>
+	<center><div class="indeterminate-progress"></center>
 </div>
 
 <div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 

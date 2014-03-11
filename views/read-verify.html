@@ -54,9 +54,10 @@
 <p>This is where you paste or type in your certificates.  For samples of what 
 certificates look like, <a href="{% url certificates_named_url %}" target="_blank">click here</a>.</p> 
 
-<textarea style="width: 100%; height: 84px; min-height: 84px;" class="expanding" id="certificates"></textarea>
+<div class="textarea-wrapper">
+	<textarea class="certificate-display expanding" id="certificates"></textarea>
+</div>
 
-<br />
 <p>If you paste one or more valid certificates for this letter and push verify, then it 
 should show you some of the missing portions.</p>
 
@@ -70,14 +71,14 @@ should show you some of the missing portions.</p>
 
 <div id="buttons-verify">
 	<center><p>
-		<a class="button" href="#" onclick="BlackhighlighterRead.verify();">
-			<img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}button.png" alt="" />Next step: <b>Verify On Your Computer Only</b>
-		</a>
+		<button onclick="BlackhighlighterRead.verify();">
+			Next step: <b>Verify On Your Computer Only</b>
+		</button>
 	</p></center>
 </div>
 
 <div id="progress-verify">
-	<center><img src="{{ BLACKHIGHLIGHTER_MEDIA_URL }}ajax-loader.gif" /></center>
+	<center><div class="indeterminate-progress"></center>
 </div>
 
 <div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 

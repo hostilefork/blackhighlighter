@@ -31,13 +31,6 @@ blackhighlighter|READ
 {% endblock title %}
 
 
-{% block css %}
-	{% parent %} {# inherit parent css, do not overwrite it! #}
-
-	<link rel="stylesheet" type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" />
-{% endblock css %}
-
-
 {% block params_javascript %}
 	{% parent %} {# inherit any existing parameters #}
  
@@ -65,21 +58,21 @@ blackhighlighter|READ
 {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
 
 	<div id="tabs">
-		<ul> <!-- YUI base.css resets put dots on the tabs if we don't list-style: none -->
+		<ul class="tabs">
 			<li style="list-style: none;"><a href="#tabs-verify">Verify</a></li>		
 			<li style="list-style: none;"><a href="#tabs-show">Show</a></li>	
 			<li style="list-style: none;"><a href="#tabs-reveal">Reveal</a></li>
 		</ul>
 		
-		<div id="tabs-verify">
+		<div class="tabs-content" id="tabs-verify">
 {% include "read-verify.html" %}
 		</div>
 		
-		<div id="tabs-show">
+		<div class="tabs-content" id="tabs-show">
 {% include "read-show.html" %}
 		</div>
 		
-		<div id="tabs-reveal">
+		<div class="tabs-content" id="tabs-reveal">
 {% include "read-reveal.html" %}
 		</div>
 

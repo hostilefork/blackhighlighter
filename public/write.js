@@ -32,7 +32,7 @@ define([
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
 	'json2', // http://www.json.org/json2.js
 	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-	'autogrow',
+	'autosize',
 	'niceditFixed'
 ], function($, _, common, clientCommon) {
 
@@ -44,22 +44,11 @@ define([
 		lastTabId: 'tabs-compose' // we start on compose tab, and don't get a select notification for it
 	};
 
-	// http://www.jankoatwarpspeed.com/post/2009/03/11/How-to-create-Skype-like-buttons-using-jQuery.aspx
-	// lines broken differently to please javascript lint
-	$(document).ready(function(){
-		$('.button').hover(function(){
-			$('.button img').animate(
-				// first jump  
-				{top: '-10px'}, 200).animate(
-				{top: '-4px'}, 200).animate(
-				// second jump
-				{top: '-7px'}, 100).animate(
-				{top: '-4px'}, 100).animate(
-				// the last jump
-				{top: '-6px'}, 100).animate(
-				{top: '-4px'}, 100);
-			});
-		}); 
+	// Theme all the button-type-things but not the <a href="#" ..> style
+	$("input:submit, button").button();
+
+	// Make all the indeterminate progress bars animate.  They're hidden.
+	$(".indeterminate-progress").progressbar({value: false});
 
 	// jquery UI does tabs by index, not ID.  using this to increase readability
 	function tabIndexForId(id) {
@@ -102,13 +91,9 @@ define([
 	// makes an edit which would change the json-commit source.
 	function ensureJsonCommitCollapsed() {
 		$('#json-commit').empty();
-		$('#demo-source').find('> a').each(function(i) {
-			if ($(this).hasClass('source-open')) {
-				$(this).removeClass('source-open');
-				$(this).addClass('source-closed');
-				$(this).next().hide();
-			}
-		});
+
+		/* Requires collapsible attribute to take "false" */
+		$('#commit-json-accordion').accordion('option', 'active', false);
 	}
 	
 	function notNormalized(node) {
@@ -692,40 +677,26 @@ define([
 		Globals.protectedObjs = _.values(revealsByHash);
 	}
 
-	// This was tricky to figure out but it's based on how jquery ui demo does "View Source"
-	// See it used on http://jqueryui.com/demos/accordion/
-	//
-	// It used to be more terse, e.g. 
-	// $(this).toggleClass('source-closed').toggleClass('source-open').next().toggle();
-	//
-	// However, I was finding it difficult to debug and getting some kind of strange re-entrant
-	// situation that was leaving spans mysteriously hidden, at least in Firefox.  When I changed
-	// it to this more verbose method it started working.  
-	$('#demo-source').find('> a').click(function() {
-		if ($(this).hasClass('source-closed')) {
-			$('#json-commit').empty();			
-			if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
-				generateCommitAndProtectedObjects();
-			}
-			if (Globals.commitObj !== null) {
-				$('#json-commit').append(document.createTextNode(
-					common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))));
-			}
-			
-			$(this).removeClass('source-closed');
-			$(this).addClass('source-open');
-			$(this).next().show();
-		} else if ($(this).hasClass('source-open')) {
-			$(this).removeClass('source-open');
-			$(this).addClass('source-closed');
-			$(this).next().hide();
-		} else {
-			throw "node should have source-open or source-closed class";
-		}
+	$('#commit-json-accordion').accordion({
+		collapsible: true,
 
-		return false;
+		// autoHeight doesn't seem to work by itself; mumbo-jumbo needed
+		// http://stackoverflow.com/a/15413662/211160
+		heightStyle: "content",
+		autoHeight: false,
+        clearStyle: true
 	});
-	$('#demo-source').find('> a').next().hide();
+
+ 	$('#commit-json-accordion').on("accordionactivate", function( event, ui ) {
+		$('#json-commit').empty();			
+		if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
+			generateCommitAndProtectedObjects();
+		}
+		if (Globals.commitObj !== null) {
+			$('#json-commit').append(document.createTextNode(
+				common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))));
+		} 		
+ 	});
 
 	// http://www.siafoo.net/article/67
 	function closeEditorWarning() {
@@ -748,8 +719,8 @@ define([
 	
 	window.onbeforeunload = closeEditorWarning;
 	
-	$('#tabs').bind('tabsshow', function(event, ui) {
-		if (ui.panel.id == 'tabs-compose') {
+	$('#tabs').on('tabsshow', function(event, ui) {
+		if (ui.newPanel.attr('id') == 'tabs-compose') {
 			// REVIEW: If you don't set the focus to the compose editor, then clicking inside of it
 			// after switching tabs causes an "Object does not support property or method" 
 			// error in IE.  Specifically, the error is in a call to bkExtend where it receives
@@ -761,14 +732,9 @@ define([
 	});
 	
 	// Bind function for what happens on tab select
-	$('#tabs').bind('tabsselect', function(event, ui) {
-
-		// Objects available in the function context:
-		// ui.tab     // anchor element of the selected (clicked) tab
-		// ui.panel   // element, that contains the selected/clicked tab contents
-		// ui.index   // zero-based index of the selected (clicked) tab
+	$('#tabs').on('tabsactivate', function(event, ui) {
 		
-		switch(ui.panel.id) {
+		switch(ui.newPanel.attr('id')) {
 			case 'tabs-compose':
 				syncEditors();
 				break;
@@ -790,7 +756,7 @@ define([
 				} else {
 					var protectedHtml = '';
 					
-					protectedHtml += '<p>';
+					protectedHtml += '<span>';
 					protectedHtml += '/* BEGIN REVEAL CERTIFICATE */' + '<br />';
 					protectedHtml += '/* To use this, visit: ' + common.makeVerifyUrl(PARAMS.base_url, Globals.commit_id) + ' */' + '<br />';
 					
@@ -803,15 +769,15 @@ define([
 							throw "UI for multiple redaction pens is not yet implemented.";
 						} else {
 							for (var protectedObjIndex = 0; protectedObjIndex < Globals.protectedObjs.length; protectedObjIndex++) {
-								protectedHtml += '<p>';
+								protectedHtml += '<span>';
 								protectedHtml += '// Key #' + (protectedObjIndex+1) + ' goes here<br />';
 								protectedHtml += JSON.stringify(Globals.protectedObjs[protectedObjIndex], null, ' ');
-								protectedHtml += '</p>';
+								protectedHtml += '</span>';
 							}
 						}
 					}
 					protectedHtml += '/* END REVEAL CERTIFICATE */';
-					protectedHtml += '</p>';
+					protectedHtml += '</span>';
 
 					$('#json-protected').append($(protectedHtml));
 					$('#no-protections').hide();
@@ -827,25 +793,25 @@ define([
 			default:
 				throw 'no match for tab in write.js';
 		}
-		Globals.lastTabId = ui.panel.id;
+		Globals.lastTabId = ui.newPanel.attr('id');
 	});
 
 	BlackhighlighterWrite.highlightProtectedText = function() {
 		clientCommon.highlightAllOfElement($('#json-protected').get(0));
 	};
 		
-	$('#tabs').bind('tabsfocus', function(event, ui) {
-		if (ui.panel.id == 'tabs-commit') {
+	$('#tabs').on('tabsfocus', function(event, ui) {
+		if (ui.newPanel.attr('id') == 'tabs-commit') {
 			BlackhighlighterWrite.highlightProtectedText();
 		}
 	});
 
 	BlackhighlighterWrite.previousStep = function() {
-		$('#tabs').tabs('select', tabIndexForId(Globals.lastTabId)-1);
+		$('#tabs').tabs('option', 'active', tabIndexForId(Globals.lastTabId)-1);
 	};
 
 	BlackhighlighterWrite.nextStep = function() {
-		$('#tabs').tabs('select', tabIndexForId(Globals.lastTabId)+1);
+		$('#tabs').tabs('option', 'active', tabIndexForId(Globals.lastTabId)+1);
 	};
 
 	function finalizeCommitUI() {
@@ -857,7 +823,7 @@ define([
 		$('#progress-commit').hide();
 		if (Globals.successfulCommit) {
 			$('#tabs').tabs('enable', tabIndexForId('tabs-commit'));
-			$('#tabs').tabs('select', tabIndexForId('tabs-commit'));
+			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-commit'));
 			$('#tabs').tabs('disable', tabIndexForId('tabs-protect'));
 		} else {
 			// Since we didn't successfully commit the letter, bring buttons back
@@ -892,6 +858,7 @@ define([
 		
 		// Hide the buttons so the user can't navigate away or click twice
 		$('#buttons-protect').hide();
+		$('#commit-json-accordion').hide();
 		
 		// jquery UI does not support an indeterminate progress bar yet
 		// http://docs.jquery.com/UI/API/1.7/Progressbar
