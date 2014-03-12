@@ -369,8 +369,16 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 	
 	var result = '';
 	_.each(commit.spans, function (commitSpan) {
+
 		if (_.isString(commitSpan)) {
-			// line breaks must be converted to br nodes
+			// The commits and reveals contain just ordinary text as JavaScript
+			// strings, so "a < b" is legal.  But what we're making here needs
+			// to be raw HTML in the template, to get the spans and divs and
+			// such for the redaction in the blacked-out bits.  Hence, we have
+			// to escape the text span!
+			commitSpan = _.escape(commitSpan);
+
+			// Also, line breaks must be converted to br nodes
 			result += commitSpan.split('\n').join('<br />');
 		} else {
 			var revealGroup = revealsByHash[commitSpan.sha256]; 
@@ -539,7 +547,8 @@ app.post('/commit/$', function (req, res) {
 	}
 
 	// Verify it doesn't have more than just "spans"
-	if (!_.isEqual(_.keys(commit).sort(), ["spans"])) { 
+	if (!_.isEqual(_.keys(commit).sort(), ["spans"])) {
+		console.log(commit.toString());
 		throw new ClientError('commit should have a .spans key, only');
 	}
 
@@ -589,16 +598,20 @@ app.post('/commit/$', function (req, res) {
 		// mongodb JS driver knows about Date()?
 		// or do we need to use the .toJSON() method?
 		commit.commit_date = requestTime;
-		commit.commit_id = common.makeIdFromCommit(commit);
+		commit.commit_id = common.calculateIdFromCommit(commit);
 		return Q.ninvoke(coll, "insert", commit, {safe: true});
 
 	}).then(function (records) {
 
-		// 4. Give back "Show" and "Verify" URLs in JSON
+		// 4. Echo the commit back with the commit_date and commit_id added
+
+		// MongoDB stuck its own _id on there, and the client doesn't
+		// need to know that.
+		delete commit._id;
 
 		// We know the async insertion actually succeeded due to {safe: true}
 		res.json({
-			commit_date: records[0].commit_date
+			commit: commit
 		});
 
 	}).catch(function (err) {
@@ -672,7 +685,7 @@ app.post('/reveal/$', function (req, res) {
 	var claimedHash = common.claimedHashForReveal(reveal);
 	if (actualHash != claimedHash) {
 		throw ClientError(
-			'Actual reveal content hash is ' + contentHash
+			'Actual reveal content hash is ' + actualHash
 			+ ' while claimed hash is ' + claimedHash
 		);
 	}

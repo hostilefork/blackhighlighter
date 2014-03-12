@@ -32,8 +32,6 @@ define([
 	// these libs have no results, purely additive...
 	'jqueryui',
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
-	'json2', // http://www.json.org/json2.js
-	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
 	'expanding'
 ], function($, _, common, clientCommon) {
 	
@@ -88,7 +86,7 @@ define([
 	$('#tabs').tabs();
 	
 	function notifyErrorOnTab(tab, msg) {
-		$('#error-' + tab + '-msg').empty().append(document.createTextNode(msg));
+		$('#error-' + tab + '-msg').empty().text(msg);
 		$('#error-' + tab).show();
 	}
 	
@@ -138,11 +136,6 @@ define([
 	});
 	
 	$('#accordion').on('accordionchange', function(event, ui) {
-		// ui.newHeader // jQuery object, activated header
-		// ui.oldHeader // jQuery object, previous header
-		// ui.newContent // jQuery object, activated content
-		// ui.oldContent // jQuery object, previous content
-		
 		// we don't get the index, we get the header and the content
 		// the header seems to be the expected object, but the
 		// content is incorrect
@@ -455,7 +448,7 @@ define([
 							if (!revealIndices[shaHexDigest]) {
 								revealIndices[shaHexDigest] = 0;
 							}
-							placeholder.empty().append(document.createTextNode(reveal.redactions[revealIndices[shaHexDigest]]));
+							placeholder.text(reveal.redactions[revealIndices[shaHexDigest]]);
 							revealIndices[shaHexDigest]++;
 
 							placeholder.removeClass('protected');
@@ -497,9 +490,12 @@ define([
 			case 'tabs-reveal':
 				clearErrorOnTab('reveal');
 				$('#progress-reveal').hide();
-				$('#json-reveal').empty().append(
-					// REVIEW: used to sort values in array by key (hash), does this matter?
-					document.createTextNode(JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ')));
+
+				// REVIEW: used to sort values in array by key (hash)
+				// Does it matter?  Should there be a "canonized" ordering?
+				$('#json-reveal').text(
+					JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ')
+				);
 				break;
 		
 			case 'tabs-done':
@@ -613,7 +609,8 @@ define([
 			try {
 				var tidyRevealText = tidyInputForJsonParser(revealInput);
 				
-				parsedJson = JSON.parse(tidyRevealText);	
+				// http://stackoverflow.com/a/10362313/211160
+				parsedJson = jQuery.parseJSON(tidyRevealText);	
 			} catch(errParse) {
 				notifyErrorOnTab('verify', errParse);
 				// do not continue to next tab

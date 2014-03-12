@@ -212,7 +212,7 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 			return result;
 		},
 		
-		makeIdFromCommit: function(commit) {
+		calculateIdFromCommit: function(commit) {
 			return SHA256(this.canonicalJsonFromCommit(commit));
 		},
 

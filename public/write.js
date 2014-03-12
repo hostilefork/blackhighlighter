@@ -29,9 +29,8 @@ define([
 	'client-common',
 	// these libs have no results, purely additive...
 	'jqueryui',
-	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
-	'json2', // http://www.json.org/json2.js
-	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
+	'sha256', // http://www.webtoolkit.info/javascript-sha256.html,
+	'json2',
 	'expanding'
 ], function($, _, common, clientCommon) {
 
@@ -58,7 +57,7 @@ define([
 	}
 	
 	function notifyErrorOnTab(tab, msg) {
-		$('#error-' + tab + '-msg').empty().append(document.createTextNode(msg));
+		$('#error-' + tab + '-msg').text(msg);
 		$('#error-' + tab).show();
 	}
 	
@@ -83,16 +82,6 @@ define([
 				killEmptyTextNodesRecursivePreorder(node.childNodes[childIndex]);
 			}
 		}
-	}
-
-	// Though ideally we would be able to update the source code in #json-commit with
-	// each protection, for performance reasons we collapse it each time the user
-	// makes an edit which would change the json-commit source.
-	function ensureJsonCommitCollapsed() {
-		$('#json-commit').empty();
-
-		/* Requires collapsible attribute to take "false" */
-		$('#commit-json-accordion').accordion('option', 'active', false);
 	}
 	
 	function notNormalized(node) {
@@ -139,7 +128,6 @@ define([
 			return false;
 		}
 
-		ensureJsonCommitCollapsed();
 		clientCommon.clearUserSelection();
 		
 		if (protectedEl.hasClass("suggested-protection")) {
@@ -169,6 +157,8 @@ define([
 		Globals.commitObj = undefined;
 		Globals.protectedObjs = undefined;
 
+		updateJsonCommitPreviewIfNecessary();
+
 		return true;
 	};
 	var doUnprotectOrTakeSuggestion_callback = function() {
@@ -178,8 +168,6 @@ define([
 	
 	function doProtect() {
 		
-		ensureJsonCommitCollapsed();
-
 		// This hack is necessary because the IE compatibility layer for W3C ranges
 		// returns nulls at times nicEdit did not expect.  I'm not very confident that
 		// the existing invariants were correct in any case, but this works around
@@ -260,6 +248,8 @@ define([
 			// bad and not all blacked out
 			// http://www.webreference.com/js/column12/selectionobject.html
 			clientCommon.clearUserSelection();
+
+			updateJsonCommitPreviewIfNecessary();
 		}
 		
 		Globals.commitObj = undefined;
@@ -528,11 +518,13 @@ define([
 						// Each protected span adds a placeholder to the commit and a redaction to
 						// the reveal certificate
 						
-						var content = innerXHTML(child);
-						// REVIEW: If HTML formatting is ever supported, we would need to ensure that the all subsets of
-						// substitutions generate valid HTML, e.g. you can't mark out the open tag for a bold and leave 
-						// the close tag behind.  Also, need to sanitize all script tags and other non-markup bits.
-			
+						// Since the div in which editing happened was contenteditable
+						// HTML, it will be representing < as &lt; inside a text node.
+						// Consequently, we must unescape it before putting it into
+						// a certificate.  The server will escape it back when it
+						// generates HTML.
+						var content = _.unescape($(child).html());
+
 						if (content.length === 0) {
 							throw "Zero length redaction found, illegal";
 						}
@@ -679,6 +671,7 @@ define([
 
 	$('#commit-json-accordion').accordion({
 		collapsible: true,
+		active: false, /* only collapsible accordions can be fully closed */
 
 		// autoHeight doesn't seem to work by itself; mumbo-jumbo needed
 		// http://stackoverflow.com/a/15413662/211160
@@ -687,16 +680,19 @@ define([
         clearStyle: true
 	});
 
- 	$('#commit-json-accordion').on("accordionactivate", function( event, ui ) {
+	// For performance reasons, it isn't good to update the JSON preview of
+	// the commit on every redact/unredact.  But if you have the JSON accordion
+	// open, you probably want to see it changing and are willing to pay for
+	// the slower performance.  If it's closed you don't pay for it.
+ 	function updateJsonCommitPreviewIfNecessary() {
 		$('#json-commit').empty();			
 		if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
 			generateCommitAndProtectedObjects();
 		}
-		if (Globals.commitObj !== null) {
-			$('#json-commit').append(document.createTextNode(
-				common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' '))));
-		} 		
- 	});
+		if (Globals.commitObj) {
+			$('#json-commit').text(common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' ')));
+		}
+ 	}
 
 	// http://www.siafoo.net/article/67
 	function closeEditorWarning() {
@@ -740,8 +736,6 @@ define([
 				break;
 
 			case 'tabs-protect':
-				ensureJsonCommitCollapsed();
-				
 				$('#progress-commit').hide();
 				// Unfortunately, switching tabs disables undo.  :(
 				// Also unfortunately, there's no undo for adding and removing protections
@@ -753,33 +747,18 @@ define([
 				if (Globals.protectedObjs.length === 0) {
 					$('#no-protections').show();
 					$('#some-protections').hide();
-				} else {
-					var protectedHtml = '';
-					
-					protectedHtml += '<span>';
-					protectedHtml += '/* BEGIN REVEAL CERTIFICATE */' + '<br />';
-					protectedHtml += '/* To use this, visit: ' + common.makeVerifyUrl(PARAMS.base_url, Globals.commit_id) + ' */' + '<br />';
-					
-					if (Globals.protectedObjs.length == 1) {
-						var reveal = Globals.protectedObjs[0];
-						reveal.commit_id = Globals.commit_id;
-						protectedHtml +=  common.escapeNonBreakingSpacesInString(JSON.stringify(reveal, null, ' ')) + '<br />';
-					} else if (Globals.protectedObjs.length > 1) {
-						if (true) {
-							throw "UI for multiple redaction pens is not yet implemented.";
-						} else {
-							for (var protectedObjIndex = 0; protectedObjIndex < Globals.protectedObjs.length; protectedObjIndex++) {
-								protectedHtml += '<span>';
-								protectedHtml += '// Key #' + (protectedObjIndex+1) + ' goes here<br />';
-								protectedHtml += JSON.stringify(Globals.protectedObjs[protectedObjIndex], null, ' ');
-								protectedHtml += '</span>';
-							}
-						}
-					}
-					protectedHtml += '/* END REVEAL CERTIFICATE */';
-					protectedHtml += '</span>';
+				} else if (Globals.protectedObjs.length == 1) {
 
-					$('#json-protected').append($(protectedHtml));
+					var certificate = '';					
+					certificate += '/* BEGIN REVEAL CERTIFICATE */' + '\n';
+					certificate += '/* To use this, visit: ' + common.makeVerifyUrl(PARAMS.base_url, Globals.commit_id) + ' */' + '\n';
+
+					var reveal = Globals.protectedObjs[0];
+					reveal.commit_id = Globals.commit_id;
+					certificate += common.escapeNonBreakingSpacesInString(JSON.stringify(reveal, null, ' ')) + '\n';
+					certificate += '/* END REVEAL CERTIFICATE */';
+
+					$('#json-protected').text(certificate);
 					$('#no-protections').hide();
 					$('#some-protections').show();
 					
@@ -787,6 +766,12 @@ define([
 					// http://groups.google.com/group/jquery-ui/browse_thread/thread/cf272e3dbb75f201
 					// waiting is a workaround
 					window.setTimeout(BlackhighlighterWrite.highlightProtectedText, 200); // returns timerId
+				} else {
+					// Before I tried to put HTML inside the textarea but,
+					// but that was hard to escape properly.  If there were
+					// multiple redaction pens it really should be done with
+					// an accordion.  
+					throw "UI for multiple redaction pens is not yet implemented.";
 				}
 				break;
 
@@ -886,15 +871,21 @@ define([
 					notifyErrorOnTab('commit', result.error.msg);
 					finalizeCommitUI();
 				} else {
-					Globals.successfulCommit = true;
-					Globals.commitObj.commit_date = result.commit_date;
-					
-					Globals.commit_id = common.makeIdFromCommit(Globals.commitObj);
+					Globals.commitObj.commit_date = result.commit.commit_date;
+					Globals.commit_id = common.calculateIdFromCommit(Globals.commitObj);
 
+					if (Globals.commit_id != result.commit.commit_id) {
+						throw 'Server accepted data but did not calculate same commit hash we did!';
+					}
+
+					Globals.successfulCommit = true;
 					// The JSON response tells us where the show_url is for our new letter
 					var showUrl = common.makeShowUrl(PARAMS.base_url, Globals.commit_id);
-					innerXHTML($('#url-public').get(0), 
-						'<a href="' + showUrl + '" target="_blank">' + showUrl + '</a>');
+					$('#url-public').html( 
+						'<a href="' + showUrl + '" target="_blank">'
+						+ showUrl
+						+ '</a>'
+					);
 				}
 				if (finalizeCommitUI.timerId === null) {
 					finalizeCommitUI();

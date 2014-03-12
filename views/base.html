@@ -80,10 +80,15 @@ You will probably want to copy and customize this file.
 			{# LIBRARIES #}
             jquery: 'http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min', 
 			jqueryui: '{{ LIBS_URL }}jquery-ui/jquery-ui-1.10.4.custom',
-			underscore: '{{ LIBS_URL }}underscore',
-			sha256: '{{ LIBS_URL }}sha256', // http://www.webtoolkit.info/javascript-sha256.html
-			json2: '{{ LIBS_URL }}json2', // http://www.json.org/json2.js
-			innerxhtml: '{{ LIBS_URL}}innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
+			underscore: '{{ LIBS_URL }}underscore-min',
+
+			// http://www.webtoolkit.info/javascript-sha256.html
+			sha256: '{{ LIBS_URL }}sha256',
+
+			// Although jQuery has a parse, it doesn't have stringify...
+			// Though modern browsers include JSON.  Review inclusion.
+			json2: '{{ LIBS_URL }}json2', 
+
 			expanding: '{{ LIBS_URL }}jquery-expanding/expanding'
         },
 		
