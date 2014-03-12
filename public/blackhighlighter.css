@@ -76,12 +76,7 @@ body {
 div.textarea-wrapper {
     margin: 16px;
 }
-/*
- * Can't get nicEdit to obey the document display class so doing literal
- * mentions for now, until I get around to replacing the editor or fixing it
- */
-.certificate-display,
-/* , .document-display */ .nicEdit-main, .protection_area, #letter-text {
+.certificate-display, .document-display {
     padding: 16px;
     border: none;
 
@@ -93,11 +88,15 @@ div.textarea-wrapper {
        -moz-box-sizing: border-box;
             box-sizing: border-box;
 }
-/* .document-display */ .nicEdit-main, .protection_area, #letter-text {
+.document-display {
 	color: black;
     background-color: white;
+    min-height: 200px;
 }
-/* currently need this specificity to override jQuery UI! */
+/*
+ * Currently need this specificity to override what jQuery UI does to
+ * any textarea that lives underneath a tab!
+ */
 div.textarea-wrapper .certificate-display {
 	background-color: rgb(255, 255, 170);
 	color: rgb(0,0,0);
@@ -109,14 +108,14 @@ div.textarea-wrapper .certificate-display {
 
 /* Classes specific to write.html */
 
-.protection_area {
+.protection-area {
 	cursor: crosshair;
 }
 /* http://css-tricks.com/overriding-the-default-text-selection-color-with-css/ */
-.protection_area::selection {
+.protection-area::selection {
 	background: #000000; /* Safari */
 	}
-.protection_area::-moz-selection {
+.protection-area::-moz-selection {
 	background: #000000; /* Firefox */
 }
 
@@ -127,30 +126,30 @@ span.protected {
 span.protected:hover {
 }
 /* when we are in read+write mode w.r.t. editing protections, e.g. compose tab */
-span.protected_readwrite {
+span.protected-readwrite {
 	background-color: gray;
 	color: black;
 }
-span.protected_readwrite:hover {
+span.protected-readwrite:hover {
 	background-color: gray;
 	color:black;
 }
 /* when we are in read only mode w.r.t. editing protections, e.g. protect tab */
-span.protected_readonly {
+span.protected-readonly {
 	background-color: black;
 	color: black;
 }
-span.protected_readonly:hover {
+span.protected-readonly:hover {
 	background-color: gray;
 	/* http://www.w3.org/TR/CSS21/ui.html#propdef-cursor */
 	/* Draw more "fun" cursor overrides to use, if avail? */
 	cursor: default;
 }
-span.suggested_protection {
+span.suggested-protection {
 	background-color: #FFA500; /* Orange */
 	cursor: default;
 }
-span.suggested_protection:hover {
+span.suggested-protection:hover {
 	background-color: #FF4500; /* OrangeRed */
 	cursor: default;
 }

@@ -32,8 +32,7 @@ define([
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
 	'json2', // http://www.json.org/json2.js
 	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-	'expanding',
-	'niceditFixed'
+	'expanding'
 ], function($, _, common, clientCommon) {
 
 	var Globals = {
@@ -136,17 +135,17 @@ define([
 	// Dynamic onclick methods...
 	// http://www.webdeveloper.com/forum/archive/index.php/t-33159.html
 	BlackhighlighterWrite.doUnprotectOrTakeSuggestion = function(protectedEl) {
-		if (protectedEl.hasClass('protected_readwrite')) {
+		if (protectedEl.hasClass('protected-readwrite')) {
 			return false;
 		}
 
 		ensureJsonCommitCollapsed();
 		clientCommon.clearUserSelection();
 		
-		if (protectedEl.hasClass("suggested_protection")) {
-			protectedEl.removeClass("suggested_protection");
+		if (protectedEl.hasClass("suggested-protection")) {
+			protectedEl.removeClass("suggested-protection");
 			protectedEl.addClass("protected");
-			protectedEl.addClass("protected_readonly");
+			protectedEl.addClass("protected-readonly");
 			normalizeProtectionsInSubtree(protectedEl.parent());
 			return true;
 		}
@@ -177,15 +176,52 @@ define([
 	};
 	
 	
-	function doProtect(selectedInstance, element) {
-		// selectedInstance is null (?) so passed instance in as this ptr in closure
-		var instance = this;
+	function doProtect() {
 		
 		ensureJsonCommitCollapsed();
 
+		// This hack is necessary because the IE compatibility layer for W3C ranges
+		// returns nulls at times nicEdit did not expect.  I'm not very confident that
+		// the existing invariants were correct in any case, but this works around
+		// the crashes.
+		// (selElm can't handle "null" ranges, but tests startContainer, so given a
+		// startContainer of null we can keep things going...)
+
+		function getRng () {
+			var nullRange = {
+					'toString': function() { return "";},
+					'startContainer': null, 
+					'endContainer': null, 
+					'parentElement': function() { return null;},
+					'note': 'This is a FAKE RANGE, see nicEditorPatches.js getRng()'
+			};
+			var s = window.getSelection();
+			if(s === null) {
+				return nullRange;
+			}
+				
+			if (s.rangeCount > 0) {
+				var rangeAt = s.getRangeAt(0);
+				if (rangeAt === null) {
+					return nullRange;
+				}
+				return rangeAt;
+			}
+
+			var rangeNew = null;
+			if('createRange' in s) {
+				rangeNew = s.createRange();
+			}
+			if (rangeNew === null) {
+				return nullRange;
+			}
+			
+			return rangeNew;
+		}
+
 		// We depend on this compatibility layer:
 		// http://code.google.com/p/ierange/
-		var range = instance.getRng();
+		var range = getRng();
 		if (range && (range.toString() !== '')) {
 						
 			// we extract the contents which removes them from the editor.
@@ -193,11 +229,11 @@ define([
 			// http://www.phpied.com/replace-selected-text-firefox/
 			var fragment = $(range.extractContents());
 		
-			// find all protected or suggested_protection spans in the range and replace them with their contents
+			// find all protected or suggested-protection spans in the range and replace them with their contents
 			// NOTE: find() does not seem to work on document fragments, see post
 			// http://groups.google.com/group/jquery-en/browse_thread/thread/c942018ff571b135/
 			// http://docs.jquery.com/Selectors/multiple#selector1selector2selectorN
-			fragment.children().filter('span').filter('.protected,.suggested_protection').each(function(i) {
+			fragment.children().filter('span').filter('.protected,.suggested-protection').each(function(i) {
 				var parentOfThis = this.parentNode;
 				$(this).replaceWith($(this).contents());
 				// We must normalize so that adjacent TextNodes get merged together
@@ -207,16 +243,18 @@ define([
 				/* parentOfThis.normalize(); */
 			});
 			
-			var protectedEl = $('<span class="protected protected_readonly"></span>');
+			var protectedEl = $('<span class="protected protected-readonly"></span>');
 			protectedEl.append(fragment.contents());
 			protectedEl.get(0).normalize();
 			protectedEl.click(doUnprotectOrTakeSuggestion_callback);
 			
 			range.insertNode(protectedEl.get(0));
 	
-			killEmptyTextNodesRecursivePreorder(instance.getElm());
+			protectionAreaEl = $("#editor-protect").get(0);
 
-			normalizeProtectionsInSubtree(instance.getElm());
+			killEmptyTextNodesRecursivePreorder(protectionAreaEl);
+
+			normalizeProtectionsInSubtree(protectionAreaEl);
 			
 			// we must unselect the selection, or the XORing will make it look
 			// bad and not all blacked out
@@ -232,53 +270,17 @@ define([
 	$('#tabs').tabs();
 
 	// Disable tabs that we're not ready for
-	$('#tabs').tabs('disable', tabIndexForId('tabs-commit'));
-	
-	// used to have this code in bkLib.onDomLoaded
-	// but that caused some kind of crash in IE because if you are in a jquery $() scoping thing
-	// you're already in the loaded phase... 
-	// see: http://www.learningjquery.com/2006/09/introducing-document-ready
-	
-		
-	var nicEditorCompose = new nicEditor({
-		// http://wiki.nicedit.com/Configuration-Options
-		'iconsPath': PARAMS.blackhighlighter_media_url + 'nicEditorIcons.gif', 
-/*		'srcPath': PARAMS.blackhighlighter_media_url + 'nicEdit/', */
-		'xhtml': true,
-		'buttonList': [
-			// REVIEW: Allow markup and rich formatting?
-/*			'bold',
-			'italic',
-			'underline',
-			'left',
-			'center',
-			'right'*/
-		]
-	}).panelInstance('editor-compose');
-	var nicInstanceCompose = nicEditorCompose.instanceById('editor-compose');
+	$('#tabs').tabs('disable', tabIndexForId('tabs-commit'));	
 
-	var nicEditorProtect = new nicEditor({
-		'iconsPath': PARAMS.blackhighlighter_media_url + 'nicEditorIcons.gif', 
-/*		'srcPath': PARAMS.blackhighlighter_media_url + 'nicEdit/', */
-		'xhtml': true,
-		'buttonList': [
-			// REVIEW: Buttons for different redaction pens?
-		]
-	}).panelInstance('editor-protect');
-	var nicInstanceProtect = nicEditorProtect.instanceById('editor-protect');
+	// Selection changes are finalized by selected, or mouseup?  What do
+	// we really want to capture here?
+	$("#editor-protect").mouseup(doProtect);
 	
-	// The nicEdit selection event only captured mouse downs
-	// (see init method in nicInstance.js)
-	// I wanted mouse ups.  Well, actually selection changes which 
-	// are finalized by mouse ups...
-	nicInstanceProtect.elm.addEvent('mouseup', nicInstanceProtect.selected.closureListener(nicInstanceProtect));
-	nicEditorProtect.addEvent('selected', doProtect.closure(nicInstanceProtect));
-			
+	// NOTE: 		
 	// http://bytes.com/groups/javascript/484582-setattribute-versus-assigning-property
-	nicInstanceProtect.elm.setAttribute('contentEditable','false');
-	nicInstanceProtect.elm.className = 'protection_area';
+	/* setAttribute('contentEditable','false'); */
 
-	nicInstanceCompose.elm.focus();
+	$('#editor-compose').focus();
 
 	function addProtectSuggestions(node) {
 	
@@ -287,7 +289,7 @@ define([
 		// the match was at the first position.
 		
 		function pushSuggestSpan(str) {
-			var suggestSpan = $('<span class="suggested_protection">' + str + '</span>');
+			var suggestSpan = $('<span class="suggested-protection">' + str + '</span>');
 			suggestSpan.click(doUnprotectOrTakeSuggestion_callback);
 			$(node).before(suggestSpan);
 			lastPushWasText = false;
@@ -389,7 +391,7 @@ define([
 	
 	function removeProtectSuggestions(node) {
 		var replaceWithContents = [];
-		$(node).find('span').filter('.suggested_protection').each(function(i) {
+		$(node).find('span').filter('.suggested-protection').each(function(i) {
 			replaceWithContents.push($(this));
 		});
 		for (var replaceIndex = 0; replaceIndex < replaceWithContents.length; replaceIndex++) {
@@ -404,19 +406,19 @@ define([
 		if (Globals.lastTabId == 'tabs-protect') {
 			// get any protections and copy to the compose editor
 			// NOTE: "true" parameter to clone preserves functions attached to elements
-			var elementProtectCopy = $(nicInstanceProtect.elm).clone(true);
+			var elementProtectCopy = $("#editor-protect").clone(true);
 			elementProtectCopy.find('span').filter('.protected').each(function(i){
-				$(this).removeClass('protected_readonly').addClass('protected_readwrite');
+				$(this).removeClass('protected-readonly').addClass('protected-readwrite');
 			});
 			removeProtectSuggestions(elementProtectCopy.get(0));
-			$(nicInstanceCompose.elm).empty().append(elementProtectCopy.contents());
+			$("#editor-compose").empty().append(elementProtectCopy.contents());
 			return true;
 		} else if (Globals.lastTabId == 'tabs-compose') {
 			// get any modifications to the letter and copy to the protected text
 			// NOTE: "true" parameter to clone preserves functions attached to elements
-			var elementComposeCopy = $(nicInstanceCompose.elm).clone(true);
+			var elementComposeCopy = $("#editor-compose").clone(true);
 			elementComposeCopy.find('span').filter('.protected').each(function(i){
-				$(this).removeClass('protected_readwrite').addClass('protected_readonly');
+				$(this).removeClass('protected-readwrite').addClass('protected-readonly');
 			});
 			
 			// REVIEW: IE has a "feature" where it will always turn things that look like 
@@ -439,7 +441,7 @@ define([
 			}
 			
 			addProtectSuggestions(elementComposeCopy.get(0));
-			$(nicInstanceProtect.elm).empty().append(elementComposeCopy.contents());
+			$("#editor-protect").empty().append(elementComposeCopy.contents());
 			return true;
 		}
 
@@ -449,10 +451,8 @@ define([
 	
 
 	function generateCommitAndProtectedObjects() {
-		// Abstraction for getting the DOM (not text content) of a nicEditor while still
-		// handling the issues noted in http://wiki.nicedit.com/XHTML-Compliant-Output
-		var publicAndProtected = nicInstanceProtect.getElmCloneClean();
-		removeProtectSuggestions(publicAndProtected.get(0));
+		var $publicAndProtected = $("#editor-protect");
+		removeProtectSuggestions($publicAndProtected.get(0));
 
 		Globals.commitObj = {
 			'spans': []
@@ -618,7 +618,7 @@ define([
 			}
 		}
 
-		publicAndProtected.contents().each(function(i){
+		$publicAndProtected.contents().each(function(i){
 			processChild(this);			
 		});
 
@@ -727,7 +727,7 @@ define([
 			// a read-only element that it attempts to copy properties to (e.g. 'construct').
 			// This has to happen after the tab has been shown (tabsshow event) and not merely
 			// at the moment of selection (tabsselect event)
-			nicInstanceCompose.elm.focus();
+			$('editor-compose').focus();
 		}
 	});
 	
