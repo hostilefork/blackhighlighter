@@ -18,7 +18,10 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
-// REVIEW: http://stackoverflow.com/questions/10302724/calling-methods-in-requirejs-modules-from-html-elements-such-as-onclick-handlers
+// REVIEW: What's the best way to call methods in requirejs modules from
+// html elements (such as onClick handlers?)
+
+// http://stackoverflow.com/questions/10302724/
 var BlackhighlighterRead = {};
 
 define([
@@ -31,7 +34,7 @@ define([
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
 	'json2', // http://www.json.org/json2.js
 	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-	'autosize'
+	'expanding'
 ], function($, _, common, clientCommon) {
 	
 	var Globals = {
@@ -67,7 +70,7 @@ define([
 
 
 	// http://www.jacklmoore.com/autosize/
-	$('textarea.expanding').autosize();
+	$('textarea.expanding').expanding();
 
 	
 	// jquery UI does tabs by index, not ID.  using this to increase readability
@@ -231,7 +234,7 @@ define([
 		}
 		
 		var tidyJson = '';
-	
+
 		// start by removing comments and whitespace
 		var inputLength = pseudoJson.length;
 		var index = 0;

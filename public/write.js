@@ -32,7 +32,7 @@ define([
 	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
 	'json2', // http://www.json.org/json2.js
 	'innerxhtml', // innerXHTML, because... hey, why not be future proof and use XHTML?
-	'autosize',
+	'expanding',
 	'niceditFixed'
 ], function($, _, common, clientCommon) {
 
