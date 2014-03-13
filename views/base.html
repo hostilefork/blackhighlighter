@@ -68,18 +68,14 @@ You will probably want to copy and customize this file.
 {% block scripts %}
 	<script type="text/javascript" src="{{ LIBS_URL }}require.js"></script>
     <script>
-    require({
+    require.config({
         baseUrl: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}',
 		
-		{# Note: no .js on these paths!  It appends that automatically. #}
         paths: {
-			{# LOADER PLUGINS #}
-			{# http://requirejs.org/docs/api.html#plugins #} 
-			"use": "{{ LIBS_URL }}use",
-
 			{# LIBRARIES #}
             jquery: 'http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min', 
 			jqueryui: '{{ LIBS_URL }}jquery-ui/jquery-ui-1.10.4.custom',
+
 			underscore: '{{ LIBS_URL }}underscore-min',
 
 			// http://www.webtoolkit.info/javascript-sha256.html
@@ -89,25 +85,38 @@ You will probably want to copy and customize this file.
 			// Though modern browsers include JSON.  Review inclusion.
 			json2: '{{ LIBS_URL }}json2', 
 
-			expanding: '{{ LIBS_URL }}jquery-expanding/expanding'
+			expanding: '{{ LIBS_URL }}jquery-expanding/expanding',
+
+			main: '{{ MAIN_SCRIPT }}'
         },
+
+		/* http://requirejs.org/docs/api.html#config-shim */
+		shim: {
+			'jqueryui': {
+				exports: '$',
+				deps: ['jquery']
+			},
+
+			'underscore': {
+				exports: '_'
+			},
+
+			"sha256": {
+				exports: 'sha256export'
+			}
+		},
 		
 		{# "high priority" modules, which will be loaded before any others #}
 		{# Note: downloaded in parallel, cannot interdepend! #}
-        priority: ['jquery'],
-		
-		{# https://github.com/tbranyen/use.js #}
-	    {# Similar to: https://github.com/gartz/RequireJS-Wrapper-Plugin #}
-		{# Wrapper for non-AMD modules that put declarations into global scope #}
-		use: {
-			"underscore": {
-				attach: "_"
-			},
-			"sha256": {
-				attach: "sha256export"
-			}
-		}
-    }, ['{{ MAIN_SCRIPT }}']); // script "entry point"
+        priority: ['jquery']
+
+    });
+
+    require(['main'], function () {
+    	/* alert("everything loaded ok?"); */
+    });
+    
+    // script "entry point"
     </script>
 		
 		<!-- If debugging in a browser without decent debugging infrastructure, Firebug Lite can be helpful -->

@@ -26,7 +26,7 @@ var BlackhighlighterRead = {};
 
 define([
 	'jquery',
-	'use!underscore',
+	'underscore',
 	'client-server-common',
 	'client-common',
 	// these libs have no results, purely additive...
@@ -152,17 +152,15 @@ define([
 	
 	BlackhighlighterRead.addReveal = function(reveal, server) {
 
-		var actualHash = common.actualHashForReveal(reveal);
-		var claimedHash = common.claimedHashForReveal(reveal);
-
-		if (actualHash != claimedHash) {
+		var actualHash = SHA256(common.canonicalStringFromReveal(reveal));
+		if (actualHash != reveal.sha256) {
 			throw 'Invalid certificate: content hash is ' + actualHash 
-				+ ' while claimed hash is ' + claimedHash;
+				+ ' while claimed hash is ' + reveal.sha256;
 		}
 
 		var numPlaceholdersForKey = 0;
 		_.each(Globals.commit.spans, function (commitSpan) {
-			if (commitSpan.sha256 == claimedHash) {
+			if (commitSpan.sha256 == reveal.sha256) {
 				numPlaceholdersForKey++;
 			}
 		});

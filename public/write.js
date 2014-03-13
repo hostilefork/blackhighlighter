@@ -24,7 +24,7 @@ var BlackhighlighterWrite = {};
 // Main script file, brings page to life in $(document).onload handler
 define([
 	'jquery',
-	'use!underscore',
+	'underscore',
 	'client-server-common',
 	'client-common',
 	// these libs have no results, purely additive...
@@ -1028,7 +1028,7 @@ define([
 					finalizeCommitUI();
 				} else {
 					Globals.commitObj.commit_date = result.commit.commit_date;
-					Globals.commit_id = common.calculateIdFromCommit(Globals.commitObj);
+					Globals.commit_id = SHA256(common.canonicalJsonFromCommit(Globals.commitObj));
 
 					if (Globals.commit_id != result.commit.commit_id) {
 						throw 'Server accepted data but did not calculate same commit hash we did!';

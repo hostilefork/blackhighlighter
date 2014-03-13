@@ -21,7 +21,7 @@
 
 // The module standard being used is the "asynchronous module definition"
 //     https://github.com/amdjs/amdjs-api/wiki/AMD
-define(['use!underscore', 'use!sha256'], function(_, SHA256){
+define(['underscore'], function(_){
     return {
 		
 		// URL api
@@ -211,22 +211,13 @@ define(['use!underscore', 'use!sha256'], function(_, SHA256){
 			result += ']}';
 			return result;
 		},
-		
-		calculateIdFromCommit: function(commit) {
-			return SHA256(this.canonicalJsonFromCommit(commit));
-		},
 
-		actualHashForReveal: function(reveal) {
+		canonicalStringFromReveal: function(reveal) {
 			var contents = reveal.salt;
 			_.each(reveal.redactions, function (redactionSpan) {
 				contents += redactionSpan;
 			});
-			return SHA256(contents);
-		},
-
-		// Helper function just for readability
-		claimedHashForReveal: function(reveal) {
-			return reveal.sha256;
+			return contents;
 		}
     };
 });

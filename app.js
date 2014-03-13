@@ -104,6 +104,16 @@ var _ = require('underscore')._;
 // http://stackoverflow.com/questions/22138759/
 var Q = require('q');
 
+// When I started the node.js port of Blackhighlighter from Python, I just
+// went ahead and tried to reuse the little SHA256 JavaScript file I had been
+// using in the browser (instead of Python's crypto).  However, that file
+// is not in the AMD Module format and it's more trouble than it's worth to
+// try and share the crypto code between server and browser.  Probably
+// better to use multiple implementations anyway.  So client-server-common
+// does not do the hashing; it just canonizes data so that the client and
+// server can call the SHA256 of their choice.
+var crypto = require('crypto');
+
 
 // 
 // BASIC HTTP SETUP
@@ -225,7 +235,10 @@ app.set('views', __dirname + '/views');
 // Initialize Swig default options, for full list of options see:
 //     http://paularmstrong.github.io/swig/docs/api/#SwigOpts
 swig.setDefaults({
-	loader: swig.loaders.fs(__dirname + '/views')
+	loader: swig.loaders.fs(__dirname + '/views'),
+
+	// TURN CACHE BACK ON in deployment environments...
+	cache: false
 });
 
 // Load custom template tags
@@ -598,7 +611,12 @@ app.post('/commit/$', function (req, res) {
 		// mongodb JS driver knows about Date()?
 		// or do we need to use the .toJSON() method?
 		commit.commit_date = requestTime;
-		commit.commit_id = common.calculateIdFromCommit(commit);
+
+		var shasum = crypto.createHash('sha256');
+		// options are utf8, ascii, binary... which to use?
+		// binary is default if input is a string...
+		shasum.update(common.canonicalJsonFromCommit(commit), 'binary');
+		commit.commit_id = shasum.digest('hex');
 		return Q.ninvoke(coll, "insert", commit, {safe: true});
 
 	}).then(function (records) {
@@ -681,12 +699,13 @@ app.post('/reveal/$', function (req, res) {
 	});
 
 	// Now make sure the reveal isn't lying about its contents hash
-	var actualHash = common.actualHashForReveal(reveal);
-	var claimedHash = common.claimedHashForReveal(reveal);
-	if (actualHash != claimedHash) {
+	var shasum = crypto.createHash('sha256');
+	shasum.update(common.canonicalStringFromReveal(reveal), 'binary');
+	var actualHash = shasum.digest('hex');
+	if (actualHash != reveal.sha256) {
 		throw ClientError(
 			'Actual reveal content hash is ' + actualHash
-			+ ' while claimed hash is ' + claimedHash
+			+ ' while claimed hash is ' + reveal.sha256
 		);
 	}
 
@@ -816,4 +835,5 @@ app.post('/reveal/$', function (req, res) {
 // listening for connections.
 //
 
+console.log("Listening on port " + port);
 app.listen(port, host);

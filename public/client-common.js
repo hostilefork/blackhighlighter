@@ -45,7 +45,7 @@ if (!window.Node) {
 
 // The module standard being used is the "asynchronous module definition"
 //     https://github.com/amdjs/amdjs-api/wiki/AMD
-define(['jquery', 'use!underscore'], function($, _){
+define(['jquery', 'underscore'], function($, _){
     return {
 
 		outerXHTML: function($source) {
