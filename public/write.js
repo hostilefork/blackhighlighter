@@ -390,48 +390,185 @@ define([
 			parent.get(0).normalize();
 		}
 	}
+
+	function cloneContenteditableAsCanon(div, keepFunctions) {
+		var divCopy = div.clone(keepFunctions);
+
+		// While HTML may collapse all whitespace as not being visually
+		// significant, we treat it as such.  If whitespace is not &nbsp;
+		// we have to collapse it in the text nodes.
+		//
+		// http://stackoverflow.com/a/4399718/211160
+		//
+		var getTextNodesIn = function(el) {
+			return $(el).find(":not(iframe)").addBack().contents().filter(function() {
+				return this.nodeType == 3;
+			});
+		};
+		getTextNodesIn(divCopy).each(function(idx, el) {
+			// http://stackoverflow.com/questions/7635952/ 
+			var str = el.nodeValue;
+			str = str.replace(/\s+/g, " ");
+			str = str.replace(/^\s+|\s+$/g, "");
+			// should we also do something with zero-no-width joiners?
+			el.nodeValue = str;
+		});
+
+		// First canonize all the <p> tags for browsers that make them into
+		// <div> instead. As you might expect, an easy thing to change is hard;
+		// tags on elements can't change without disrupting content.  :-/
+		//
+		// Note we lose any attributes that may have been attached to the
+		// paragraph.  As we're going for canon, that's not a bad thing in
+		// this case...in fact we should probably strip *more* information off!
+		//
+		// http://stackoverflow.com/a/1695200/211160
+		//
+		divCopy.find("p").each(function(idx, el) {
+			var oldP = $(el);
+			var newDiv = $('<div></div>');
+			oldP.before(newDiv);
+			newDiv.append(oldP.contents());
+			oldP.remove();
+		});
+
+		// Due to wacky behavior of the ::selection pseudoclass, a custom
+		// selection color will not apply to any *empty space* that crosses
+		// line breaks.  This looks ugly.  There are other reasons for
+		// canonizing the input so there are only <div></div> sections
+		// with no <br> (simplifies later processing), so it's worth
+		// doing regardless of this quirk.
+		
+		// It's hard to canonize any arbitrary input here, because you can't
+		// (for instance) blindly transform all <div>foo</div> into foo<br>.
+		// So this is an attempt to "make it work".  A common pattern in the
+		// contenteditable I've seen is to kick off the process with something
+		// not in a div, with things after that put into divs...which causes
+		// a break similar to as if it was in a div.  So we can account for
+		// that one.
+		if (
+			(divCopy.contents().length >= 2)
+			&& (!divCopy.contents().eq(0).is("div"))
+			&& (divCopy.contents().eq(1).is("div"))
+		) {
+			divCopy.contents().eq(0).wrapAll("<div></div>");
+		}
+
+		// After that let's flatten, and hope for the best.
+		divCopy.find("div").each(function(idx, el) {
+			var $el = $(el);
+			// Flatten by putting content before, break after, and remove
+			if (($el.contents().length == 1) && ($el.contents().first().is("br"))) {
+				$el.after($('<br>'));
+				$el.remove();
+			} else {
+	 			$el.after($('<br>'));
+				$el.before($el.contents());
+				$el.remove();
+			}
+		});
+
+		// Now we recover the structure adapting code from StackOverflow
+		// 
+		// http://stackoverflow.com/q/18494385/211160
+		//
+		var $contents = divCopy.contents();
+		var $cur, $set, i;
+		$set = $();
+		if ($contents.length > 1) {
+			for (i = 0; i < $contents.length; i++) {
+				$cur = $contents.eq(i);
+
+				if ($cur.is("br")) {
+					if ($set.length > 0) {
+						$set.wrapAll("<div></div>");
+						$cur.remove();
+					} else {
+						// An actual line break.  Wrap in a span so that we
+						// don't have content as a direct child of the
+						// contenteditble (causes ugly selection UI)
+						$cur.replaceWith($('<div class="zwnj-spacing-hack">&zwnj;</div>'));
+					}
+					$set = $();
+				} else {
+					$set = $set.add($cur);
+				}
+			}
+			$set.wrapAll("<div></div>");
+		}
+
+		return divCopy;
+	}
 	
-	
+	function cloneCanonAsContenteditable(div, keepFunctions) {
+		var divCopy = div.clone(keepFunctions);
+
+		// One simple way to decanonize is just to leave the first element
+		// outside of a div, with all the successive elements keeping their
+		// divs and wrapping actual breaks in divs.  This is what webkit
+		// seems to do, and if it weren't for the selection stuff I'd have
+		// left it be.
+		//
+		// If only custom selection color wasn't so aesthetically fickle :-/
+		//
+		divCopy.children().each(function(idx, el) {
+			$el = $(el);
+			if ($el.is("div") && (idx == 0)) {
+				$el.before($el.contents());
+				$el.remove();
+			} else if ($el.is("div") && $el.hasClass("zwnj-spacing-hack")) {
+				$el.html($('<br>'));
+				$el.removeClass("zwnj-spacing-hack");
+			}
+			// Just leave it otherwise.
+		});
+
+		return divCopy;
+	}
+
 	function syncEditors() {
 		if (Globals.lastTabId == 'tabs-protect') {
+
 			// get any protections and copy to the compose editor
 			// NOTE: "true" parameter to clone preserves functions attached to elements
-			var elementProtectCopy = $("#editor-protect").clone(true);
-			elementProtectCopy.find('span').filter('.protected').each(function(i){
+			var divProtectCopy = cloneCanonAsContenteditable($("#editor-protect"), true);
+			divProtectCopy.find('span').filter('.protected').each(function(i){
 				$(this).removeClass('protected-readonly').addClass('protected-readwrite');
 			});
-			removeProtectSuggestions(elementProtectCopy.get(0));
-			$("#editor-compose").empty().append(elementProtectCopy.contents());
+			removeProtectSuggestions(divProtectCopy.get(0));
+			$("#editor-compose").empty().append(divProtectCopy.contents());
 			return true;
 		} else if (Globals.lastTabId == 'tabs-compose') {
 			// get any modifications to the letter and copy to the protected text
 			// NOTE: "true" parameter to clone preserves functions attached to elements
-			var elementComposeCopy = $("#editor-compose").clone(true);
-			elementComposeCopy.find('span').filter('.protected').each(function(i){
+			var divComposeCopy = cloneContenteditableAsCanon($("#editor-compose"), true);
+			divComposeCopy.find('span').filter('.protected').each(function(i){
 				$(this).removeClass('protected-readwrite').addClass('protected-readonly');
 			});
 			
-			// REVIEW: IE has a "feature" where it will always turn things that look like 
-			// hyperlinks or email addresses into anchors.  Seems you can't turn it off.
+			// REVIEW: IE has a "feature" where it will always turn things that
+			// look like hyperlinks or email addresses into anchors.  Seems
+			// you can't turn it off.
+			//
 			//   http://drupal.org/node/191644
-			// Removing all anchors is okay at this point, since we're not allowing the
-			// user to deliberately insert anchors...
+			//
+			// Removing all anchors is okay at this point, since we're not
+			// allowing the user to deliberately insert anchors...
 			var replaceWithContents = [];
-			elementComposeCopy.find('a').each(function(i) {
+			divComposeCopy.find('a').each(function(i) {
 				replaceWithContents.push(this);
 			});
-			for (var replaceIndex = 0; replaceIndex < replaceWithContents.length; replaceIndex++) {
-				var replaceMe = replaceWithContents[replaceIndex];
+			_.each(replaceWithContents, function(replaceMe) {
 				var parentOfReplace = replaceMe.parentNode;
 				$(replaceMe).replaceWith($(replaceMe).contents());
 				parentOfReplace.normalize();
 				if (notNormalized(parentOfReplace)) {
-					throw "Normalization failure!  What kind of browser are you running, anyway?";
+					throw "Normalization failure trying to fix contenteditable.";
 				}
-			}
-			
-			addProtectSuggestions(elementComposeCopy.get(0));
-			$("#editor-protect").empty().append(elementComposeCopy.contents());
+			})
+
+			addProtectSuggestions(divComposeCopy.get(0));
+			$("#editor-protect").empty().append(divComposeCopy.contents());
 			return true;
 		}
 
@@ -455,6 +592,9 @@ define([
 		var mergeableLineBreakPending = false;
 		var redactionOrder = 1;
 
+		// Before the canonization, this process used to be more complex.
+		// It can most likely be simplified now since there are no uses of
+		// "mergeable line breaks"
 		function processChild(child) {
 			function pushStringSpan(stringSpan) {
 				if (!_.isString(stringSpan)) {
@@ -558,15 +698,12 @@ define([
 					} else {
 						switch (tagNameLowerCase) {
 							case 'br': {
-								if ($(child).contents().length === 0) {
-									pushUnmergeableLineBreak();
-								} else {
-									throw 'Malformed <br> tag has child nodes';
-								}
+								throw "Canonized contenteditable had stray <br> tag";
 							}
 							break;
 							
 							case 'p': {
+								throw "Canonized contenteditable had <p> tag";
 								// Though Firefox doesn't seem to inject paragraphs each time you press
 								// enter, Opera does.  We translate these into two newlines.
 								pushMergeableLineBreak();
@@ -574,13 +711,19 @@ define([
 								pushMergeableLineBreak();
 							}
 							break;
-							
+
 							case 'div': {
-								// Chrome use "div" instead of paragraphs.  Each "div" introduces a line
-								// break which is merged with that from other sibling divs.
-								pushMergeableLineBreak();
-								$(child).contents().each(function(i) { processChild(this); });
-								pushMergeableLineBreak();
+								if ($(child).hasClass("zwnj-spacing-hack")) {
+									// We canonize our contenteditable to put this odd char
+									// only in an empty <div>.  It's enough to get the div
+									// to space out, seemingly...and we'll just try and
+									// make sure none of these are in the input code to
+									// start with.
+									pushUnmergeableLineBreak();
+								} else {
+									$(child).contents().each(function(i) { processChild(this); });
+									pushUnmergeableLineBreak();
+								}
 							}
 							break;
 							
@@ -677,22 +820,35 @@ define([
 		// http://stackoverflow.com/a/15413662/211160
 		heightStyle: "content",
 		autoHeight: false,
-        clearStyle: true
+		clearStyle: true
 	});
 
 	// For performance reasons, it isn't good to update the JSON preview of
 	// the commit on every redact/unredact.  But if you have the JSON accordion
 	// open, you probably want to see it changing and are willing to pay for
 	// the slower performance.  If it's closed you don't pay for it.
- 	function updateJsonCommitPreviewIfNecessary() {
-		$('#json-commit').empty();			
-		if (syncEditors() || _.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
-			generateCommitAndProtectedObjects();
+	function updateJsonCommitPreviewIfNecessary() {
+		// can't just test for false if collapsed, since 0 is false!
+		if ($('#commit-json-accordion').accordion('option', 'active') == 0) {
+			$('#json-commit').empty();			
+			if (_.isUndefined(Globals.commitObj) || _.isUndefined(Globals.protectedObjs)) {
+				generateCommitAndProtectedObjects();
+			}
+			if (Globals.commitObj) {
+				$('#json-commit').text(
+					common.escapeNonBreakingSpacesInString(
+						JSON.stringify(Globals.commitObj, null, ' ')
+					)
+				);
+			}
 		}
-		if (Globals.commitObj) {
-			$('#json-commit').text(common.escapeNonBreakingSpacesInString(JSON.stringify(Globals.commitObj, null, ' ')));
-		}
- 	}
+	}
+	$('#commit-json-accordion').on("accordionactivate", function(event, ui) {
+		// We don't update the json commit during redactions for performance
+		// reasons, so if the user opens it we need to do so.
+		updateJsonCommitPreviewIfNecessary();
+	});
+
 
 	// http://www.siafoo.net/article/67
 	function closeEditorWarning() {
@@ -740,6 +896,7 @@ define([
 				// Unfortunately, switching tabs disables undo.  :(
 				// Also unfortunately, there's no undo for adding and removing protections
 				syncEditors();
+				updateJsonCommitPreviewIfNecessary();
 				break;
 			
 			case 'tabs-commit':

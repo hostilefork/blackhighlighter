@@ -80,19 +80,27 @@ div.textarea-wrapper {
     padding: 16px;
     border: none;
 
+    /* http://stackoverflow.com/a/22367546/211160 */
+    overflow: hidden;
+
   /*  margin: ...; */ /* see above... */
 
    	width: 100%;
-   	resize: vertical;
+   	resize: none;
     -webkit-box-sizing: border-box;
        -moz-box-sizing: border-box;
             box-sizing: border-box;
 }
 .document-display {
+	position: relative;
 	color: black;
     background-color: white;
     min-height: 200px;
+
+	/* I don't know if I like this or not, but it's something to think on */
+	/* border: double 6px #333; */
 }
+
 /*
  * Currently need this specificity to override what jQuery UI does to
  * any textarea that lives underneath a tab!
@@ -105,18 +113,27 @@ div.textarea-wrapper .certificate-display {
 	font-size: 14px;
 }
 
-
 /* Classes specific to write.html */
 
 .protection-area {
 	cursor: crosshair;
 }
 /* http://css-tricks.com/overriding-the-default-text-selection-color-with-css/ */
-.protection-area::selection {
-	background: #000000; /* Safari */
-	}
-.protection-area::-moz-selection {
-	background: #000000; /* Firefox */
+/*
+ * Text nodes in the protection area itself are intentionally not marked with
+ * the black highlighter selection style.  This is because of the poor handling
+ * of custom selection colors in webkit for such nodes.  The protection area
+ * must clean up *any* direct children and convert them into divs before
+ * running the protect process!  So don't add .protection-area::selection here
+ * to try and solve a problem; fix the canonization before the protect instead.
+ */
+.protection-area *::selection { /* Safari, Chrome, etc... */
+	color: #000000 !important;
+	background: #000000 !important; 
+}
+.protection-area *::-moz-selection {
+	color: #000000 !important;
+	background: #000000 !important; /* Firefox */
 }
 
 /* must use span.protected as simply using .protected does not seem to work in Firefox */
