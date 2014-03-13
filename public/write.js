@@ -78,16 +78,15 @@ define([
 		if ((node.nodeType == Node.TEXT_NODE) && (node.data === "")) {
 			$(node).remove();
 		} else {
-			for (var childIndex = 0; childIndex < node.childNodes.length; childIndex++) {
-				killEmptyTextNodesRecursivePreorder(node.childNodes[childIndex]);
-			}
+			_.each(node.childNodes, function(childNode) {
+				killEmptyTextNodesRecursivePreorder(childNode);
+			});
 		}
 	}
 	
 	function notNormalized(node) {
 		var lastWasTextNode = false;
-		for (var childIndex = 0; childIndex < node.childNodes.length; childIndex++) {
-			var child = node.childNodes[childIndex];
+		_.each(node.childNodes, function(child) {
 			var nodeType = _.isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
 			if (nodeType == Node.TEXT_NODE) {
 				if (lastWasTextNode) {
@@ -97,7 +96,7 @@ define([
 			} else {
 				lastWasTextNode = false;
 			}
-		}
+		});
 	}
 
 	function normalizeProtectionsInSubtree(elm) {
@@ -116,9 +115,9 @@ define([
 				current = current.nextSibling;
 			}
 		});
-		for (var deleteSpanIndex = 0; deleteSpanIndex < deleteSpans.length; deleteSpanIndex++) {
-			$(deleteSpans[deleteSpanIndex]).remove();
-		}
+		_.each(deleteSpans, function(span) {
+			span.remove();
+		});
 	}
 	
 	// Dynamic onclick methods...
@@ -384,11 +383,11 @@ define([
 		$(node).find('span').filter('.suggested-protection').each(function(i) {
 			replaceWithContents.push($(this));
 		});
-		for (var replaceIndex = 0; replaceIndex < replaceWithContents.length; replaceIndex++) {
-			var parent = replaceWithContents[replaceIndex].parent();
-			replaceWithContents[replaceIndex].replaceWith(replaceWithContents[replaceIndex].contents().remove());
+		_.each(replaceWithContents, function(replaceMe) {
+			var parent = replaceMe.parent();
+			replaceMe.replaceWith(replaceMe.contents().remove());
 			parent.get(0).normalize();
-		}
+		});
 	}
 
 	function cloneContenteditableAsCanon(div, keepFunctions) {
@@ -764,9 +763,9 @@ define([
 				var revealObjToHash = revealsByName[revealNameToHash];
 				var saltToHash = common.stripHyphensFromUUID(common.generateRandomUUID());
 				var contents = saltToHash;
-				for (var redactionIndex = 0; redactionIndex < revealObjToHash.redactions.length; redactionIndex++) {
-					contents += revealObjToHash.redactions[redactionIndex];
-				}
+				_.each(revealObjToHash.redactions, function(redaction) {
+					contents += redaction;
+				});
 				
 				revealObjToHash.salt = saltToHash;
 				revealObjToHash.sha256 = SHA256(contents);
@@ -775,19 +774,19 @@ define([
 			}
 		}
 
-		for (var placeholderToFinalizeIndex = 0; placeholderToFinalizeIndex < placeholders.length; placeholderToFinalizeIndex++) {
-			var placeholderToFinalizeObj = placeholders[placeholderToFinalizeIndex].obj;
-			var placeholderReveal = placeholders[placeholderToFinalizeIndex].reveal;
-			var placeholderOrder = placeholders[placeholderToFinalizeIndex].order;
+		_.each(placeholders, function(finalizeMe) {
+			var obj = finalizeMe.obj;
+			var reveal = finalizeMe.reveal;
+			var order = finalizeMe.order;
 
 			// Due to large random salt, hash is a unique ID for the reveal
-			placeholderToFinalizeObj.sha256 = placeholderReveal.sha256;
-		}
+			obj.sha256 = reveal.sha256;
+		});
 		
 		// Check that process did not produce two sequential string spans in commit
 		var lastWasString = false;
-		for (var commitCheckIndex = 0; commitCheckIndex < Globals.commitObj.spans.length; commitCheckIndex++) {
-			if (_.isString(Globals.commitObj.spans[commitCheckIndex])) {
+		_.each(Globals.commitObj.spans, function(spanToCheck) {
+			if (_.isString(spanToCheck)) {
 				if (lastWasString) {
 					throw "Two sequential string spans in commit -- error in generateCommitAndProtectedObjects()"; 
 				}
@@ -795,7 +794,7 @@ define([
 			} else {
 				lastWasString = false;
 			}
-		}
+		});
 		
 		// If the commit is effectively empty, set the commit object to null
 		if (Globals.commitObj.spans.length === 0) {
