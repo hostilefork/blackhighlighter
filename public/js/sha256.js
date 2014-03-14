@@ -123,20 +123,4 @@ function SHA256(s){
 
     s = Utf8Encode(s);
     return binb2hex(core_sha256(str2binb(s), s.length * chrsz));
-
 }
-
-// Interestingly enough, a "function definition" doesn't get added to the
-// context.  It's put into an "activation object" of the "execution context",
-// and cannot be programmatically accessed.  If you want some "light reading"
-// go ahead and look these things up:
-// 
-//    http://coachwei.sys-con.com/node/676031/mobile
-//    http://perfectionkills.com/understanding-delete/
-//
-// But the upshot is that as long as SHA256 is declared as a function in
-// the above way, there's no way to probe it out of the module.  You
-// need to explicitly poke it into some kind of global context.
-// Unfortunately, doing it this way pollutes the global scope and defeats
-// the purpose of the name assigning.  :-/  I'm looking into this.
-this.sha256export = SHA256;

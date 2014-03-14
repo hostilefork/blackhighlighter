@@ -36,6 +36,7 @@
 	</div>
 {% endcomment %}
 
+<!--
 <div id="accordion">
 {% for certificate in all_certificates %}
 	<div title='{{ certificate.sha256 }}'>
@@ -50,6 +51,7 @@
 	</div>
 {% endfor %}
 </div>
+-->
 
 <p>This is where you paste or type in your certificates.  For samples of what 
 certificates look like, <a href="{% url certificates_named_url %}" target="_blank">click here</a>.</p> 
@@ -71,7 +73,7 @@ should show you some of the missing portions.</p>
 
 <div id="buttons-verify">
 	<center><p>
-		<button onclick="BlackhighlighterRead.verify();">
+		<button id="verify-button">
 			Next step: <b>Verify On Your Computer Only</b>
 		</button>
 	</p></center>

@@ -39,10 +39,7 @@ changes to the text by clicking on the "Compose" tab.</p>
 	Contents will be copied here from editor-compose textarea when tab is switched
 	When tab is switched back to compose, any protection changes are copied back
 -->{# {% endcomment %} #}
-<div class="textarea-wrapper">
-	<div id="editor-protect" class="document-display protection-area">
-		0xDECAFBAD
-	</div>
+<div class="textarea-wrapper" id="protect-wrapper">
 </div>
 
 <p>When you're satisfied that everything you didn't mark out is okay to publish
@@ -59,9 +56,9 @@ on the internet so anyone can see it, continue.</p>
 <div id="buttons-protect">
 	<center><p>
 	<!-- button has weird margins, needs spacing (using nbsp for now)... better fix? -->
-		<a href="#" onclick="BlackhighlighterWrite.previousStep()">go back and edit</a>
+		<a href="#" class="previous-step">go back and edit</a>
 		-or- &nbsp; 
-		<button onclick="BlackhighlighterWrite.commit()">
+		<button id="commit-button">
 			<b>Publish the Public Portions</b>
 		</button>
 	</p></center>

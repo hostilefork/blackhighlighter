@@ -33,7 +33,7 @@ one time hidden but has since been published to the general public.</p>
 {# We generate the public HTML on the server side because we want the page to be readable without JavaScript #}
 {# REVIEW: ensure we've sanitized the HTML, as we are using the "raw" filter! #}
 <div class="textarea-wrapper">
-	<div class="document-display" id="letter-text">
+	<div id="editor">
 	{{ public_html|raw }}
 	</div>
 </div>
@@ -43,15 +43,15 @@ choose, reveal its contents.</p>
 
 <div id="buttons-show-before">
 	<center><p>
-		<a href="#" onclick="BlackhighlighterRead.previousStep(); return true;">add &amp; remove certificates</a>
+		<a href="#" class="previous-step">add &amp; remove certificates</a>
 	</p></center>
 </div>
 
 <div id="buttons-show-after">
 	<center><p>
-		<a href="#" onclick="BlackhighlighterRead.previousStep(); return true;">add &amp; remove certificates</a>
+		<a href="#" class="previous-step">add &amp; remove certificates</a>
 		-or- &nbsp; 
-		<button onclick="BlackhighlighterRead.nextStep(); return true;">
+		<button class="next-step">
 			Optional Step: <b>Reveal</b>
 		</button>
 	</p></center>

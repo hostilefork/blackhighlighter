@@ -1,0 +1,93 @@
+/* 
+	Note: only valid color names are:
+		aqua, black, blue, fuchsia, gray, green, lime, maroon, navy, 
+		olive, purple, red, silver, teal, white, and yellow.
+	See http://www.w3schools.com/css/css_colornames.asp for hex codes 
+*/
+
+
+body {
+	/*
+	 * I dunno what "the answer" is but if you fill the whole width
+	 * it looks ugly.
+	 *
+	 * https://jdm-digital.com/2012/11/why-max-width-960/
+	 */
+	min-width: 720px;
+	max-width: 960px;
+
+	/* http://cssfontstack.com/ */
+	font-family: "Proxima Nova Regular","Helvetica Neue",Calibri,"Droid Sans",Helvetica,Arial,sans-serif;
+	font-size: 16px;
+
+	margin: 0 auto;
+	padding-top: 16px;
+
+	background-color: #888;
+}
+
+
+/* Pad the tabs a bit more than they are by default */
+.ui-tabs .ui-tabs-nav li a {
+	padding: .5em 1.5em;
+}
+
+
+/*
+ * Create some headroom in the area behind the tabs so that we can put
+ * the logo in; flush with the right and top (there's a gap in the image).
+ * It's technically possible in some browsers to offset it, but not all.
+ */
+.ui-tabs .ui-tabs-nav {
+	padding-top: 110px !important;
+	background-image: url(blackhighlighter-header-logo.png);
+	background-position: top right;
+	background-repeat: no-repeat;
+}
+
+
+/*
+ * Unfortunately textareas have a problem with having padding and margin
+ * directly applied to them.
+ * 
+ * http://stackoverflow.com/questions/271067/
+ */
+div.textarea-wrapper {
+    margin: 16px;
+}
+.certificate-display, .blackhighlighter {
+    padding: 16px;
+    border: none;
+
+    /* http://stackoverflow.com/a/22367546/211160 */
+    overflow: hidden;
+
+  /*  margin: ...; */ /* see above... */
+
+   	width: 100%;
+   	resize: none;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+.blackhighlighter {
+	position: relative;
+	color: black;
+    background-color: white;
+    min-height: 200px;
+
+	/* I don't know if I like this or not, but it's something to think on */
+	/* border: double 6px #333; */
+}
+
+/*
+ * Currently need this specificity to override what jQuery UI does to
+ * any textarea that lives underneath a tab!
+ */
+div.textarea-wrapper .certificate-display {
+	background-color: rgb(255, 255, 170);
+	color: rgb(0,0,0);
+	height: auto;
+	font-family: "Andale Mono", AndaleMono, monospace;
+	font-size: 14px;
+}

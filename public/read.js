@@ -18,11 +18,6 @@
 //   See http://hostilefork.com/blackhighlighter for documentation.
 //
 
-// REVIEW: What's the best way to call methods in requirejs modules from
-// html elements (such as onClick handlers?)
-
-// http://stackoverflow.com/questions/10302724/
-var BlackhighlighterRead = {};
 
 define([
 	'jquery',
@@ -31,20 +26,14 @@ define([
 	'client-common',
 	// these libs have no results, purely additive...
 	'jqueryui',
-	'sha256', // http://www.webtoolkit.info/javascript-sha256.html
-	'expanding'
+	'expanding',
+	'blackhighlighter'
 ], function($, _, common, clientCommon) {
 	
 	var Globals = {
 		// due to the fact that there's no "get currently active accordion section",
 		// we have to track it ourself.
-		lastAccordionId: null,
-		commit: PARAMS.commit,
-		initialLetterText: $('#letter-text').contents().clone(),
-		serverRevealsByHash: {},
-		localRevealsByHash: {},
-		successfulVerify: undefined,
-		successfulReveal: undefined
+		lastAccordionId: null
 	};
 
 	// Theme all the button-type-things but not the <a href="#" ..> style
@@ -65,11 +54,6 @@ define([
 		autoHeight: false,
         clearStyle: true
 	});
-
-
-	// http://www.jacklmoore.com/autosize/
-	$('textarea.expanding').expanding();
-
 	
 	// jquery UI does tabs by index, not ID.  using this to increase readability
 	// NOTE: a function as opposed to a raw map for consistency with accordionIndexForId
@@ -85,8 +69,19 @@ define([
 	// Bring tabs to life.
 	$('#tabs').tabs();
 	
-	function notifyErrorOnTab(tab, msg) {
-		$('#error-' + tab + '-msg').empty().text(msg);
+	function notifyErrorOnTab(tab, err) {
+		var message = "<span><b>" + err.toString() + "</b></span>";
+
+		if (err instanceof Error) {
+			var stack = err.stack.split("\n");
+			message += "<br><br><ul><li>" 
+				+ stack.join("</li><li>")
+				+ "</li></ul>"
+				+ "<br><br>" 
+				+ 'Please save a copy of this error and report it to <a href="https://github.com/hostilefork/blackhighlighter/issues/new">the Blackhighlighter Issue Tracker</a> on GitHub!';
+		} 
+
+		$('#error-' + tab + '-msg').empty().html(message);
 		$('#error-' + tab).show();
 	}
 	
@@ -94,6 +89,7 @@ define([
 		$('#error-' + tab).hide();
 	}
 
+/*
 	// NOTE: This is a function, not a map.
 	function accordionIndexAndChildForId(revealKey) {
 		var index = null;
@@ -147,68 +143,31 @@ define([
 		}
 	});
 
-	// Pass -1 to close all (only possible with collapsible:true).
+	// Pass false to close all (only possible with collapsible:true).
 	$('#accordion').accordion('option', 'active', false);
-	
-	BlackhighlighterRead.addReveal = function(reveal, server) {
 
-		var actualHash = SHA256(common.canonicalStringFromReveal(reveal));
-		if (actualHash != reveal.sha256) {
-			throw 'Invalid certificate: content hash is ' + actualHash 
-				+ ' while claimed hash is ' + reveal.sha256;
-		}
+*/
 
-		var numPlaceholdersForKey = 0;
-		_.each(Globals.commit.spans, function (commitSpan) {
-			if (commitSpan.sha256 == reveal.sha256) {
-				numPlaceholdersForKey++;
-			}
-		});
-		// warn user if certificate is useless, need better UI
-		if (numPlaceholdersForKey === 0) {
-			throw 'Certificate does not match any placeholders.';
-		}
-		if (numPlaceholdersForKey != reveal.redactions.length) {
-			throw 'Certificate contains ' + reveal.redactions.length +
-				' redactions for key when letter needs ' + 
-				numPlaceholdersForKey + ' for that key';
-		}
-	
-		if (server) {
-			Globals.serverRevealsByHash[reveal.sha256] = reveal;
-		} else {
-			if (reveal.sha256 in Globals.serverRevealsByHash) {
-				throw 'Local certificate already revealed on server.';
-			} else if (reveal.sha256 in Globals.localRevealsByHash) {
-				throw 'You have already revealed the local certificate.';
-			} else {
-				Globals.localRevealsByHash[reveal.sha256] = reveal;
-			}
-		}
+/*
+			accordionHeaderForId(revealKey).empty().append(
+					'<span>' + 'Certificate not revealed' + '</span>');
+			accordionContentForId(revealKey).empty().append(
+					'<span>' + 'No information about this reveal available' + '</span>');
+			
+*/
 
-		var namePart = reveal.name ? (': ' + reveal.name) : '';
-		accordionHeaderForId(reveal.sha256).empty().append(
-			'<span>' + (server ? 'Server Certificate' : 'Local Certificate') + namePart + '</span>');
-		var spanPart = $('<span></span>');
-		spanPart.append($('<p>' + JSON.stringify(reveal, null, ' ') + '</p>'));
-		if (!server) {
-			var buttonPart = $('<input type="button" value="Remove" name="' + reveal.sha256 + '"></input>');
-			buttonPart.click(function() {
-				BlackhighlighterRead.removeReveal(this.name);
-				return true;
-			});
-			spanPart.append(buttonPart);
-		}			
-		accordionContentForId(reveal.sha256).empty().append(spanPart);
-	};
 
+	$("#editor").blackhighlighter({
+		mode: 'show',
+		commit: PARAMS.commit
+	});
 
 	try {
 		if (!_.isArray(PARAMS.reveals)) {
 			throw "Expected server to give reveals[] as JSON array";
 		}
 		$.each(PARAMS.reveals, function(index, reveal) {
-			BlackhighlighterRead.addReveal(reveal, true);
+			$("#editor").blackhighlighter('seereveal', reveal, true);
 		});
 	} catch(err) {
 		throw 'Reveal posted on server did not pass client verification check: ' + err; 
@@ -404,8 +363,12 @@ define([
 		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
 
-		// REVIEW: hasOwnProperty(), does it matter? http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
-		if (_.keys(Globals.localRevealsByHash).length > 0) {
+		// REVIEW: hasOwnProperty(), does it matter?
+		// http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
+
+		var protections = $("#editor").blackhighlighter('option', 'protections');
+
+		if (_.keys(protections).length > 0) {
 			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
 			$('#buttons-show-before').hide();			
 			$('#buttons-show-after').show();
@@ -420,7 +383,7 @@ define([
 	
 	var lastTabId = 'tabs-verify'; // we start on verify tab, and don't get a select message
 	// Bind function for what happens on tab select
-	$('#tabs').on('tabsactivate', function(event, ui) {
+	$('#tabs').on('tabsbeforeactivate', function(event, ui) {
 
 		switch(ui.newPanel.attr('id')) {
 			case 'tabs-verify':
@@ -429,70 +392,18 @@ define([
 				break;
 			
 			case 'tabs-show':		
-				var revealIndices = {};
-							
-				function fillInPlaceholder(placeholder) {
-
-					var shaHexDigest = placeholder.attr('title');
-
-					if (!placeholder.hasClass('revealed')) {
-						var publiclyRevealed = true;
-						var reveal = Globals.serverRevealsByHash[shaHexDigest];
-						if (!reveal) {
-							publiclyRevealed = false;
-							reveal = Globals.localRevealsByHash[shaHexDigest];
-						}
-						if (reveal) {
-							if (!revealIndices[shaHexDigest]) {
-								revealIndices[shaHexDigest] = 0;
-							}
-							placeholder.text(reveal.redactions[revealIndices[shaHexDigest]]);
-							revealIndices[shaHexDigest]++;
-
-							placeholder.removeClass('protected');
-							if (publiclyRevealed) {
-								placeholder.addClass('revealed');
-							} else {
-								placeholder.addClass('verified');
-							}
-						}
-					}
-
-					// These reference links help to determine which reveal a placeholder is from,
-					// which is useful in cases of multiple reveals (not currently supported in the UI)
-					if (false) {
-						var referenceLink = $('<span class="certlink" title="' + shaHexDigest + '"><sup>' + '[' +
-							(accordionIndexForId(shaHexDigest)+1) + ']' + '</sup></span>');
-						referenceLink.click(function() {
-							// As per example #5, you can't make a closure using shaHexDigest here
-							// http://blog.morrisjohns.com/javascript_closures_for_dummies
-							// REVIEW: way to do this that frees up the title for something else?
-							BlackhighlighterRead.viewReveal($(this).attr('title'));
-							return true;
-						});
-						placeholder.after(referenceLink);
-					}
-				}
-
-				// we used to convert the JSON into a public HTML fragment on the client side.
-				// but server-side generation is better for running in non-javascript contexts.
-				// and making it possible for search engines to index the letter.
-				// Save what the server made in the beginning so that if we mess with it we
-				// can restore it back.			
-				$('#letter-text').empty().append(Globals.initialLetterText.clone());
-				$('#letter-text').find('span').filter('.placeholder').each(function(i) {
-					fillInPlaceholder($(this));		
-				});				
+				// Shouldn't have to do anything?		
 				break;
 		
 			case 'tabs-reveal':
 				clearErrorOnTab('reveal');
 				$('#progress-reveal').hide();
 
+				var protections = $("#editor").blackhighlighter("option", "protections");
 				// REVIEW: used to sort values in array by key (hash)
 				// Does it matter?  Should there be a "canonized" ordering?
 				$('#json-reveal').text(
-					JSON.stringify(_.values(Globals.localRevealsByHash), null, ' ')
+					JSON.stringify(_.values(protections), null, ' ')
 				);
 				break;
 		
@@ -519,72 +430,40 @@ define([
 			throw 'invalid PARAMS.tabstate';
 	}	
 
-	BlackhighlighterRead.viewReveal = function(revealKey) {
+/*
+	function showRevealInTab(revealKey) {
 		// first make sure we're on the verify tab
 		$('#tabs').tabs('option', 'active', tabIndexForId('tabs-verify'));
 		if (Globals.lastAccordionId != revealKey) {
 			$('#accordion').accordion('activate', accordionIndexForId(revealKey));
 		}
 	};
+	*/
 
-	
-	BlackhighlighterRead.removeReveal = function(revealKey) {
-	
-		if (!(revealKey in Globals.localRevealsByHash)) {
-			throw 'Attempt to remove certificate that is not in the local list.';
-		}
-		
-		delete Globals.localRevealsByHash[revealKey];
-
-		accordionHeaderForId(revealKey).empty().append(
-				'<span>' + 'Certificate not revealed' + '</span>');
-		accordionContentForId(revealKey).empty().append(
-				'<span>' + 'No information about this reveal available' + '</span>');
-		
-		updateTabEnables();
-	};
-	
-
-	BlackhighlighterRead.previousStep = function() {
+	$(".previous-step").on('click', function(eventObj) {
 		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) - 1);
-	};
+	});
 
-
-	BlackhighlighterRead.nextStep = function() {
+	$(".next-step").on('click', function(eventObj) {
 		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) + 1);
-	};
+	});
 	
-	BlackhighlighterRead.clearRevealInputField = function() {
-		$('#certificates').get(0).value = '';
-	};
-	
-	function finalizeVerifyUI() {
-		if (this.timerId !== null) {
-			window.clearTimeout(this.timerId);
-		}
-		this.timerId = undefined;
+	$("#verify-button").on('click', function() {
 
-		updateTabEnables();
-		
-		if (Globals.successfulVerify) {
-			BlackhighlighterRead.clearRevealInputField();
-			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
-		}
-		
-		$('#progress-verify').hide();
-		$('#buttons-verify').show();
-		
-		Globals.successfulVerify = undefined;
-	}
-	finalizeVerifyUI.timerCallback = function() {
-		this.timerId = null;
-		if (Globals.successfulVerify) {
-			finalizeVerifyUI();
-		} // we expect the pending Ajax call to complete and reset this to undefined
-	};
-	finalizeVerifyUI.timerId = undefined;
-	
-	BlackhighlighterRead.verify = function() {
+		finalizeVerifyUI = _.debounce(function(err) {
+			updateTabEnables();
+			
+			if (err) {
+				notifyErrorOnTab('verify', err);
+			} else {
+				$('#certificates').empty();
+				$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
+			}
+			
+			$('#progress-verify').hide();
+			$('#buttons-verify').show();
+		}, 3000);
+
 		clearErrorOnTab('verify');
 	
 		var revealInput = $('#certificates').get(0).value;
@@ -596,12 +475,7 @@ define([
 			$('#tabs').tabs('disable', tabIndexForId('tabs-reveal'));
 			$('#progress-verify').show();
 			$('#buttons-verify').hide();
-			Globals.successfulVerify = false;
 		
-			// We set a timer to make sure there is enough of a delay that the
-			// user feels confident that something actually happened
-			finalizeVerifyUI.timerId = window.setTimeout(finalizeVerifyUI.timerCallback, 3000);
-
 			var parsedJson = null;
 			// Catch parsing errors and put them in an error message
 			try {
@@ -610,9 +484,8 @@ define([
 				// http://stackoverflow.com/a/10362313/211160
 				parsedJson = jQuery.parseJSON(tidyRevealText);	
 			} catch(errParse) {
-				notifyErrorOnTab('verify', errParse);
 				// do not continue to next tab
-				finalizeVerifyUI();
+				finalizeVerifyUI(errParse);
 			}
 
 			if (parsedJson) {
@@ -629,139 +502,65 @@ define([
 					}
 					
 					$.each(reveals, function(index, reveal) {
-						BlackhighlighterRead.addReveal(reveal, false);
+						$("#editor").blackhighlighter('seereveal', reveal, false);
 					});
 
-					Globals.successfulVerify = true;
-					if (finalizeVerifyUI.timerId === null) {
-						finalizeVerifyUI();
-					}
+					finalizeVerifyUI(null);
 				} catch(errAdd) {
-					notifyErrorOnTab('verify', errAdd);
-					// do not continue to next tab
-					finalizeVerifyUI();
+					finalizeVerifyUI(errAdd);
 				}
 			}
 		}
-	};
+	});
 
-	function finalizeRevealUI() {
-		if (this.timerId !== null) {
-			window.clearTimeout(this.timerId);
-		}
-		this.timerId = undefined;
-		
-		if (Globals.successfulReveal) {
-			// We want to redirect to the "show" page for this letter
-			// Which means we have to reload if we were already on the letter's "show" URL
-			if (PARAMS.tabstate == 'show') {
-				// Reload semantics vary in Java and browser versions
-				// http://grizzlyweb.com/webmaster/javascripts/refresh.asp
-				window.location.reload(true);
+/*			var namePart = reveal.name ? (': ' + reveal.name) : '';
+			accordionHeaderForId(reveal.sha256).empty().append(
+				'<span>' + (server ? 'Server Certificate' : 'Local Certificate') + namePart + '</span>');
+			var spanPart = $('<span></span>');
+			spanPart.append($('<p>' + JSON.stringify(reveal, null, ' ') + '</p>'));
+			if (!server) {
+				var buttonPart = $('<input type="button" value="Remove" name="' + reveal.sha256 + '"></input>');
+				buttonPart.click(function() {
+					this.$div.removeBlackhighlighterReveal(this.name);
+					return true;
+				});
+				spanPart.append(buttonPart);
+			}			
+			accordionContentForId(reveal.sha256).empty().append(spanPart);*/
+
+
+	$("#reveal-button").on('click', function(eventObj) {
+
+		finalizeRevealUI = _.debounce(function (err) {
+			if (err) {
+				notifyErrorOnTab('reveal');
+				$('#buttons-reveal').show();
+				$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
+				$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
+				
+				// we only hide the progress bar in the error case, because otherwise we
+				// want the animation to stick around until the redirect has completed
+				$('#progress-reveal').hide();
 			} else {
-				window.navigate(clientCommon.absoluteFromRelativeURL(PARAMS.show_url));
+				// We want to redirect to the "show" page for this letter
+				// Which means we have to reload if we were already on the letter's "show" URL
+				if (PARAMS.tabstate == 'show') {
+					// Reload semantics vary in JavaScript and browser versions
+					// http://grizzlyweb.com/webmaster/javascripts/refresh.asp
+					window.location.reload(true);
+				} else {
+					window.navigate(clientCommon.absoluteFromRelativeURL(PARAMS.show_url));
+				}
 			}
-		} else {
-			$('#buttons-reveal').show();
-			$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
-			$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
-			
-			// we only hide the progress bar in the error case, because otherwise we
-			// want the animation to stick around until the redirect has completed
-			$('#progress-reveal').hide();
-		}
-		
-		Globals.successfulReveal = undefined;
-	}
-	finalizeRevealUI.timerCallback = function() {
-		this.timerId = null;
-		if (Globals.successfulReveal) {
-			finalizeRevealUI();
-		} // else we expect the pending Ajax call to complete and reset this to undefined
-	};
-	finalizeRevealUI.timerId = undefined;
-	
-	BlackhighlighterRead.reveal = function() {
-	
+		}, 3000);
+
 		$('#tabs').tabs('disable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('disable', tabIndexForId('tabs-show'));
 
-		// jquery UI does not support an indeterminate progress bar yet
-		// http://docs.jquery.com/UI/API/1.7/Progressbar
-		// Currently using an animated GIF from http://www.ajaxload.info/
 		$('#progress-reveal').show();
 		$('#buttons-reveal').hide();
 		$('#reveal-json-accordion').hide();
 		
-		// We set a timer to make sure there is enough of a delay that the
-		// user feels confident that something actually happened
-		finalizeRevealUI.timerId = window.setTimeout(finalizeRevealUI.timerCallback, 3000);
-
-		Globals.successfulReveal = false;
-
-		// If there is more than one reveal in the UI, we'd need to have a
-		// way to indicate which one we are revealing in the request.  (or
-		// make multiple requests if we intend to do more than one).  For
-		// protocol simplicity in error reporting, the server now accepts
-		// only one reveal per XMLHttpRequest.
-		if (_.keys(Globals.localRevealsByHash).length != 1) {
-			throw 'Multiple reveals feature not currently supported by client';
-		}
-		
-		// http://docs.jquery.com/Ajax/jQuery.ajax
-		$.ajax({
-			type: 'POST'
-		,
-			dataType: 'json' // expected response type from server
-		,
-			url: common.makeRevealUrl(PARAMS.base_url)
-		,
-			// sends as UTF-8
-			data: {
-				reveal: JSON.stringify(
-					_.values(Globals.localRevealsByHash)[0], null, ' '
-				)
-			}
-		,
-			success: function(resultJson) {
-				if (resultJson.error) {
-					notifyErrorOnTab('reveal', resultJson.error.msg);
-					finalizeRevealUI();
-				} else {
-					Globals.successfulReveal = true;
-				}
-				if (finalizeRevealUI.timerId === null) {
-					finalizeRevealUI();
-				}
-			}
-		,
-			error: function (XMLHttpRequest, textStatus, errorThrown) {
-				finalizeRevealUI();
-				
-				// "this" contains the options for this ajax request
-
-				switch (textStatus) {
-					case 'timeout':
-						notifyErrorOnTab('reveal', 'The POST reveal request timed out on ' + PARAMS.reveal_url + 
-							' --- check your network connection and try again.');
-						break;
-						
-					case 'error':
-						notifyErrorOnTab('reveal', 'There was an error with the web server during your request.');
-						break;
-						
-					case 'notmodified':
-					case 'parsererror':
-						notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
-						break;
-						
-					default:
-						notifyErrorOnTab('reveal', 'Unexpected error code during Ajax POST: ' + textStatus);
-						break;
-				}
-			}
-		});
-	};
-	
-	return BlackhighlighterRead;
+		$('#editor').blackhighlighter('revealsecret', PARAMS.base_url, finalizeRevealUI);
+	});
 });

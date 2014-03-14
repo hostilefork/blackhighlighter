@@ -29,15 +29,15 @@ protect.  (<a href="{% url network_named_url %}" target="_blank">"How can I veri
 Provide all relevant information for the recipient to follow up with you, just as you would
 in a typical private email.</p>
 
-<div class="textarea-wrapper">
-	<div class="document-display" id="editor-compose" contenteditable="true"></div>
+<div class="textarea-wrapper" id="compose-wrapper">
+	<div id="editor"></div>
 </div>
 
 <p>When you've finished, click the button below to continue to the protect phase (you will
 still be able to come back and make changes if necessary.)</p>
 
 <center><p>
-	<button onclick="BlackhighlighterWrite.nextStep();">
+	<button class="next-step">
 		Next step: <b>Protect</b>
 	</button>
 </p></center>

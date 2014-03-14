@@ -61,7 +61,9 @@ You will probably want to copy and customize this file.
 	to modernize it further yet.
 {% endcomment %}
 		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/theme/jquery-ui-1.10.4.custom.css" rel="stylesheet" />
-		<link type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}blackhighlighter.css" rel="stylesheet" />
+		<link type="text/css" href="{{ LIBS_URL }}blackhighlighter/blackhighlighter.css" rel="stylesheet" />
+
+		<link type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}demo.css" rel="stylesheet" />
 {% endblock css %}
 
 
@@ -87,6 +89,8 @@ You will probably want to copy and customize this file.
 
 			expanding: '{{ LIBS_URL }}jquery-expanding/expanding',
 
+			blackhighlighter: '{{ LIBS_URL }}blackhighlighter/blackhighlighter',
+
 			main: '{{ MAIN_SCRIPT }}'
         },
 
@@ -102,7 +106,7 @@ You will probably want to copy and customize this file.
 			},
 
 			"sha256": {
-				exports: 'sha256export'
+				exports: 'SHA256'
 			}
 		},
 		

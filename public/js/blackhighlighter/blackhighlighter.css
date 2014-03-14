@@ -1,0 +1,100 @@
+/*
+ blackhighlighter.css - CSS particular to the read/write/verify widgets.
+ Copyright (C) 2009 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://hostilefork.com/blackhighlighter for documentation.
+*/
+
+
+/*
+ * http://css-tricks.com/overriding-the-default-text-selection-color-with-css/
+ *
+ * Text nodes in the protection area itself are intentionally not marked with
+ * the black highlighter selection style.  This is because of the poor handling
+ * of custom selection colors in webkit for such nodes.  The protection area
+ * must clean up *any* direct children and convert them into divs before
+ * running the protect process!  So don't add .protection-area::selection here
+ * to try and solve a problem; fix the canonization before the protect instead.
+ */
+.blackhighlighter-protect *::selection { /* Safari, Chrome, etc... */
+	color: #000000 !important;
+	background: #000000 !important; 
+}
+.blackhighlighter-protect *::-moz-selection {
+	color: #000000 !important;
+	background: #000000 !important; /* Firefox */
+}
+
+
+
+/* 
+ * Blackhighlighter has 3 modes, current names: 'compose', 'protect', 'show'
+ * must use span.protected as .protected does not seem to work in Firefox
+ */
+
+/* COMPOSE */
+
+div.blackhighlighter-compose span.protected {
+	background-color: gray;
+	color: black;
+}
+div.blackhighlighter-compose span.protected:hover {
+	background-color: gray;
+	color:black;
+}
+
+
+/* PROTECT */
+
+.blackhighlighter-protect {
+	/*
+	 * Crosshair may not be as fun as what is possible.
+	 * Could draw a custom redacting pen as an image, if the browser supports?
+	 *
+	 * http://css-tricks.com/almanac/properties/c/cursor/
+	 */
+	cursor: crosshair;
+}
+div.blackhighlighter-protect span.protected {
+	background-color: black;
+	color: black;
+}
+div.blackhighlighter-protect span.protected:hover {
+	background-color: gray;
+	cursor: default;
+}
+div.blackhighlighter-protect span.suggested-protection {
+	background-color: #FFA500; /* Orange */
+	cursor: default;
+}
+div.blackhighlighter-protect span.suggested-protection:hover {
+	background-color: #FF4500; /* OrangeRed */
+	cursor: default;
+}
+
+
+/* SHOW */
+
+div.blackhighlighter-show span.protected {
+	background-color: black;
+	color: black;
+}
+div.blackhighlighter-show span.verified {
+	background-color: yellow;
+}
+div.blackhighlighter-show span.revealed {
+	background-color: #90EE90; /* Lightgreen */
+}
