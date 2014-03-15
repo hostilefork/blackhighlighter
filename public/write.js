@@ -195,8 +195,8 @@ define([
 
 					var certString = '';					
 					certString += '/* BEGIN REVEAL CERTIFICATE */' + '\n';
-					certString += '/* To use this, visit: ' 
-						+ common.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
+					certString += '/* To use this, visit: http://' 
+						+ document.location.host + common.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
 						+ ' */' + '\n';
 
 					var protection = _.values(protections)[0];
@@ -261,8 +261,8 @@ define([
 			var showUrl = common.makeShowUrl(PARAMS.base_url, commit.commit_id);
 
 			$('#url-public').html( 
-				'<a href="' + showUrl + '" target="_blank">'
-				+ showUrl
+				'<a href="http://' + document.location.host + showUrl + '" target="_blank">'
+				+ "http://" + document.location.host + showUrl
 				+ '</a>'
 			);
 

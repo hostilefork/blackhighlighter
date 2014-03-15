@@ -85,6 +85,7 @@ div.textarea-wrapper {
  * any textarea that lives underneath a tab!
  */
 div.textarea-wrapper .certificate-display {
+	white-space: pre;
 	background-color: rgb(255, 255, 170);
 	color: rgb(0,0,0);
 	height: auto;

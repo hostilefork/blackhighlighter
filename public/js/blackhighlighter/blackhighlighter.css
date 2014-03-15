@@ -29,11 +29,11 @@
  * running the protect process!  So don't add .protection-area::selection here
  * to try and solve a problem; fix the canonization before the protect instead.
  */
-.blackhighlighter-protect *::selection { /* Safari, Chrome, etc... */
+.blackhighlighter-ink *::selection { /* Safari, Chrome, etc... */
 	color: #000000 !important;
 	background: #000000 !important; 
 }
-.blackhighlighter-protect *::-moz-selection {
+.blackhighlighter-ink *::-moz-selection {
 	color: #000000 !important;
 	background: #000000 !important; /* Firefox */
 }
@@ -62,9 +62,7 @@ div.blackhighlighter-compose span.protected:hover {
 .blackhighlighter-protect {
 	/*
 	 * Crosshair may not be as fun as what is possible.
-	 * Could draw a custom redacting pen as an image, if the browser supports?
-	 *
-	 * http://css-tricks.com/almanac/properties/c/cursor/
+	 * https://github.com/hostilefork/blackhighlighter/issues/31
 	 */
 	cursor: crosshair;
 }
@@ -76,11 +74,11 @@ div.blackhighlighter-protect span.protected:hover {
 	background-color: gray;
 	cursor: default;
 }
-div.blackhighlighter-protect span.suggested-protection {
+div.blackhighlighter-protect span.suggested {
 	background-color: #FFA500; /* Orange */
 	cursor: default;
 }
-div.blackhighlighter-protect span.suggested-protection:hover {
+div.blackhighlighter-protect span.suggested:hover {
 	background-color: #FF4500; /* OrangeRed */
 	cursor: default;
 }

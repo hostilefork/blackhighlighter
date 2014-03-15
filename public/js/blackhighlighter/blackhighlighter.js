@@ -37,7 +37,28 @@
 		Blackhighlighter._registry.push(this);
 
 		this.$div = $div;
-		$div.addClass("blackhighlighter"); // keep track of if we added it to take it off?
+		// keep track of if we added it to take it off?
+		$div.addClass("blackhighlighter"); 
+
+		// Event delegation sounds like a good idea; to handle elements that
+		// are added dynamically with CSS selectors.  Problem is, the CSS
+		// selectors have a pecking order based on "specificity":
+		//
+		// http://htmldog.com/guides/css/intermediate/specificity/
+		//
+		// In the end, it's safer to put the functions directly onto the
+		// elements they want to act on.  jQuery UI was overriding
+		// "div.blackhighlighter-protect span.protected" but not
+		// when the div wasn't specified, but just saying span.protected
+		// would be too broad.  Would be nice if it worked; it doesn't.
+		//
+		/* $div.on('click', 'div.blackhighlighter-protect span.suggested',
+			$.proxy(this._takeSuggestionListener, this)
+		);
+		$div.on('click', 'div.blackhighlighter-protect span.protected',
+			$.proxy(this._unprotectSpanListener, this)
+		); */
+
 		this.setMode(opts.mode, true);
 		if (opts.mode === 'show') {
 			if (opts.commit) {
@@ -79,22 +100,6 @@
 	};
 
 
-// We seem to get empty text nodes for some reason, at least in Firefox
-// Jquery is not good at dealing with text nodes so best to use DOM to kill them
-// REVIEW: Why are these showing up?  Is it this?
-// http://markmail.org/message/uuoieaafwn6h6gxz
-// http://reference.sitepoint.com/javascript/Node/normalize
-function _killEmptyTextNodesRecursivePreorder(node) {
-	// http://www.jslab.dk/articles/non.recursive.preorder.traversal.part2
-	if ((node.nodeType == Node.TEXT_NODE) && (node.data === "")) {
-		$(node).remove();
-	} else {
-		_.each(node.childNodes, function(childNode) {
-			_killEmptyTextNodesRecursivePreorder(childNode);
-		});
-	}
-};
-
 ////////////////////////////////////////////////////////////////////////////////
 
 	Blackhighlighter.prototype = {
@@ -130,16 +135,16 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-		_addProtectSuggestionsRecursive: function(node) {
+		_addSuggestionsRecursive: function(node) {
 		
 			var lastPushWasText = false;
 			// re-interleave the splits and matches...which goes first depends on whether
 			// the match was at the first position.
 			
 			function pushSuggestSpan(str) {
-				var suggestSpan = $('<span class="suggested-protection">' + str + '</span>');
-				suggestSpan.on('click', this._doUnprotectOrTakeSuggestion);
+				var suggestSpan = $('<span class="suggested">' + str + '</span>');
 				$(node).before(suggestSpan);
+				suggestSpan.on('click', $.proxy(this._takeSuggestionListener, this));
 				lastPushWasText = false;
 			}
 
@@ -204,11 +209,11 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 						
 					while ((matchIndex < matchArray.length) && (splitIndex < splitArray.length)) {
 						if (firstMatchPos == 0) {
-							pushSuggestSpan(matchArray[matchIndex++]);
-							pushTextNode(splitArray[splitIndex++]);
+							pushSuggestSpan.call(this, matchArray[matchIndex++]);
+							pushTextNode.call(this, splitArray[splitIndex++]);
 						} else {
-							pushTextNode(splitArray[splitIndex++]);
-							pushSuggestSpan(matchArray[matchIndex++]);
+							pushTextNode.call(this, splitArray[splitIndex++]);
+							pushSuggestSpan.call(this, matchArray[matchIndex++]);
 						}
 					} 
 
@@ -233,7 +238,7 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 						var child = node.firstChild;
 						while (child) {
 							var next = child.nextSibling;
-							this._addProtectSuggestionsRecursive(child);
+							this._addSuggestionsRecursive(child);
 							child = next;
 						}
 					}
@@ -243,12 +248,12 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 			}
 		},
 		
-		_removeProtectSuggestions: function() {
-			this.$div.find('span.suggested-protection').each(function(idx, span) {
-				var parent = span.parent();
+		_removeSuggestions: function() {
+			this.$div.find('span.suggested').each(function(idx, span) {
 				var $span = $(span);
+				var $parent = $span.parent();
 				$span.replaceWith($span.contents().remove());
-				parent.normalize();
+				$parent.get(0).normalize();
 			});
 		},
 
@@ -261,7 +266,7 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 			//
 			var getTextNodesIn = function(el) {
 				return $(el).find(":not(iframe)").addBack().contents().filter(function() {
-					return this.nodeType == 3;
+					return this.nodeType == Node.TEXT_NODE;
 				});
 			};
 			getTextNodesIn(this.$div).each(function(idx, el) {
@@ -290,6 +295,13 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 				newDiv.append(oldP.contents());
 				oldP.remove();
 			});
+
+			// If there are no divs or br at all, then wrap the whole thing up
+			// into one single div.
+			if (!this.$div.find("div, br").length) {
+				var $newDiv = $("<div></div>").append(this.$div.contents().remove());
+				this.$div.append($newDiv);
+			}
 
 			// Due to wacky behavior of the ::selection pseudoclass, a custom
 			// selection color will not apply to any *empty space* that crosses
@@ -422,8 +434,20 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 					case 'protect': {
 						this.$div
 							.removeClass("blackhighlighter-protect")
-							.off("mouseup", $.proxy(this._doProtect, this));
-						this._removeProtectSuggestions();
+							.off("mousedown", this._inkOnListener, this)
+							.off("mouseup mouseleave", this._inkOffListener, this);
+
+						// Just in case it got stuck somehow :-/
+						this.$div.removeClass("blackhighlighter-ink");
+
+						// See notes on why I'm doing it this way.
+						// Using less-specificity in selectors, or delegates,
+						// led events to be snapped up by jQuery UI
+						this.$div.find("span.protected").off(
+							'click', this._unprotectSpanListener
+						);
+
+						this._removeSuggestions();
 						this._decanonizeContent();
 						break;
 					}
@@ -456,11 +480,23 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 					this.$div.addClass("blackhighlighter-protect");
 					this._canonizeContent();
 
+					// See notes on why I'm doing it this way.
+					// Using less-specificity in selectors, or delegates,
+					// led events to be snapped up by jQuery UI
+					this.$div.find("span.protected").on('click', this._unprotectSpanListener);
+
 					// Selection changes are finalized by selected, or mouseup?  What
 					// do we really want to capture here?
-					this.$div.on("mouseup", $.proxy(this._doProtect, this));
+					this.$div.on("mousedown", $.proxy(this._inkOnListener, this));
 
-					this._addProtectSuggestionsRecursive(this.$div.get(0));
+					// We have to track leaves, because mouseups get lost if you
+					// leave the area, even a little bit.  More elegant solution?
+					//
+					// http://stackoverflow.com/a/12348816/211160
+					//
+					this.$div.on("mouseup mouseleave", $.proxy(this._inkOffListener, this));
+
+					this._addSuggestionsRecursive(this.$div.get(0));
 					break;
 				}
 
@@ -471,8 +507,8 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 						this.initialLetterText = this.$div.contents().clone();
 					} else {
 						this.$div.html(
-							"<b>Ajax-based show mode not implemented yet!</b>"
-							+ " : You have to load a show url for now"
+							"<h3>Comitting Blackhighlighter Message to Server</h3>"
+							+ "<p><i>Please wait...</i></p>"
 						);
 					}
 					break;
@@ -485,20 +521,23 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 		},
 
 ////////////////////////////////////////////////////////////////////////////////
-		
-		_notNormalized: function(node) {
-			var lastWasTextNode = false;
-			_.each(node.childNodes, function(child) {
-				var nodeType = _.isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
-				if (nodeType == Node.TEXT_NODE) {
-					if (lastWasTextNode) {
-						return true;
-					}
-					lastWasTextNode = true;
-				} else {
-					lastWasTextNode = false;
-				}
-			});
+
+		// We seem to get empty text nodes for some reason, at least in Firefox
+		// Jquery is not good at dealing with text nodes so best to use DOM to kill them
+		// REVIEW: Why are these showing up?  Is it this?
+		// http://markmail.org/message/uuoieaafwn6h6gxz
+		// http://reference.sitepoint.com/javascript/Node/normalize
+		_killEmptyTextNodesRecursivePreorder: function(node) {
+			var instance = this;
+
+			// http://www.jslab.dk/articles/non.recursive.preorder.traversal.part2
+			if ((node.nodeType == Node.TEXT_NODE) && (node.data === "")) {
+				$(node).remove();
+			} else {
+				_.each(node.childNodes, function(childNode) {
+					instance._killEmptyTextNodesRecursivePreorder(childNode);
+				});
+			}
 		},
 
 		_normalizeProtectionsInSubtree: function(elm) {
@@ -522,143 +561,421 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 			});
 		},
 		
-		_doUnprotectOrTakeSuggestion: function(eventObj) {
-
-			// http://www.quirksmode.org/js/events_properties.html
-			var $target = $(eventObj.target);
-
-			clientCommon.clearUserSelection();
-			
-			if ($target.hasClass("suggested-protection")) {
-				$target.removeClass("suggested-protection");
-				$target.addClass("protected");
-				this._normalizeProtectionsInSubtree($target.parent());
-			} else {		
-				// http://www.exampledepot.com/egs/org.w3c.dom/MergeText.html
-				// (except getFirstChildNode is not cross-browser)
-				
-				// Move all children of the clicked span in front of the span
-
-				$target.contents().remove().insertBefore($target);
-				var parent = $target.parent().get(0);
-				$target.remove();
-
-				// Merge all text nodes under the parent
-				parent.normalize();
-				_killEmptyTextNodesRecursivePreorder(parent);
+		_unprotectSpan: function($span) {	
+			if (this.mode !== 'protect') {
+				throw "Can't unprotect span outside of protect mode";
+			}
+			if (!$span.hasClass('protected')) {
+				throw "trying to unprotect a non-protected span";
 			}
 
+			var parent = $span.parent().get(0);
+			$span.replaceWith($span.contents().remove());
+			// We shouldn't need to remove the event handler, it will GC
+			/* $span.off('click', this._unprotectSpan); */
+
+			// Merge all text nodes under the parent
+			parent.normalize();
+			this._killEmptyTextNodesRecursivePreorder(parent);
+		},
+
+		_unprotectSpanListener: function(eventObj) {
+			// http://www.quirksmode.org/js/events_properties.html
+			var $target = $(eventObj.target);
+			clientCommon.clearUserSelection();
+			this._unprotectSpan($target);
+			this.update();
+			return true;
+		},
+
+		_takeSuggestionNoNormalize: function($span) {
+			// We do this during an enumeration, and normalizing would
+			// disrupt the enumeration.
+
+			if (this.mode !== 'protect') {
+				throw "Can't take protect suggestion outside of protect mode";
+			}
+			if (!$span.hasClass('suggested')) {
+				throw "trying to take non-suggested span";
+			}
+
+			$span.removeClass("suggested");
+			$span.off('click', this._takeSuggestion);
+
+			$span.addClass("protected");
+			$span.on('click', $.proxy(this._unprotectSpanListener, this));
+		},
+
+		_takeSuggestion: function($span) {
+			var $parent = $span.parent();
+			this._takeSuggestionNoNormalize($span);
+			this._normalizeProtectionsInSubtree($parent);
+		},
+
+		_takeSuggestionListener: function(eventObj) {
+			// http://www.quirksmode.org/js/events_properties.html
+			var $target = $(eventObj.target);
+			clientCommon.clearUserSelection();
+			this._takeSuggestion($target);
 			this.update();
 			return true;
 		},
 		
-		_doProtect: function(eventObj) {
-			$target = eventObj.target;
+		_makeProtectedSpan: function(str) {
+			if (!str) {
+				throw "Empty string passed to _makeProtectedSpan";
+			}
+			var $span = $('<span class="protected">' + str + '</span>');
+			if (this.mode === 'protect') {
+				$span.on('click', $.proxy(this._unprotectSpanListener, this));
+			}
+			return $span;
+		},
 
-			// This hack is necessary because the IE compatibility layer for W3C ranges
-			// returns nulls at times nicEdit did not expect.  I'm not very confident that
-			// the existing invariants were correct in any case, but this works around
-			// the crashes.
-			// (selElm can't handle "null" ranges, but tests startContainer, so given a
-			// startContainer of null we can keep things going...)
+		_inkOnListener: function(eventObj) {
+			var instance = this;
+			this.$div.addClass("blackhighlighter-ink");
+			return true;
+		},
 
-			function getRng () {
-				var nullRange = {
-						'toString': function() { return "";},
-						'startContainer': null, 
-						'endContainer': null, 
-						'parentElement': function() { return null;},
-						'note': 'This is a FAKE RANGE, see nicEditorPatches.js getRng()'
-				};
-				var s = window.getSelection();
-				if(s === null) {
-					return nullRange;
-				}
-					
-				if (s.rangeCount > 0) {
-					var rangeAt = s.getRangeAt(0);
-					if (rangeAt === null) {
-						return nullRange;
-					}
-					return rangeAt;
-				}
-
-				var rangeNew = null;
-				if('createRange' in s) {
-					rangeNew = s.createRange();
-				}
-				if (rangeNew === null) {
-					return nullRange;
-				}
-				
-				return rangeNew;
+		_protectRangeIfApplicable: function(range) {
+ 			var instance = this;
+ 			
+			// Do inclusive test; if the common ancestor of the selection is
+			// not fully inside the blackhighlighter div, then some amount
+			// of the selection is outside.  A decision needs to be made
+			// about how to handle this, currently ignore.  See:
+			//
+			// https://github.com/hostilefork/blackhighlighter/issues/30
+			//
+			if (!this.$div.get(0).contains(range.commonAncestorContainer)) {
+				return false;
 			}
 
-			// We depend on this compatibility layer:
-			// http://code.google.com/p/ierange/
-			var range = getRng();
-			if (range && (range.toString() !== '')) {
-							
-				// we extract the contents which removes them from the editor.
-				// REVIEW: cloneContents() instead?
-				// http://www.phpied.com/replace-selected-text-firefox/
-				var fragment = $(range.extractContents());
+			// SANITY CHECK!
+			//
+			// After normalization, the structure of the blackhighlighter
+			// has been changed to where all selections should be within
+			// sibling divs, or inside a span in one of those divs.
+			//
+			// Before we start making ANY changes, make sure this is the
+			// case, and throw an error if not.
+			//
+			// Note: we allow a depth of one span.  Even if a mouse click
+			// would generally be intercepted by a protected span to unprotect
+			// first, they can still drag a selection into one and end it
+			// there.  Same for the suggested spans.  Also, we don't know what
+			// alternative UI or programmatic API might have been used to
+			// make the selection... so if it's valid, we should accept it
+			// even if it's not clear how the UI could have gotten that way.
+
+			var $startContainer = $(range.startContainer);
+			var $startDiv = $startContainer;
+
+			var $endContainer = $(range.endContainer)
+			var $endDiv = $endContainer;
+
+			if ($startDiv.get(0).nodeType === Node.TEXT_NODE) {
+				$startDiv = $startDiv.parent();
+				if ($startDiv.is('span')) {
+					$startDiv = $startDiv.parent();
+				}
+			}
+			if ($endDiv.get(0).nodeType === Node.TEXT_NODE) {
+				$endDiv = $endDiv.parent();
+				if ($endDiv.is('span')) {
+					$endDiv = $endDiv.parent();
+				}
+			}
+
+			// The normalization structure should mean that all the paragraphs
+			// are in divs, and line breaks are done with our special class
+
+			if (!$startDiv.is('div')) {
+				throw Error("Blackhiglighter sel doesn't start in a div");
+			}
+			if (!$endDiv.is('div')) {
+				throw Error("Blackhiglighter sel doesn't end in a div");
+			}
+			if (!$startDiv.parent().is($endDiv.parent())) {
+				throw Error("Blackhighlighter start/end different parents");
+			}
+			if (!$startDiv.parent().is(this.$div)) {
+				throw Error("Selection isn't normalized inside container");
+			}
+
+			// Finally, we ensure we can enumerate safely in a forward
+			// direction from the starting div through its later siblings and
+			// hit the ending div (inclusive, as start may equal end)
+			//
+			var foundEnd = false;
+			$startDiv.nextAll().add($startDiv).each(function (idx, el) {
+				var $el = $(el)
+				if ($el.is($endDiv)) {
+					foundEnd = true;
+					return false; // break the loop
+				}
+			});
+			if (!foundEnd) {
+				throw Error("Illegal enumeration in blackhighlighter area.");
+			}
+
+			// DOM TextNodes really are second-class citizens in jQuery
+			// http://stackoverflow.com/questions/16452127/
+			function indexIncludingTextNodes($node) {
+				var node = $node.get(0);
+			    var n = 0;
+			    while (node = node.previousSibling) {
+			        n++;
+			   	}
+			    return n;
+			}
+
+			// ACTUAL REDACTION WORK
+			//
+			// Now that we know the selection is good, we need to handle all
+			// the cases.  To make the work easier, we transform things
+			// into unmerged spans and text nodes and then normalize them at
+			// the end of the operation.  I'm sure it could be done more
+			// elegantly, but for now I'll go with obvious/correct.
+
+			// First we clear the selection, because regardless of what we 
+			// do we don't want the visual XORing to happen.
+
+			clientCommon.clearUserSelection();
+
+			var startOffset = range.startOffset;
+			var endOffset = range.endOffset;
+
+			// First of all, it is technically possible to get selections
+			// into the hack containers.  We don't redact these, although
+			// for UI reasons it might be considered to help unredact
+			// groups.  But for now just shift the start/end to skip them.
+
+			if ($startContainer.parent().hasClass("zwnj-spacing-hack")) {
+				$startContainer = $startContainer.parent();
+			}
+			while ($startContainer.hasClass("zwnj-spacing-hack")) {
+				if ($startContainer.is($endContainer)) {
+					return false;
+				}
+				$startContainer = $startContainer.next();
+				startOffset = 0;
+			}
+			if ($endContainer.parent().hasClass("zwnj-spacing-hack")) {
+				$endContainer = $endContainer.parent();
+			}
+			while ($endContainer.hasClass("zwnj-spacing-hack")) {
+				if ($endContainer.is($startContainer)) {
+					// Shouldn't happen, or we'd have hit it above!
+					throw "Internal error in zwnj-spacing-hack enumeration";
+				}
+				$endContainer = $endContainer.prev();
+				endOffset = $endContainer.contents().length;
+			}
+
+			// Start with taking care of the case where the start and end are
+			// text nodes, doing the substring and splicing work to make
+			// protection spans.  We need to handle this specially because
+			// if we try to handle the edges on their own we might disrupt
+			// the start or end without recognizing them as being the same.
+			//
+			// http://www.bennadel.com/blog/2159-Using-Slice-Substring-And-Substr-In-Javascript.htm
+
+			var $startParent = $startContainer.parent();
+			var $endParent = $endContainer.parent();
+
+			if (
+				$startContainer.is($endContainer) 
+				&& ($startContainer.get(0).nodeType === Node.TEXT_NODE)
+			) {
+				// Start and end is the same text node; needs particular handling
+
+				if ($startParent.is("span")) {
+					if ($startParent.hasClass("protected")) {
+						console.error("Note: redacting inside redaction");
+						return false;
+					} else if ($startParent.hasClass("suggested")) {
+						console.error("Note: redacting inside suggestion");
+						$startParent.replaceWith($startParent.contents().remove());
+					} else {
+						throw "Unknown span selection in blackhighlighter";
+					}
+				}
+
+				var str = $startContainer.get(0).nodeValue;
+				var $span = this._makeProtectedSpan(str.substring(startOffset, endOffset));
+				var rest = document.createTextNode(str.substr(endOffset));
+				$startContainer.get(0).nodeValue = str.slice(0, startOffset);
+				$startContainer.after($span);
+				$span.after(rest);
+
+			} else {
+
+				// If start or end are in a text node otherwise, we handle them
+
+				if ($startContainer.get(0).nodeType === Node.TEXT_NODE) {
+					if ($startParent.is("span") && $startParent.hasClass("protected")) {
+						// ignore it (you can't redact it more) but climb a level
+						startOffset = indexIncludingTextNodes($startContainer);
+						$startContainer = $startContainer.parent();
+					} else {
+						if ($startParent.is("span")) {
+							if ($startParent.hasClass("suggested")) {
+								$startParent.replaceWith($startParent.contents().remove());
+							} else {
+								throw "Unknown span selection in blackhighlighter";
+							}
+						}
+
+						var startStr = $startContainer.get(0).nodeValue;
+						var $startSpan = this._makeProtectedSpan(startStr.substr(startOffset));
+						$startContainer.get(0).nodeValue = startStr.slice(0, startOffset);
+						$startContainer.after($startSpan);
+
+						// As what's left of start container is now a text node
+						// we *don't* want to redact, use protected span for further
+						// indication of the start of the redaction
+						$startContainer = $startSpan;
+
+						// We added a sibling text node; this may disrupt the
+						// endOffset if it was counting one of those siblings
+						if ($startContainer.parent().is($endContainer)) {
+							endOffset++;
+						}
+					}
+					startOffset = indexIncludingTextNodes($startContainer);
+					$startContainer = $startContainer.parent();
+				}
+
+				if ($endContainer.get(0).nodeType === Node.TEXT_NODE) {
+					if ($endParent.is("span") && $endParent.hasClass("protected")) {
+						// ignore it (you can't redact it more)
+						endOffset = indexIncludingTextNodes($endContainer);
+						$endContainer = $endContainer.parent();
+					} else {
+						if ($endParent.is("span")) {
+							if ($endParent.hasClass("suggested")) {
+								$endParent.replaceWith($endParent.contents().remove());
+							} else {
+								throw "Unknown span selection in blackhighlighter";
+							}
+						}
+
+						var endStr = $endContainer.get(0).nodeValue;
+						var $endSpan = this._makeProtectedSpan(endStr.slice(0, endOffset));
+						$endContainer.get(0).nodeValue = endStr.substr(endOffset);
+						$endContainer.before($endSpan);
+
+						// As what's left of end container is now a text node
+						// we *don't* want to redact, use protected span for further
+						// indication of the end of the redaction
+						$endContainer = $endSpan;
+					}
+					endOffset = indexIncludingTextNodes($endContainer);
+					$endContainer = $endContainer.parent();
+				}
+	 
+	 			// From this point on, the only text nodes we'll be processing
+	 			// will be redacted in their entirety.  $startContainer and
+	 			// $endContainer should be under sibling divs, so let's just
+	 			// check that to be sure.
+
+	 			if (!$startContainer.parent().is($endContainer.parent())) {
+	 				throw Error("Assertion failed: startContainer != endContainer");
+	 			}
+
+	 			function redactFn (idx, el) {
+ 					var $el = $(el);
+ 					if (el.nodeType === Node.TEXT_NODE) {
+ 						$el.replaceWith(instance._makeProtectedSpan(el.nodeValue));
+ 					} else if ($el.is('span')) {
+ 						if ($el.hasClass('protected')) {
+ 							// nothing
+ 						} else if ($el.hasClass('suggested')) {
+ 							instance._takeSuggestionNoNormalize($el);
+ 						}
+ 					} else {
+ 						throw "Unknown element found in blackhighlighter."
+ 					}
+ 				}
+
+	 			if ($startContainer.is($endContainer)) {
+	 				$startContainer.contents().slice(startOffset, endOffset).each(redactFn);
+	 			} else {
+	 				// This is a div-spanning operation.  REVIEW: apply the
+	 				// redaction indicator to blank lines we cross in order
+	 				// to help with the unredaction of groups with
+	 				// continuity?
+
+	 				$startContainer.contents().slice(startOffset).each(redactFn);
+	 				$endContainer.contents().slice(0, endOffset).each(redactFn);
+	 				$startContainer.nextUntil($endContainer).each(function (idx, div) {
+	 					var $div = $(div);
+	 					if (!$div.hasClass("zwnj-spacing-hack")) {
+	 						$(div).contents().each(redactFn);
+	 					}
+	 				});
+	 			}
+	 		}
+
+			// Our selection can potentially have two partial ranges
+			// Normalize the text nodes in each div so that if two Text nodes
+			// are adjacent to each other they become one.  (Note: Review the
+			// necessity of this given the new implementation technique)
+			//
+			this.$div.find("div").each(function(idx, el) {
+				el.normalize();
+			});
 			
-				// find all protected or suggested-protection spans in the range and replace them with their contents
-				// NOTE: find() does not seem to work on document fragments, see post
-				// http://groups.google.com/group/jquery-en/browse_thread/thread/c942018ff571b135/
-				// http://docs.jquery.com/Selectors/multiple#selector1selector2selectorN
-				fragment.children().filter('span').filter('.protected,.suggested-protection').each(function(i) {
-					var parentOfThis = this.parentNode;
-					$(this).replaceWith($(this).contents());
-					// We must normalize so that adjacent TextNodes get merged together
-					// NOTE: IE6 and 7 document fragments can't be normalized!
-					// http://reference.sitepoint.com/javascript/DocumentFragment
-					// we must defer the normalization until after the insertion below
-					/* parentOfThis.normalize(); */
-				});
-				
-				var protectedEl = $('<span class="protected"></span>');
-				protectedEl.append(fragment.contents());
-				protectedEl.get(0).normalize();
-				protectedEl.on('click', $.proxy(this._doUnprotectOrTakeSuggestion, this));
-				
-				range.insertNode(protectedEl.get(0));
-		
-				protectionAreaEl = $("#editor").get(0);
+			this._killEmptyTextNodesRecursivePreorder(this.$div);
+			this._normalizeProtectionsInSubtree(this.$div);
+			
+			// we must unselect the selection, or the XORing will make it look
+			// bad and not all blacked out
+			// http://www.webreference.com/js/column12/selectionobject.html
+			clientCommon.clearUserSelection();
 
-				_killEmptyTextNodesRecursivePreorder(protectionAreaEl);
+			this.update();
+			return true;
+		},
 
-				this._normalizeProtectionsInSubtree(protectionAreaEl);
-				
-				// we must unselect the selection, or the XORing will make it look
-				// bad and not all blacked out
-				// http://www.webreference.com/js/column12/selectionobject.html
-				clientCommon.clearUserSelection();
+		_inkOffListener: function(eventObj) {
+			$target = eventObj.target;
 
-				this.update();
-			}		
+			this.$div.removeClass("blackhighlighter-ink");
+
+			// We depend on this compatibility layer:
+			//
+			// http://code.google.com/p/ierange/
+			//
+			// How relevant are IE8 and lower now?
+			sel = window.getSelection();
+
+			for(var i = 0; i < sel.rangeCount; i++) {
+				var range = sel.getRangeAt(i);
+				if (!range) {
+					throw "Empty range received from selection model";
+				}
+				if (!range.toString()) {
+					// Because mouseup happens BEFORE click, it's important
+					// that we filter out the "insertion point" selections
+					// you form by just clicking.  We want the click events
+					// to be passed to the takeSuggestion and unprotectSpan
+				} else {
+					this._protectRangeIfApplicable(range);
+				}
+			}
+			return true;
 		},
 
 ////////////////////////////////////////////////////////////////////////////////
 
-		/*
-		 * This should probably not be part of the API.  Though interesting to
-		 * offer it as a hook so that curious people can see the certificate
-		 * data without *actually* committing it, really it should only be
-		 * offered as an undocumented hook.
-		 */
 		generateCommitAndProtections: function() {
 
 			// The editor must be cleaned up and switched into canonical mode
 			var modeSaved = this.mode;
 			this.setMode('protect');
-
-			// Note: This means if you are debugging and want to see the
-			// suggestions you will have to turn them back on.  Work that out
-			// later.
-
-			this._removeProtectSuggestions(this.$div.get(0));
 
 			var commit = {'spans': []};
 			var protectedObjs = undefined;
@@ -672,6 +989,8 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 			// It can most likely be simplified now since there are no uses of
 			// "mergeable line breaks"
 			function processChild(child) {
+				var $child = $(child);
+
 				function pushStringSpan(stringSpan) {
 					if (!_.isString(stringSpan)) {
 						throw 'Pushing non-string as string span';
@@ -683,7 +1002,7 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 					handleMergeableLineBreaks();
 
 					var numSpans = commit.spans.length;
-							
+
 					if ((numSpans > 0) && _.isString(commit.spans[numSpans-1])) {
 						commit.spans[numSpans-1] += stringSpan;
 					} else {
@@ -723,110 +1042,83 @@ function _killEmptyTextNodesRecursivePreorder(node) {
 					return 'black';
 				}
 				
-				var nodeType = _.isUndefined(child.nodeType) ? Node.ATTRIBUTE_NODE : child.nodeType;
-				
-				// https://developer.mozilla.org/en/Case_Sensitivity_in_class_and_id_Names 
-				var tagNameLowerCase = _.isUndefined(child.tagName) ? undefined : child.tagName.toLowerCase(); 
-				
-				switch (nodeType) {
-					case Node.ELEMENT_NODE:
-						if ((tagNameLowerCase == 'span') && $(child).hasClass('protected')) {
-							// Each protected span adds a placeholder to the commit and a redaction to
-							// the reveal certificate
-							
-							// Since the div in which editing happened was contenteditable
-							// HTML, it will be representing < as &lt; inside a text node.
-							// Consequently, we must unescape it before putting it into
-							// a certificate.  The server will escape it back when it
-							// generates HTML.
-							var content = _.unescape($(child).html());
+				if (child.nodeType === Node.TEXT_NODE) {
+					// REVIEW: JSON.stringify seems not to escape \u00A0.  This is a problem because 
+					// it looks just like a space to the user's clipboard, and so we lose it when the
+					// user copies and pastes.  This will apply to other invisible unicode characters
+					// too... but hopefully they're taken care of inside JSON.stringify (?)
+					pushStringSpan.call(this, child.data);
+					return;
+				}
 
-							if (content.length === 0) {
-								throw "Zero length redaction found, illegal";
-							}
-								
-							var protectionName = protectionNameForSpan(child);
+				if (child.nodeType !== Node.ELEMENT_NODE) {
+					throw 'Unexpected nodeType in canonized blackhighlighter area';
+				}
 
-							var protection = protectionsByName[protectionName];
-							if (_.isUndefined(protection)) {
-								protection = {
-									'redactions': [],
-									'name': protectionName
-								};
-								protectionsByName[protectionName] = protection;
-							}
-							
-							// http://www.javascripter.net/faq/convert3.htm
-							// we track the order but do not put it into the
-							// commit or protection as it is implicit
-							var placeholder = {
-								'display_length': content.length
-							};
-							placeholders.push({
-								obj: placeholder,
-								protection: protection,
-								order: redactionOrder
-							});
+				if ($child.is('span')) {
 
-							protection.redactions.push(content);
-							redactionOrder++;
-							
-							pushPlaceholderSpan(placeholder);
-						} else {
-							switch (tagNameLowerCase) {
-								case 'br': {
-									throw "Canonized contenteditable had stray <br> tag";
-								}
-								break;
-								
-								case 'p': {
-									throw "Canonized contenteditable had <p> tag";
-									// Though Firefox doesn't seem to inject paragraphs each time you press
-									// enter, Opera does.  We translate these into two newlines.
-									pushMergeableLineBreak();
-									$(child).contents().each(function(i) { processChild(this); });
-									pushMergeableLineBreak();
-								}
-								break;
+					if ($(child).hasClass('protected')) {
 
-								case 'div': {
-									if ($(child).hasClass("zwnj-spacing-hack")) {
-										// We canonize our contenteditable to put this odd char
-										// only in an empty <div>.  It's enough to get the div
-										// to space out, seemingly...and we'll just try and
-										// make sure none of these are in the input code to
-										// start with.
-										pushUnmergeableLineBreak();
-									} else {
-										$(child).contents().each(function(i) { processChild(this); });
-										pushUnmergeableLineBreak();
-									}
-								}
-								break;
-								
-								default: {
-									// REVIEW: it is technically possible to pass HTML inside of the strings
-									// however that opens a can of worms so we just do UTF8 JSON strings
-									if (true) {
-										throw 'Rich text and HTML instructions not currently supported for security reasons: <' + child.tagName + '>';
-									} else {
-										pushStringSpan(clientCommon.outerXHTML(child));
-									}
-								}
-							}
+						// Each protected span adds a placeholder to the commit 
+						// and a redaction to the reveal certificate
+						
+						var content = $child.text();
+						if (content.length === 0) {
+							throw "Zero length redaction found, illegal";
 						}
-						break;
+							
+						var protectionName = protectionNameForSpan(child);
+
+						var protection = protectionsByName[protectionName];
+						if (_.isUndefined(protection)) {
+							protection = {
+								'redactions': [],
+								'name': protectionName
+							};
+							protectionsByName[protectionName] = protection;
+						}
 						
-					case Node.TEXT_NODE:
-						// REVIEW: JSON.stringify seems not to escape \u00A0.  This is a problem because 
-						// it looks just like a space to the user's clipboard, and so we lose it when the
-						// user copies and pastes.  This will apply to other invisible unicode characters
-						// too... but hopefully they're taken care of inside JSON.stringify (?)
-						pushStringSpan(child.data);
-						break;
+						// http://www.javascripter.net/faq/convert3.htm
+						// we track the order but do not put it into the
+						// commit or protection as it is implicit
+						var placeholder = {
+							'display_length': content.length
+						};
+						placeholders.push({
+							obj: placeholder,
+							protection: protection,
+							order: redactionOrder
+						});
+
+						protection.redactions.push(content);
+						redactionOrder++;
 						
-					default:
-						throw 'Unexpected node in XHTML produced by getElmCloneClean()';
+						pushPlaceholderSpan.call(this, placeholder);
+					} else if ($child.hasClass('suggested')) {
+						// Treat it identially to a text node.  Used to throw
+						// these out before calling generation, but it should
+						// now be safe to call generation at any time.
+						pushStringSpan.call(this, $child.text());
+					} else {
+						throw "Illegal span found in canonized blackhighlighter area";
+					}
+				} else if ($child.is('div')) {
+
+					if ($(child).hasClass("zwnj-spacing-hack")) {
+						// We canonize our contenteditable to put this odd char
+						// only in an empty <div>.  It's enough to get the div
+						// to space out, seemingly...and we'll just try and
+						// make sure none of these are in the input code to
+						// start with.
+						pushUnmergeableLineBreak.call();
+					} else {
+						$(child).contents().each(function(i) {
+							processChild(this);
+						});
+						pushUnmergeableLineBreak.call();
+					}
+				} else {
+					throw 'Unknown DOM element found in blackhighlighter canonized area';
 				}
 			}
 

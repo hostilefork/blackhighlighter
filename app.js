@@ -169,6 +169,9 @@ var mongoConnectURI = (
 // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 //
 function ClientError(msg) {
+	// http://stackoverflow.com/a/13294728/211160
+	if (!(this instanceof ClientError)){ return ClientError(msg); }
+
 	Error.call(this);
 	Error.captureStackTrace(this, ClientError);
 	this.message = msg;
@@ -180,7 +183,7 @@ function resSendJsonForErr(res, err) {
 
 	if (!err) {
 		// Legacy from Step; changing to not call this when there is no error
-		throw new Error("resSendJsonForErr called without an error parameter");
+		throw Error("resSendJsonForErr called without an error parameter");
 	} 
 
 	if (err instanceof Error) {
@@ -495,9 +498,9 @@ function showOrVerify(req, res, tabstate) {
 
 		// 5: Check the arrays for validity and extract needed data
 		if (commitsArray.length == 0) {
-			throw new ClientError("No commit with requested _id");
+			throw ClientError("No commit with requested _id");
 		} else if (commitsArray.length > 1) {
-			throw new Error("Multiple commits with same _id.");
+			throw Error("Multiple commits with same _id.");
 		}
 
 		// REVIEW: is the length the only thing we need to check?
@@ -556,13 +559,13 @@ app.post('/commit/$', function (req, res) {
 
 	// Must be an object
 	if (!_.isObject(commit)) {
-		throw new ClientError('commit must be an object');
+		throw ClientError('commit must be an object');
 	}
 
 	// Verify it doesn't have more than just "spans"
 	if (!_.isEqual(_.keys(commit).sort(), ["spans"])) {
 		console.log(commit.toString());
-		throw new ClientError('commit should have a .spans key, only');
+		throw ClientError('commit should have a .spans key, only');
 	}
 
 	// Spans can be either strings or objects with 2 keys
@@ -571,20 +574,20 @@ app.post('/commit/$', function (req, res) {
 			return;
 		}
 		if (!_.isObject(commitSpan)) {
-			throw new ClientError('commit spans must be string or object');
+			throw ClientError('commit spans must be string or object');
 		}
 		if (!_.isEqual(
 			_.keys(commitSpan).sort(), ["display_length", "sha256"])
 		) {
-			throw new ClientError(
+			throw ClientError(
 				'span objects can only have sha256 and display_length'
 			);
 		}
 		if (!_.isNumber(commitSpan.display_length)) {
-			throw new ClientError('display_length must be a number');
+			throw ClientError('display_length must be a number');
 		}
 		if (!_.isString(commitSpan.sha256)) {
-			throw new ClientError('sha256 of span must be string');
+			throw ClientError('sha256 of span must be string');
 		}
 	});
 
@@ -665,7 +668,7 @@ app.post('/reveal/$', function (req, res) {
 
 	// Must be an object
 	if (!_.isObject(reveal)) {
-		throw new ClientError('reveal must be an object');
+		throw ClientError('reveal must be an object');
 	}
 
 	// Verify the keyset
@@ -673,28 +676,28 @@ app.post('/reveal/$', function (req, res) {
 	if (!_.isEqual(_.keys(reveal).sort(), 
 		["commit_id", "name", "redactions", "salt", "sha256"])
 	) { 
-		throw new ClientError('reveal has extra or missing keys');
+		throw ClientError('reveal has extra or missing keys');
 	}
 
 	// Verify the values
 	if (!_.isString(reveal.commit_id)) {
-		throw new ClientError('commit_id should be a string');
+		throw ClientError('commit_id should be a string');
 	}
 	if (!_.isString(reveal.salt)) {
-		throw new ClientError('salt should be a string');
+		throw ClientError('salt should be a string');
 	}
 	if (!_.isString(reveal.sha256)) {
-		throw new ClientError('sha256 should be a string');
+		throw ClientError('sha256 should be a string');
 	}
 	if (!_.isString(reveal.name)) {
-		throw new ClientError('name should be a string');
+		throw ClientError('name should be a string');
 	}
 	if (!_.isArray(reveal.redactions)) {
-		throw new ClientError('redactions should be an array');
+		throw ClientError('redactions should be an array');
 	}
 	_.each(reveal.redactions, function (redactionSpan) {
 		if (!_.isString(redactionSpan)) {
-			throw new ClientError('all redaction spans must be strings');
+			throw ClientError('all redaction spans must be strings');
 		}
 	});
 
@@ -762,7 +765,7 @@ app.post('/reveal/$', function (req, res) {
 		// Ensure it hasn't *already* been revealed
 		_.each(oldRevealsArray, function(oldReveal) {
 			if (reveal.sha256 == oldReveal.sha256) {
-				throw new ClientError(
+				throw ClientError(
 					"Reveal " + reveal.sha256 + " was already published."
 				);
 			}
@@ -770,9 +773,9 @@ app.post('/reveal/$', function (req, res) {
 
 		// Make sure there's exactly one commit with that ID
 		if (commitsArray.length == 0) {
-			throw new ClientError("No commit with requested _id");
+			throw ClientError("No commit with requested _id");
 		} else if (commitsArray.length > 1) {
-			throw new Error("Multiple commits with same _id.");
+			throw Error("Multiple commits with same _id.");
 		}
 
 		var commit = commitsArray[0];
@@ -789,7 +792,7 @@ app.post('/reveal/$', function (req, res) {
 			return true;
 		});
 		if (!matchedSpan) {
-			throw new ClientError("Reveal's hash matches no span in commit.");
+			throw ClientError("Reveal's hash matches no span in commit.");
 		}
 
 		// mongodb JS driver knows about Date(), or do we need to use
