@@ -1,4 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!doctype html>
+<html lang="en">
+
 {# This is a swig-templated HTML file #}
 {# http://paularmstrong.github.com/swig/ #}
 
@@ -33,13 +35,12 @@ jquery and jquery UI... and set up a params-javascript block.
 You will probably want to copy and customize this file.
 {% endcomment %}
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<meta name="keywords" content="" />
+		<meta charset="utf-8">
+		<meta name="keywords" content="security transparency accountability redaction" />
 		<meta name="description" content="" />
 
-		<title>{% block title %}Blackhighlighter{% endblock %}</title>
+		<title>{% block title %}Blackhighlighter Demo Sandbox{% endblock %}</title>
 
 
 	<!-- Django allows us to pass parameters into our templates, good to have as javascript vars -->
@@ -144,15 +145,9 @@ You will probably want to copy and customize this file.
 		{% if HOSTING_SERVICE %}
 		and <a href="{{ HOSTING_SERVICE_URL }}">{{ HOSTING_SERVICE }}</a>
 		{% endif %}
-		: (<a href="https://github.com/hostilefork/blackhighlighter/blob/master/CREDITS.md" target="_blank">full credits</a>)
+		: (<a href="https://github.com/hostilefork/blackhighlighter/blob/master/CREDITS.md" target="_blank">full credits</a>, <a href="http://blackhighlighter.hostilefork.com">project homepage</a>)
 	</p>
 {% endblock credits %}
-{% block copyright %}
-	<div class="copyright">
-		Copyleft <img src="{{ PROJECT_MEDIA_URL }}copyleft.png" style="vertical-align: middle;" alt="Copyleft Logo" /> 2009-2014 <a href="http://blackhighlighter.hostilefork.com/" target="_blank">hostilefork.com</a> &mdash;
-		<a href="https://github.com/hostilefork/blackhighlighter/">view on GitHub</a>
-	</div>
-{% endblock copyright %}
 
 	</div>
 

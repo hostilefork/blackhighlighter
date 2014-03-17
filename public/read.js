@@ -471,13 +471,13 @@ define([
 			if (err) {
 				notifyErrorOnTab('verify', err);
 			} else {
-				$('#certificates').empty();
+				$('#certificates').val('');
 				$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
 			}
 			
 			$('#progress-verify').hide();
 			$('#buttons-verify').show();
-		}, 3000);
+		}, 2000);
 
 		clearErrorOnTab('verify');
 	
@@ -567,7 +567,7 @@ define([
 					window.navigate(clientCommon.absoluteFromRelativeURL(PARAMS.show_url));
 				}
 			}
-		}, 3000);
+		}, 2000);
 
 		$('#tabs').tabs('disable', tabIndexForId('tabs-verify'));
 		$('#tabs').tabs('disable', tabIndexForId('tabs-show'));

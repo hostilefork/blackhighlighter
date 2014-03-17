@@ -281,7 +281,7 @@ define([
 			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-commit'));
 			$('#tabs').tabs('disable', tabIndexForId('tabs-protect'));
 		}
-	}, 3000);
+	}, 2000);
 	
 	$("#commit-button").button().on('click', function(eventObj) {
 		if ($("#editor").blackhighlighter('option', 'mode') === 'show') {

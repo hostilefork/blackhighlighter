@@ -39,11 +39,20 @@
 	<div class="textarea-wrapper">
 	</div>
 
+	<div id="reveal-json-accordion">
+		<h3>View the low-level data that will be revealed to the server</h3>
+		<div id='json-reveal'>
+			{# Filled by switching tabs #}
+		</div>
+	</div>
+
 	<div class="trailing-section">
-		<p>Remember that you can still send the certificates to any party who wants to verify 
-		the letter without publishing it to the world!  So reveal only if you are the sender
-		or if it's absolutely necessary.</p>
-		<i>If you are <b>sure</b> you want to reveal</i>, click the 
+		<p>Remember that you can still send the certificates to any party
+		who wants to verify the letter without publishing it to the whole world!
+		So reveal only if you are the sender, or if it's absolutely necessary
+		to prove a point about the communication.</p>
+
+		<p><i>If you are <b>sure</b> you want to reveal</i>, click the 
 		button below.</p>
 
 		<div class="error-display" style="display: none;">
@@ -63,13 +72,6 @@
 
 		<div id="progress-reveal" style="display: none;">
 			<div class="indeterminate-progress"></div>
-		</div>
-
-		<div id="reveal-json-accordion">
-			<h3>View the JSON reveal that will be sent to the server</h3>
-			<div id='json-reveal'>
-				{# Filled by switching tabs #}
-			</div>
 		</div>
 	</div>
 </div>

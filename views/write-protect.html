@@ -42,15 +42,20 @@
 	-->{# {% endcomment %} #}
 	</div>
 
-	<div class="trailing-section">
-		<p>You won't be sending the marked out text of your letter to the server. 
-		Instead, you will be sending digital verification numbers that can
-		be used to prove what you wrote is what you entered here at the time of
-		authorship.  These will be given back to you in the form of a
-		certificate, which you may share privately with who you wish.</p>
+	<div id="commit-json-accordion"><h3>View the low-level redacted data that will be sent to the server</h3>
+		<div>
+			<div id='json-commit'>
+				{# Filled on demand #}
+			</div>
+		</div>
+	</div>
 
-		<p>When you're satisfied that everything you didn't mark out is okay to
-		publish on the internet so anyone can see it, continue.</p>
+	<div class="trailing-section">
+		<p>The marked out text of your letter won't be published.  Instead,
+		what will be published are digital signatures that can be used to
+		verify what you entered, without actually containing the hidden text.
+		You will be given certificates for these missing parts, that you may
+		share privately with who you wish.</p>
 
 		<div class="error-display" style="display: none;">
 			<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
@@ -65,15 +70,6 @@
 			<button id="commit-button">
 				<b>Publish the Public Portions</b>
 			</button></p>
-		</div>
-
-		{# This is an accordion widget #}
-		<div id="commit-json-accordion"><h3>View the redacted JSON that will be sent to the server</h3>
-			<div>
-				<div id='json-commit'>
-		{# Filled on demand #}
-				</div>
-			</div>
 		</div>
 
 		<div id="progress-commit" style="display: none;">
