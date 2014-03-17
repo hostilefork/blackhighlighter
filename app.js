@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-//   See http://hostilefork.com/blackhighlighter for documentation.
+//   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
 
@@ -342,7 +342,7 @@ app.get('/', function (req, res) {
 app.get('/docs/*', function(req, res) {
 	res.send('For now, if you want to '
 		+ 'learn more about this project, please visit '
-		+ '<a href="http://hostilefork.com/blackhighlighter">'
+		+ '<a href="http://blackhighlighter.hostilefork.com">'
 		+	'hostilefork.com/blackhighlighter'
 		+ '</a>');
 });

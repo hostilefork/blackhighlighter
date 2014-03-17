@@ -1,38 +1,65 @@
 ### CREDITS
 
-This is a placeholder for content that will ultimately become the credits page.
-
-**Server Side**
-
-* Node.JS
-
-* MongoDB
-
-* Express and Swig
-
-* Q Promise Library
-
-*(Note: The server was initially written in Python using the Django web framework.  Due to the fact that verification code must run on both in the web browser and on the server, this was ported to Node.JS in order to share the JavaScript portions of the certificate code.  It was a largely simplifying change, and accelerated by the existence of a largely-compatible templating language to Django for Node.)*
+This is an attempt to list all the third-party components used by the Blackhighlighter system.  In addition, code snippets are linked and attributed within the source (as best possible).
 
 
-**Client Side**
+**Blackhighlighter Server**
 
-* jQuery and jQuery UI
+* [Node.JS](http://nodejs.org/) *(read [license](https://raw.github.com/joyent/node/v0.10.12/LICENSE))*
 
-* nicEdit
+* [Express](http://expressjs.com/) *(MIT license)*
 
-*(Note: The codebase was established in 2009.  Very little was done to the interface in 2012 during the Node.JS port, besides bringing it up to date to work around changes in the browsers that had happened in the intervening years.  Generally speaking, the UI requires an overhaul.)*
+* [MongoDB](http://www.mongodb.org/) *(Affero GPL license)*
+
+* [Q Promise Library](https://github.com/kriskowal/q) *(MIT license)*
+
+* [NPM crypto package](https://www.npmjs.org/package/crypto) *(BSD license)*
+
+* [underscore.js](http://underscorejs.org/) *(MIT license)*
+
+
+**jquery-blackhighlighter Widget**
+
+* [jQuery](http://jquery.com/) *(MIT license)*
+
+* [ierange-m2.js](https://code.google.com/p/ierange/) *(MIT license)*
+
+* [jsSHA2](http://anmar.eu.org/projects/jssha2/) *(BSD license)*
+
+
+**Sandbox Demo Server**
+
+* [Node.JS](http://nodejs.org/) (read [license](https://raw.github.com/joyent/node/v0.10.12/LICENSE))
+
+* [Express](http://expressjs.com/) *(MIT license)*
+
+* [underscore.js](http://underscorejs.org/) *(MIT license)*
+
+* [Swig](http://paularmstrong.github.io/swig/) *(MIT license)*
+
+* [requirejs](http://requirejs.org/) *("New" BSD license)*
+
+
+**Sandbox Demo Client**
+
+* [jQuery UI](https://jqueryui.com/) *(MIT license)*
+
+* [underscore.js](http://underscorejs.org/) *(MIT license)*
+
+* [jQuery-actual](http://dreamerslab.com/blog/en/get-hidden-elements-width-and-height-with-jquery/) *(MIT license)*
+
+* [jQuery-expanding](http://bgrins.github.io/ExpandingTextareas/) *(MIT license)*
 
 
 **Testing**
 
-* NPM Test
+* [NPM test package](https://www.npmjs.org/package/test) *(MIT license)*
 
-* Travis
+* [Travis](https://travis-ci.org/)
 
 
 **Version Control**
 
-* Git
+* [Git](http://git-scm.com/) *(Lesser GPL)*
 
-* GitHub
+* [GitHub](https://github.com/)
