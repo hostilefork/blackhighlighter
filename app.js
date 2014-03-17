@@ -329,12 +329,9 @@ var common = requirejs('public/client-server-common');
 app.use("/public", express.static(__dirname + '/public'));
 
 
-// No homepage for now
+// No homepage for now, just redirect to write URL
 app.get('/', function (req, res) {
-	res.send(
-		'Blackhighlighter app currently in private demo'
-		+ 'no public URLs...yet!'
-	);
+	res.redirect('/write/');
 });
 
 
