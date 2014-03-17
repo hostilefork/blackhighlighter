@@ -90,8 +90,6 @@ define([
 	// http://bytes.com/groups/javascript/484582-setattribute-versus-assigning-property
 	/* setAttribute('contentEditable','false'); */
 
-	$('#editor').focus();
-
 	$('#commit-json-accordion').accordion({
 		collapsible: true,
 		active: false, /* only collapsible accordions can be fully closed */
@@ -133,6 +131,7 @@ define([
 		mode: 'compose',
 		update: updateCommitPreviewIfNecessary
 	});
+	$('#editor').focus();
 
 	// http://www.siafoo.net/article/67
 	function closeEditorWarning() {
