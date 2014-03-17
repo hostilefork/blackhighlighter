@@ -418,7 +418,8 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 				// more clever?  e.g. we could add a method onto the element
 				// or keep a sidestructure
 				var placeholder = 
-					'<span class="placeholder protected">'
+					'<span class="placeholder protected" title="'
+					+ commitSpan.sha256 + '">'
 					+ placeholderString + '</span>';
 
 				result += placeholder;
