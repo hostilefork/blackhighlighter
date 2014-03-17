@@ -180,10 +180,6 @@ define([
 				$editor.blackhighlighter('option', 'mode', 'protect');
 				updateCommitPreviewIfNecessary();
 				$("#protect-wrapper").append($editor.detach());
-
-				// would this be easier if we hid these things by default and
-				// showed them when we needed them? 
-				$('#progress-commit').hide();
 				break;
 		
 			case 'tabs-commit':

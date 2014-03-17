@@ -396,7 +396,6 @@ define([
 
 		switch(ui.newPanel.attr('id')) {
 			case 'tabs-verify':
-				$('#progress-verify').hide();
 				clearErrorOnTab('verify');
 				break;
 			
@@ -409,13 +408,11 @@ define([
 				break;
 		
 			case 'tabs-reveal':
+				clearErrorOnTab('reveal');
 				$("#tabs-reveal .textarea-wrapper").append(
 					$editor.remove()
 				);
 				$editor.blackhighlighter('option', 'mode', 'reveal');
-
-				clearErrorOnTab('reveal');
-				$('#progress-reveal').hide();
 
 				var protections = $("#editor").blackhighlighter("option", "protections");
 				// REVIEW: used to sort values in array by key (hash)
