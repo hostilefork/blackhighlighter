@@ -26,6 +26,7 @@ define([
 	'client-server-common',
 	'client-common',
 	// these libs have no results, purely additive...
+	'sha256',
 	'jqueryui',
 	'json2',
 	'blackhighlighter',
