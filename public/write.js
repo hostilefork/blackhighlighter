@@ -18,6 +18,8 @@
 //   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
+// Whole-script strict mode syntax
+"use strict";
 
 // Main script file, brings page to life in $(document).onload handler
 define([
@@ -256,7 +258,7 @@ define([
 		$('#tabs').tabs('option', 'active', oldTabId + 1);
 	});
 
-	finalizeCommitUI = _.debounce(function (err) {
+	var finalizeCommitUI = _.debounce(function (err) {
 
 		$('#progress-commit').hide();
 		if (err) {

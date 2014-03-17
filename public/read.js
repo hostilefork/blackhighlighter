@@ -18,6 +18,8 @@
 //   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
+// Whole-script strict mode syntax
+"use strict";
 
 define([
 	'jquery',
@@ -465,7 +467,7 @@ define([
 	
 	$("#verify-button").on('click', function() {
 
-		finalizeVerifyUI = _.debounce(function(err) {
+		var finalizeVerifyUI = _.debounce(function(err) {
 			updateTabEnables();
 			
 			if (err) {
@@ -546,7 +548,7 @@ define([
 
 	$("#reveal-button").on('click', function(eventObj) {
 
-		finalizeRevealUI = _.debounce(function (err) {
+		var finalizeRevealUI = _.debounce(function (err) {
 			if (err) {
 				notifyErrorOnTab('reveal');
 				$('#buttons-reveal').show();

@@ -18,6 +18,8 @@
 //   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
+// Whole-script strict mode syntax
+"use strict";
 
 //
 // DOM
@@ -145,7 +147,7 @@ define(['jquery', 'underscore'], function($, _){
 			// want them to be the same size.  We can get their height by default
 			// and then style them to have the height of the maximum of any of them.
 
-			$leads = $('#tabs > div.tabs-content div.leading-section');
+			var $leads = $('#tabs > div.tabs-content div.leading-section');
 
 			$leads.css('height', 'auto');
 

@@ -18,6 +18,9 @@
 //   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
+// Whole-script strict mode syntax
+"use strict";
+
 
 // Basic structure borrowed from:
 // https://github.com/bgrins/BlackhighlighterTextareas
@@ -402,7 +405,7 @@
 			// If only custom selection color wasn't so aesthetically fickle :-/
 			//
 			this.$div.children().each(function(idx, el) {
-				$el = $(el);
+				var $el = $(el);
 				if ($el.is("div") && (idx == 0)) {
 					$el.before($el.contents());
 					$el.remove();
@@ -480,6 +483,14 @@
 			// decanonized from our internal form to whatever the browser
 			// likes best for non-blackhighlighter divs.
 
+			function blinker() {
+				this.$div.find('.placeholder.verified')
+					.css('background-color',
+						blinker.isRed ? '' : 'transparent');
+				blinker.isRed = !blinker.isRed;
+			}
+			blinker.isRed = false;
+
 			switch (newMode) {
 				case 'compose': {
 					this.$div
@@ -530,15 +541,6 @@
 						throw "Can only go from show to reveal.";
 					}
 					this.$div.addClass("blackhighlighter-reveal");
-
-					function blinker() {
-						this.$div.find('.placeholder.verified')
-							.css('background-color',
-								blinker.isRed ? '' : 'transparent');
-						blinker.isRed = !blinker.isRed;
-					}
-					blinker.isRed = false;
-
 					this.blinkTimer = setInterval($.proxy(blinker, this), 800);
 					break;
 
@@ -629,7 +631,7 @@
 			}
 
 			$span.removeClass("suggested");
-			$span.off('click', this._takeSuggestion);
+			$span.off('click', this._takeSuggestionListener);
 
 			$span.addClass("protected");
 			$span.on('click', $.proxy(this._unprotectSpanListener, this));
@@ -759,6 +761,22 @@
 			   	}
 			    return n;
 			}
+
+			function redactFn (idx, el) {
+				var $el = $(el);
+				if (el.nodeType === Node.TEXT_NODE) {
+					$el.replaceWith(instance._makeProtectedSpan(el.nodeValue));
+				} else if ($el.is('span')) {
+					if ($el.hasClass('protected')) {
+						// nothing
+					} else if ($el.hasClass('suggested')) {
+						instance._takeSuggestionNoNormalize($el);
+					}
+				} else {
+					throw "Unknown element found in blackhighlighter."
+				}
+			}
+
 
 			// ACTUAL REDACTION WORK
 			//
@@ -914,21 +932,6 @@
 	 				throw Error("Assertion failed: startContainer != endContainer");
 	 			}
 
-	 			function redactFn (idx, el) {
- 					var $el = $(el);
- 					if (el.nodeType === Node.TEXT_NODE) {
- 						$el.replaceWith(instance._makeProtectedSpan(el.nodeValue));
- 					} else if ($el.is('span')) {
- 						if ($el.hasClass('protected')) {
- 							// nothing
- 						} else if ($el.hasClass('suggested')) {
- 							instance._takeSuggestionNoNormalize($el);
- 						}
- 					} else {
- 						throw "Unknown element found in blackhighlighter."
- 					}
- 				}
-
 	 			if ($startContainer.is($endContainer)) {
 	 				$startContainer.contents().slice(startOffset, endOffset).each(redactFn);
 	 			} else {
@@ -970,7 +973,7 @@
 		},
 
 		_inkOffListener: function(eventObj) {
-			$target = eventObj.target;
+			var $target = eventObj.target;
 
 			this.$div.removeClass("blackhighlighter-ink");
 
@@ -979,7 +982,7 @@
 			// http://code.google.com/p/ierange/
 			//
 			// How relevant are IE8 and lower now?
-			sel = window.getSelection();
+			var sel = window.getSelection();
 
 			for(var i = 0; i < sel.rangeCount; i++) {
 				var range = sel.getRangeAt(i);
