@@ -17,46 +17,6 @@ As an additional security step, the URL which is used to share Blackhighighter p
 Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.hostilefork.com) for philosophy, videos, and more articles about this project.
 
 
-### TECHNOLOGIES USED
-
-This is a placeholder for content that will ultimately become the credits page.
-
-**Server Side**
-
-* Node.JS
-
-* MongoDB
-
-* Express and Swig
-
-* Q Promise Library
-
-*(Note: The server was initially written in Python using the Django web framework.  Due to the fact that verification code must run on both in the web browser and on the server, this was ported to Node.JS in order to share the JavaScript portions of the certificate code.  It was a largely simplifying change, and accelerated by the existence of a largely-compatible templating language to Django for Node.  Currently the Django code is frozen in the django-blackhighlighter subdirectory, for comparison purposes.  It will eventually be removed.)*
-
-
-**Client Side**
-
-* jQuery and jQuery UI
-
-* nicEdit
-
-*(Note: The codebase was established in 2009.  Very little was done to the interface in 2012 during the Node.JS port, besides bringing it up to date to work around changes in the browsers that had happened in the intervening years.  Generally speaking, the UI requires an overhaul.)*
-
-
-**Testing**
-
-* NPM Test
-
-* Travis
-
-
-**Version Control**
-
-* Git
-
-* GitHub
-
-
 ### NOTE ABOUT THE LICENSE
 
 I'm a pretty strong believer in the Stallman-style of "Software Freedom".  It would be a better world if those who adapted free software (and then deployed it to users) would share their adaptations back with the community.  His arguments have always seemed pretty solid to me:

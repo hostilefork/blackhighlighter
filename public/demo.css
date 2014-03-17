@@ -39,8 +39,8 @@ body {
  * It's technically possible in some browsers to offset it, but not all.
  */
 .ui-tabs .ui-tabs-nav {
-	padding-top: 110px !important;
-	background-image: url(blackhighlighter-header-logo.png);
+	padding-top: 142px !important;
+	background-image: url(blackhighlighter-header-nodejitsu.png);
 	background-position: top right;
 	background-repeat: no-repeat;
 }
@@ -69,12 +69,13 @@ div.textarea-wrapper {
     -webkit-box-sizing: border-box;
        -moz-box-sizing: border-box;
             box-sizing: border-box;
+
+    min-height: 200px;
 }
 .blackhighlighter {
 	position: relative;
 	color: black;
     background-color: white;
-    min-height: 200px;
 
 	/* I don't know if I like this or not, but it's something to think on */
 	/* border: double 6px #333; */
@@ -91,4 +92,29 @@ div.textarea-wrapper .certificate-display {
 	height: auto;
 	font-family: "Andale Mono", AndaleMono, monospace;
 	font-size: 14px;
+}
+
+div.tabs-content div.action-buttons {
+	text-align: center;
+}
+
+div.copyright, div.credits {
+	text-align: center;
+}
+
+.indeterminate-progress {
+	margin: 10px;
+}
+
+div.leading-section ul {
+	margin-left: 20px;
+	margin-right: 100px;
+}
+
+div.leading-section li {
+	margin-bottom: 8px;
+}
+
+div.action-buttons {
+	margin: 8px;
 }

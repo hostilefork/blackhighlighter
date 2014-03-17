@@ -96,3 +96,17 @@ div.blackhighlighter-show span.verified {
 div.blackhighlighter-show span.revealed {
 	background-color: #90EE90; /* Lightgreen */
 }
+
+
+/* REVEAL */
+
+div.blackhighlighter-reveal span.protected {
+	background-color: black;
+	color: black;
+}
+div.blackhighlighter-reveal span.verified {
+	background-color: red;
+}
+div.blackhighlighter-reveal span.revealed {
+	/* Don't confuse by showing already revealed info in different color */
+}

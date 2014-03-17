@@ -352,7 +352,11 @@ app.get('/docs/*', function(req, res) {
 // entirely in JavaScript on the client's machine.  The /commit/ HTTP POST
 // handler does the actual server-side work of saving the document.
 app.get('/write/$', function (req, res) {
-    res.render('write', { MAIN_SCRIPT: "write" });
+    res.render('write', {
+    	MAIN_SCRIPT: "write"
+    	, HOSTING_SERVICE: process.env.HOSTING_SERVICE
+    	, HOSTING_SERVICE_URL: process.env.HOSTING_SERVICE_URL
+    });
 });
 
 
@@ -417,8 +421,7 @@ function generateHtmlFromCommitAndReveals(commit, reveals) {
 				// more clever?  e.g. we could add a method onto the element
 				// or keep a sidestructure
 				var placeholder = 
-					'<span class="placeholder protected" title="'
-					+ commitSpan.sha256 + '">'
+					'<span class="placeholder protected">'
 					+ placeholderString + '</span>';
 
 				result += placeholder;
@@ -511,6 +514,8 @@ function showOrVerify(req, res, tabstate) {
 		// 6: Generate response HTML
 		res.render('read', {
 			MAIN_SCRIPT: 'read'
+			, HOSTING_SERVICE: process.env.HOSTING_SERVICE
+			, HOSTING_SERVICE_URL: process.env.HOSTING_SERVICE_URL
 			, commit_id: commit_id
 			, all_certificates: generateCertificateStubsFromCommit(commit)
 			, tabstate: tabstate

@@ -23,44 +23,75 @@
 
 {% endcomment %}
 
-<p>Here is the letter in its current viewable form.  Blacked out
-portions have been protected by the author and have not been revealed
-on the server (or by a certificate local to your browser).  Text you see 
-with a yellow background has been verified in your browser, but hasn't
-been revealed to the server.  Text with a green background was at 
-one time hidden but has since been published to the general public.</p>
+<div class="tabs-content" id="tabs-show">
 
-{# We generate the public HTML on the server side because we want the page to be readable without JavaScript #}
-{# REVIEW: ensure we've sanitized the HTML, as we are using the "raw" filter! #}
-<div class="textarea-wrapper">
-	<div id="editor">
-	{{ public_html|raw }}
+	<div class="leading-section">
+		<p>Here is the letter in its current viewable form. Blacked out portions were protected by the author.<p>
+		<ul>
+		<li>Text with a <span style="color: yellow;">yellow</span> background was protected by the author, but has been verified <i>in your browser only</i></li>
+		<li>Text with a <span style="color: green;">green</span> background was at one time protected, but has since been revealed to the general public.</li>
+		</ul>
+	</div>
+
+	{# We generate the public HTML on the server side because we want the page to be readable without JavaScript #}
+	{# REVIEW: ensure we've sanitized the HTML, as we are using the "raw" filter! #}
+	<div class="textarea-wrapper">
+		<div id="editor">
+		{{ public_html|raw }}
+		</div>
+	</div>
+
+	<div class="trailing-section">
+		<p>You can either add new verification certificates to read the letter, or if you choose, reveal its contents.</p>
+
+		<div class="action-buttons">
+			<div id="buttons-show-before">
+				<a href="#" class="previous-step">add &amp; remove certificates</a>
+			</div>
+
+			<div id="buttons-show-after">
+				<a href="#" class="previous-step">add &amp; remove certificates</a>
+				-or-
+				<button class="next-step">
+					Optional Step: <b>Reveal</b>
+				</button>
+			</div>
+		</div>
+
+	{% comment %}
+		<!-- Each accordion div should look like this -->
+		<div title='{# hash #}'>
+			<a href="#">{# Local or Server #} Certificate: {# id #}</a>
+			<div>
+			{# JSON certificate text #}
+			<form>
+				<input type="button" value="Remove" name="button1" onclick="(code to remove this certificate)" />
+			</form>
+			</div>
+		</div>
+	{% endcomment %}
+		<!--
+		<div id="accordion">
+		{% for certificate in all_certificates %}
+			<div title='{{ certificate.sha256 }}'>
+			{% if true %}
+				<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ certificate.reveal_date }}</a>
+			{% else %}
+				<a href="#">Certificate {{ forloop.counter }}: Not Revealed to Public</a>
+			{% endif %}
+				<div>
+					<i>For the moment, Javascript is required to see details of the reveal!</i>
+				</div>
+			</div>
+		{% endfor %}
+		</div>
+		-->
+
+		<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"><p>
+			<span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+		  	<strong>Note:</strong> This is a letter on a blackhighlighter system.  If you have any
+		  	question about what that means, see <a href="http://blackhighlighter.hostilefork.com/" target="_blank">
+		  	http://blackhighlighter.hostilefork.com/</a>.
+		</p></div>
 	</div>
 </div>
-
-<p>You can either add new verification certificates to read the letter, or if you
-choose, reveal its contents.</p>
-
-<div id="buttons-show-before">
-	<center><p>
-		<a href="#" class="previous-step">add &amp; remove certificates</a>
-	</p></center>
-</div>
-
-<div id="buttons-show-after">
-	<center><p>
-		<a href="#" class="previous-step">add &amp; remove certificates</a>
-		-or- &nbsp; 
-		<button class="next-step">
-			Optional Step: <b>Reveal</b>
-		</button>
-	</p></center>
-</div>
-
-<!-- "Helpful" info box -->
-<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"><p>
-	<span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-  	<strong>Note:</strong> This is a letter on a blackhighlighter system.  If you have any
-  	question about what that means, see <a href="http://hostilefork.com/blackhighlighter/" target="_blank">
-  	http://hostilefork.com/blackhighlighter/</a>.
-</p></div>

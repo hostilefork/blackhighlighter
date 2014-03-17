@@ -23,48 +23,53 @@
 
 {% endcomment %}
 
-<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
-	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-	<b>Etiquette note:</b> Though it is obviously okay for a sender to reveal
-	their <i>own</i> letter for pretty much any reason, a recipient should 
-	generally respect the protections that were applied by the sender.  
-	Exceptions would be cases such as proving to the public that the missing parts
-	do not contain authentic information (and thus do not warrant response).</p>	
-</div>
+<div class="tabs-content" id="tabs-reveal">
 
-<br />
-
-<p>Remember that you can still send the certificates to any party who wants to verify 
-the letter without publishing it to the world!  So reveal only if you are the sender
-or if you are certain it is warranted.  If you are sure you want to reveal, click the 
-button below.</p>
-
-<div id="error-reveal">
-	<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
-		<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-		<strong>Error:</strong> <span id="error-reveal-msg">{# filled by notifyErrorOnTab() #}</span></p>
-	</div>
-	<br/>
-</div>
-
-<div id="buttons-reveal">
-	<center><p>
-		<a href="#" class="previous-step">go back and review the letter</a>
-			-or- &nbsp;
-		<button id="reveal-button">
-			"I'm certain: <b>Reveal this to the World!!!</b>"
-		</button>
-	</p></center>
-</div>
-
-<div id="progress-reveal">
-	<center><div class="indeterminate-progress"></div></center>
-</div>
-
-{# For the moment, using demo-source toggle from jquery UI demos.css #}
-<div id="reveal-json-accordion">
-	<h3>View the JSON reveal that will be sent to the server</h3>
-		<div id='json-reveal'>
-{# Filled by switching tabs #}
+	<div class="leading-section">
+		<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+			<b>Etiquette note:</b> Though it is obviously okay for a sender to reveal
+			their <i>own</i> letter for pretty much any reason, a recipient should 
+			generally respect the protections that were applied by the sender.  
+			Exceptions would be cases such as proving to the public that the missing parts
+			do not contain authentic information (and thus do not warrant response).</p>	
 		</div>
+	</div>
+
+	<div class="textarea-wrapper">
+	</div>
+
+	<div class="trailing-section">
+		<p>Remember that you can still send the certificates to any party who wants to verify 
+		the letter without publishing it to the world!  So reveal only if you are the sender
+		or if it's absolutely necessary.</p>
+		<i>If you are <b>sure</b> you want to reveal</i>, click the 
+		button below.</p>
+
+		<div class="error-display">
+			<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+				<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+				<strong>Error:</strong> <span class="error-display-msg">{# filled by notifyErrorOnTab() #}</span></p>
+			</div>
+		</div>
+
+		<div class="action-buttons">
+			<a href="#" class="previous-step">go back and review the letter</a>
+				-or-
+			<button id="reveal-button">
+				"I'm certain: <b>Reveal this to the World!!!</b>"
+			</button>
+		</div>
+
+		<div id="progress-reveal">
+			<div class="indeterminate-progress"></div>
+		</div>
+
+		<div id="reveal-json-accordion">
+			<h3>View the JSON reveal that will be sent to the server</h3>
+			<div id='json-reveal'>
+				{# Filled by switching tabs #}
+			</div>
+		</div>
+	</div>
 </div>

@@ -23,30 +23,37 @@
 
 {% endcomment %}
 
-<p>Write the full, <b>unabridged</b> version of your letter below.  None of what you write 
-will be sent over the network until you've had a chance to mark which parts you want to 
-protect.  (<a href="{% url network_named_url %}" target="_blank">"How can I verify this?"</a>)
-Provide all relevant information for the recipient to follow up with you, just as you would
-in a typical private email.</p>
+<div class="tabs-content" id="tabs-compose">
 
-<div class="textarea-wrapper" id="compose-wrapper">
-	<div id="editor"></div>
-</div>
+	<div class="leading-section">
+		<p>Write the full, <b>unabridged</b> version of your letter below.
+		None of what you write will be sent over the network until you've had
+		a chance to mark which parts you want to protect.  Provide all relevant information for the recipient to follow up with you, just as you would
+		in a typical private email.</p>
 
-<p>When you've finished, click the button below to continue to the protect phase (you will
-still be able to come back and make changes if necessary.)</p>
+		<p>When you've finished, click the button below to continue to the
+		protect phase (you will still be able to come back and make changes if necessary.)</p>
+	</div>
 
-<center><p>
-	<button class="next-step">
-		Next step: <b>Protect</b>
-	</button>
-</p></center>
+	<div class="textarea-wrapper" id="compose-wrapper">
+		<div id="editor"></div>
+	</div>
 
-<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
-	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-	<strong>Note:</strong> Because what you type is not being sent to our server until
-	after you've taken out the parts you want to protect, we are not saving a copy
-	as you type.  So if your browser or computer crashes, you'll lose your letter.
-	You might want to compose in another program with auto-save, and then paste
-	it here when you are finished.</p>
+	<div class="trailing-section">
+		<div class="action-buttons">
+			<button class="next-step">
+				Next step: <b>Protect</b>
+			</button>
+		</div>
+
+		<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+			<strong>Note:</strong> Since there is no communication with the
+			server during composition or protection, a copy of what you are
+			writing is not being saved as you type. You might want to compose in
+			a local application with auto-save, and then paste here when you are
+			finished.</p>
+		</div>
+	</div>
+
 </div>

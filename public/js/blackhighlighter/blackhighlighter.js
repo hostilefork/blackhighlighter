@@ -453,7 +453,19 @@
 					}
 
 					case 'show': {
-						throw "Cannot shift out of show mode; it's a finalization.";
+						this.$div
+							.removeClass("blackhighlighter-show");
+						break;
+					}
+
+					case 'reveal': {
+						this.$div
+							.removeClass("blackhighlighter-reveal");
+
+						clearInterval(this.blinkTimer);
+
+						this.$div.find('.placeholder.verified')
+							.css('background-color', '');
 						break;
 					}
 
@@ -503,14 +515,31 @@
 				case 'show':
 					// only good for initializing...
 					if (initializing) {
-						this.$div.addClass("blackhighlighter-show");
 						this.initialLetterText = this.$div.contents().clone();
 					} else {
-						this.$div.html(
-							"<h3>Comitting Blackhighlighter Message to Server</h3>"
-							+ "<p><i>Please wait...</i></p>"
-						);
+						// we transition to show in the editor in a broken
+						// way, but eventually we will transition in a smooth
+						// way...
 					}
+
+					this.$div.addClass("blackhighlighter-show");
+					break;
+
+				case 'reveal':
+					if (oldMode !== 'show') {
+						throw "Can only go from show to reveal.";
+					}
+					this.$div.addClass("blackhighlighter-reveal");
+
+					function blinker() {
+						this.$div.find('.placeholder.verified')
+							.css('background-color',
+								blinker.isRed ? '' : 'transparent');
+						blinker.isRed = !blinker.isRed;
+					}
+					blinker.isRed = false;
+
+					this.blinkTimer = setInterval($.proxy(blinker, this), 800);
 					break;
 
 				default:
@@ -1220,6 +1249,13 @@
 						instance.commit = temp.commit;
 						instance.protections = temp.protections;
 
+						// Technically we shouldn't have to do this, but if
+						// we don't then since we have an artificial delay
+						// the setMode call will show junk otherwise.
+						instance.$div.html(
+							"<h3>Comitting Blackhighlighter Message to Server</h3>"
+							+ "<p><i>Please wait...</i></p>"
+						);
 						instance.setMode('show');
 
 						callback(null);
@@ -1482,7 +1518,7 @@
 
 				var instance = Blackhighlighter.getInstance(this.get(0));
 
-				if (instance.mode === 'show') {
+				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 					// Don't return the actual commit object!
 					return _.clone(instance.commit);
 				} else {
@@ -1496,7 +1532,7 @@
 			if (arg1 === "protections") {
 				if (!instance) return undefined;
 
-				if (instance.mode === 'show') {
+				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 					// Don't return the actual protection objects!
 					return _.clone(instance.protections);
 				} else {
@@ -1510,7 +1546,7 @@
 			if (arg1 === "reveals") {
 				if (!instance) return undefined;
 
-				if (instance.mode === 'show') {
+				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 					// Don't return the actual reveal objects!
 					return _.clone(instance.reveals);
 				} else {
@@ -1529,7 +1565,7 @@
 
 			var instance = Blackhighlighter.getInstance(this.get(0));
 
-			if (instance.mode === 'show') {
+			if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 				// Once in the show state, it's too late to make changes
 				// But does adding reveals count as a modification?
 				return false;

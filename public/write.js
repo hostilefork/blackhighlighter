@@ -28,7 +28,8 @@ define([
 	// these libs have no results, purely additive...
 	'jqueryui',
 	'json2',
-	'blackhighlighter'
+	'blackhighlighter',
+	'actual'
 ], function($, _, common, clientCommon, SHA256) {
 
 	// Theme all the button-type-things but not the <a href="#" ..> style
@@ -46,7 +47,8 @@ define([
 		}[id];
 	}
 	
-	function notifyErrorOnTab(tab, msg) {
+	function notifyErrorOnTab(tabname, msg) {
+		var $tab = $("#tabs-" + tabname);
 		var message = "<span><b>" + err.toString() + "</b></span>";
 
 		if (err instanceof Error) {
@@ -58,22 +60,28 @@ define([
 				+ 'Please save a copy of this error and report it to <a href="https://github.com/hostilefork/blackhighlighter/issues/new">the Blackhighlighter Issue Tracker</a> on GitHub!';
 		} 
 
-		$('#error-' + tab + '-msg').html(message);
-		$('#error-' + tab).show();
+		$tab.find('.error-display-msg').html(message);
+		$tab.find('.error-display').show();
 	}
 	
-	function clearErrorOnTab(tab) {
-		$('#error-' + tab).hide();
+	function clearErrorOnTab(tabname) {
+		var $tab = $("#tabs-" + tabname);
+		$tab.find('.error-display').hide();
 	}
 	
-	clearErrorOnTab('commit');
-
+	// Makes it easier to select certificate, but impossible to partially
+	// select it.  Seems a good tradeoff.
+	$('#json-protected').on('click', highlightCertificateText);
 
 	// Bring tabs to life.
 	$('#tabs').tabs();
 
 	// Disable tabs that we're not ready for
 	$('#tabs').tabs('disable', tabIndexForId('tabs-commit'));	
+
+	$(window).resize(clientCommon.resizeListener);
+
+	clientCommon.resizeListener(null);
 
 	// NOTE: 		
 	// http://bytes.com/groups/javascript/484582-setattribute-versus-assigning-property
@@ -156,15 +164,16 @@ define([
 	// Bind function for what happens on tab select
 	$('#tabs').on('tabsbeforeactivate', function(event, ui) {
 		
+		var $editor = $("#editor");
+
 		switch (ui.newPanel.attr('id')) {
 			case 'tabs-compose':
-				$editor = $("#editor");
 				$editor.blackhighlighter('option', 'mode', 'compose');
 				$("#compose-wrapper").append($editor.detach());
 				break;
 
 			case 'tabs-protect':
-				$editor = $("#editor");
+				clearErrorOnTab("protect");
 				// Unfortunately, switching tabs disables undo.  :(
 				// Also unfortunately, there's no undo for adding and removing protections
 				$editor.blackhighlighter('option', 'mode', 'protect');
@@ -178,6 +187,7 @@ define([
 		
 			case 'tabs-commit':
 				$('#json-protected').empty();
+				clearErrorOnTab('commit');
 
 				if ($("#editor").blackhighlighter('option', 'mode') !== 'show') {
 					throw "Internal error: ommit tab enabled but no commit made.";
@@ -186,9 +196,15 @@ define([
 				var commit = $("#editor").blackhighlighter('option', 'commit');
 				var protections = $("#editor").blackhighlighter('option', 'protections');
 				var keyCount = _.keys(protections).length;
+
 				if (keyCount === 0) {
-					$('#no-protections').show();
-					$('#some-protections').hide();
+
+					// no protections -- handle this specially?
+
+					$('#json-protected').text(
+						"Note: No protections made, post is viewable in full."
+					);
+
 				} else if (keyCount === 1) {
 
 					// Review: clients shouldn't be generating this string
@@ -206,8 +222,6 @@ define([
 					certString += '/* END REVEAL CERTIFICATE */';
 
 					$('#json-protected').text(certString);
-					$('#no-protections').hide();
-					$('#some-protections').show();
 					
 					// jQuery tabs do something weird to the selection
 					// http://groups.google.com/group/jquery-ui/browse_thread/thread/cf272e3dbb75f201

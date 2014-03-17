@@ -27,7 +27,8 @@ define([
 	// these libs have no results, purely additive...
 	'jqueryui',
 	'expanding',
-	'blackhighlighter'
+	'blackhighlighter',
+	'actual'
 ], function($, _, common, clientCommon) {
 	
 	var Globals = {
@@ -69,7 +70,12 @@ define([
 	// Bring tabs to life.
 	$('#tabs').tabs();
 	
-	function notifyErrorOnTab(tab, err) {
+	$(window).resize(clientCommon.resizeListener);
+
+	clientCommon.resizeListener(null);
+
+	function notifyErrorOnTab(tabname, err) {
+		var $tab = $("#tabs-" + tabname);
 		var message = "<span><b>" + err.toString() + "</b></span>";
 
 		if (err instanceof Error) {
@@ -81,12 +87,13 @@ define([
 				+ 'Please save a copy of this error and report it to <a href="https://github.com/hostilefork/blackhighlighter/issues/new">the Blackhighlighter Issue Tracker</a> on GitHub!';
 		} 
 
-		$('#error-' + tab + '-msg').empty().html(message);
-		$('#error-' + tab).show();
+		$tab.find(".error-display-msg").empty().html(message);
+		$tab.find('.error-display').show();
 	}
 	
-	function clearErrorOnTab(tab) {
-		$('#error-' + tab).hide();
+	function clearErrorOnTab(tabname) {
+		var $tab = $("#tabs-" + tabname);
+		$tab.find('.error-display').hide();
 	}
 
 /*
@@ -385,6 +392,8 @@ define([
 	// Bind function for what happens on tab select
 	$('#tabs').on('tabsbeforeactivate', function(event, ui) {
 
+		var $editor = $("#editor");
+
 		switch(ui.newPanel.attr('id')) {
 			case 'tabs-verify':
 				$('#progress-verify').hide();
@@ -392,10 +401,19 @@ define([
 				break;
 			
 			case 'tabs-show':		
-				// Shouldn't have to do anything?		
+				// Shouldn't have to do anything?
+				$("#tabs-show .textarea-wrapper").append(
+					$editor.remove()
+				);
+				$editor.blackhighlighter('option', 'mode', 'show');
 				break;
 		
 			case 'tabs-reveal':
+				$("#tabs-reveal .textarea-wrapper").append(
+					$editor.remove()
+				);
+				$editor.blackhighlighter('option', 'mode', 'reveal');
+
 				clearErrorOnTab('reveal');
 				$('#progress-reveal').hide();
 

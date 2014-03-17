@@ -23,70 +23,41 @@
 
 {% endcomment %}
 
-{% comment %}
-	<!-- Each accordion div should look like this -->
-	<div title='{# hash #}'>
-		<a href="#">{# Local or Server #} Certificate: {# id #}</a>
-		<div>
-		{# JSON certificate text #}
-		<form>
-			<input type="button" value="Remove" name="button1" onclick="(code to remove this certificate)" />
-		</form>
+<div class="tabs-content" id="tabs-verify">
+
+	<div class="leading-section">
+		<p>This is where you paste or type in blackhighlighter certificates for this post.</p> 
+
+		<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+			<strong>Note:</strong> Entering a certificate for verification only does so in your browser &mdash; it makes no communication with the server.
+			You will only be showing the information to others if you later choose to go through with the "reveal" step.</p>
 		</div>
 	</div>
-{% endcomment %}
 
-<!--
-<div id="accordion">
-{% for certificate in all_certificates %}
-	<div title='{{ certificate.sha256 }}'>
-	{% if true %}
-		<a href="#">Certificate {{ forloop.counter }}: Revealed on {{ certificate.reveal_date }}</a>
-	{% else %}
-		<a href="#">Certificate {{ forloop.counter }}: Not Revealed to Public</a>
-	{% endif %}
-		<div>
-			<i>For the moment, Javascript is required to see details of the reveal!</i>
+	<div class="textarea-wrapper">
+		<textarea class="certificate-display expanding" id="certificates"></textarea>
+	</div>
+
+	<div class="trailing-text">
+		<p>If you paste one or more valid certificates for this letter and push verify, then it 
+		should show you some of the missing portions.</p>
+
+		<div class="error-display">
+			<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
+				<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+				<strong>Error:</strong> <span class="error-display-msg">{# filled by notifyErrorOnTab() #}</span></p>
+			</div>
+		</div>
+
+		<div class="action-buttons">
+			<button id="verify-button">
+				Next step: <b>Verify On Your Computer Only</b>
+			</button>
+		</div>
+
+		<div id="progress-verify">
+			<div class="indeterminate-progress"></div>
 		</div>
 	</div>
-{% endfor %}
-</div>
--->
-
-<p>This is where you paste or type in your certificates.  For samples of what 
-certificates look like, <a href="{% url certificates_named_url %}" target="_blank">click here</a>.</p> 
-
-<div class="textarea-wrapper">
-	<textarea class="certificate-display expanding" id="certificates"></textarea>
-</div>
-
-<p>If you paste one or more valid certificates for this letter and push verify, then it 
-should show you some of the missing portions.</p>
-
-<div id="error-verify">
-	<div class="ui-state-error ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
-		<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-		<strong>Error:</strong> <span id="error-verify-msg">{# filled by notifyErrorOnTab() #}</span></p>
-	</div>
-	<br/>
-</div>
-
-<div id="buttons-verify">
-	<center><p>
-		<button id="verify-button">
-			Next step: <b>Verify On Your Computer Only</b>
-		</button>
-	</p></center>
-</div>
-
-<div id="progress-verify">
-	<center><div class="indeterminate-progress"></center>
-</div>
-
-<div class="ui-state-highlight ui-corner-all" style="margin-top: 20px; padding: 0 .7em;"> 
-	<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
-	<strong>Note:</strong> Entering a certificate for verification does not send
-	anything to the server (for how to check that fact, <a href="{% url network_named_url %}" target="_blank">read this</a>).
-	You will only send the certificate to the server if you later choose to go through
-	with the "reveal" step and show the information to the public.</p>
 </div>

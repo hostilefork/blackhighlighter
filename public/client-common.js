@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-//   See http://hostilefork.com/blackhighlighter for documentation.
+//   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
 
@@ -121,6 +121,49 @@ define(['jquery', 'underscore'], function($, _){
 			} else if (document.selection) {
 				document.selection.empty();
 			}
-		}
+		},
+
+		// http://stackoverflow.com/a/12463110/211160
+		//
+		getHiddenHeightForWidth: function(element, width) {
+		    var $temp = $(element).clone()
+		 		.css('position','absolute')
+		   		.css('height','auto').css('width', width + 'px')
+		  	  	// inject right into parent element so all the css applies
+		  	  	// (yes, i know, except the :first-child and other pseudo stuff
+			    .appendTo($(element).parent())
+			    .css('left','-10000em')
+			    .show();
+
+		    h = $temp.height();
+		    $temp.remove();
+		    return h;
+		},
+
+		resizeListener: function(eventObj) {
+			// We want some leading text before the boxes containing data, but we
+			// want them to be the same size.  We can get their height by default
+			// and then style them to have the height of the maximum of any of them.
+
+			$leads = $('#tabs > div.tabs-content div.leading-section');
+
+			$leads.css('height', 'auto');
+
+			var maxHeight = undefined;
+
+			$leads.each(function(idx, el) {
+				var $el = $(el);
+				var hiddenHeight = $el.actual('height');
+				if (!maxHeight) {
+					maxHeight = hiddenHeight;
+				} else {
+					if (hiddenHeight > maxHeight) {
+						maxHeight = hiddenHeight;
+					}
+				}
+			});
+
+	    	$leads.height(maxHeight);
+	    }
 	}
 });
