@@ -1651,6 +1651,58 @@
 		if ($.blackhighlighter.autoInitialize) {
 			$($.blackhighlighter.initialSelector).blackhighlighter();
 		}
+
+		// We want to stop pastes of arbitrary content into the contenteditable
+		// div.  There were some suggestions like making invisible textareas
+		// and pasting into them, and saving and restoring selections like:
+		//
+		// http://stackoverflow.com/questions/12027137/
+		// http://stackoverflow.com/a/3323835/211160
+		//
+		// But I found this simpler solution seems to work well enough.
+		//
+		$(document).on('paste', function(eventObj) {
+			// Don't use *:focus selector, it's slow.
+			// http://stackoverflow.com/a/11278006
+			var $oldActive = $(document.activeElement);
+			if (!$oldActive.hasClass('blackhighlighter')) {
+				return true;
+			}
+
+			// http://stackoverflow.com/questions/12027137/
+			var pastedText = undefined;
+			if (window.clipboardData && window.clipboardData.getData) { // IE
+				pastedText = window.clipboardData.getData('Text');
+			} else if (
+				eventObj.originalEvent.clipboardData 
+				&& eventObj.originalEvent.clipboardData.getData
+			) {
+				pastedText = eventObj.originalEvent
+					.clipboardData.getData('text/plain');
+			}
+
+			// Escape any HTML characters as we're moving from a text context
+			// to raw contents of a div.  If the source was text, convert any
+			// newlines into line break nodes so they show up.  Need to also
+			// find any groups of more than one space character and turn them
+			// into &nbsp; :-/  Doing that with this trick:
+			//
+			// http://stackoverflow.com/a/2373823/211160
+			// 
+			var newText = _.escape(pastedText);
+			var regex = new RegExp("\n", 'g');
+			newText = newText.replace(regex, "<br>");
+			regex = new RegExp("  ", 'g');
+			newText = newText.replace(regex, "&nbsp;&nbsp;");
+			regex = new RegExp("&nbsp; ", 'g');
+			newText = newText.replace(regex, "&nbsp;&nbsp;");
+
+			document.execCommand('insertHtml', false, newText);
+
+		  	// cancel the original paste
+    		eventObj.preventDefault();
+			return false;
+		});
 	});
 
 }));
