@@ -35,54 +35,15 @@
 (function(factory) {
 	// Add jQuery via AMD registration or browser globals
 	if (typeof define === 'function' && define.amd) {
-		define([ 'jquery', 'underscore'], factory);
+		define([ 'jquery'], factory);
+	} else {
+		factory(jQuery);
 	}
-	else {
-		// How to pass in underscore in non-AMD cases?  Is this right?
-		factory(jQuery, _);
-	}
-}(function ($, _) {
+}(function ($) {
 
-
-////////////////////////////////////////////////////////////////////////////////
-
-/*
-	//
-	// JQUERY DEPENDENCY
-	//
-	// The blackhighlighter widget is designed to offer some utility functions
-	// as a "common library" even if jQuery is not present.  This operates
-	// on the assumption that such failures will happens synchronously
-	// (e.g. in Node.JS) rather than waiting for a timeout.
-	//
-	// http://stackoverflow.com/a/22474864/211160
-
-		var $ = null;
-
-		require(['jquery'], function (jQuery) {
-			// This will execute only if jquery is present.
-
-			$ = jQuery;
-		}, function (err) {
-			// This will execute if there is an error.
-
-			// If server-side, do nothing. If client-side, scream!
-			if (window) {
-				throw "jQuery requirejs dependency not found for blackhighlighter";
-			}
-
-			console.log("Flibbety foo!");
-
-	       //undef is function only on the global requirejs object.
-	        //Use it to clear internal knowledge of jQuery. Any modules
-	        //that were dependent on jQuery and in the middle of loading
-	        //will not be loaded yet, they will wait until a valid jQuery
-	        //does load.
-	        requirejs.undef('jquery');
-		});
-
-	console.log("blackhighlighter called");
-*/
+	// Mask global underscore library in browser in order to avoid any
+	// underscore-dependent code creeping in.
+	var _ = null;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -351,6 +312,32 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+	//
+	// HTML ESCAPING
+	//
+	// Was using _.escape() from underscore.js, but when that dependency was
+	// removed for the widget, no equivalent exists in jQuery.
+	//
+	// http://stackoverflow.com/a/12034334/211160
+	// 
+
+	var entityMap = {
+		"&": "&amp;",
+		"<": "&lt;",
+		">": "&gt;",
+		'"': '&quot;',
+		"'": '&#39;',
+		"/": '&#x2F;'
+	};
+
+	function escapeHtml(string) {
+		return String(string).replace(/[&<>"'\/]/g, function (s) {
+			return entityMap[s];
+		});
+	}
+
+////////////////////////////////////////////////////////////////////////////////
+
 
 	// Better to use these constants than test against "magic numbers"
 	//
@@ -393,6 +380,13 @@
 	// common routines to Node.JS as there is no jQuery, and the
 	// require("jquery.blackhighlighter") has to return something AND not
 	// trigger any calls to jQuery because it will be null. 
+	//
+	// Note that because the server-side doesn't use jQuery, and the client
+	// side doesn't require underscore, *THIS MUST BE NATIVE JAVASCRIPT*.
+	// Although there is a forEach in ECMAscript 5, there's no real reason
+	// to use it until warranted... just a simple old FOR will do.
+	//
+	// http://stackoverflow.com/a/9329476/211160
 	//
 
     var exports = {
@@ -562,13 +556,17 @@
 
 			var isFirstSpan = true;			
 			result += '"spans":[';
-			_.each(commit.spans, function(span) {
+			for (var index = 0; index < commit.spans.length; index++) {
+				var span = commit.spans[index];
 				if (isFirstSpan) {
 					isFirstSpan = false;
 				} else {
 					result += ',';
 				}
-				if (_.isString(span)) {
+
+				// Native test for string, no libraries
+				// http://stackoverflow.com/a/9436948/211160
+				if (typeof span == 'string' || span instanceof String) {
 					// We want to turn single quotes into \", etc.
 					// for our canonical representation
 					result += JSON.stringify(span);
@@ -580,16 +578,17 @@
 					result += JSON.stringify(span.sha256);
 					result += ']';
 				}
-			});
+			}
 			result += ']}';
 			return result;
 		},
 
 		canonicalStringFromReveal: function(reveal) {
 			var contents = reveal.salt;
-			_.each(reveal.redactions, function (redactionSpan) {
+			for (var index = 0; index < reveal.redactions.length; index++) {
+				var redactionSpan = reveal.redactions[index];
 				contents += redactionSpan;
-			});
+			}
 			return contents;
 		}
     };
@@ -760,7 +759,9 @@
 			// This needs to be broken out as an API.  At minimum, put the
 			// suggest regexes in the options for now.
 
-			var nodeType = _.isUndefined(node.nodeType) ? Node.ATTRIBUTE_NODE : node.nodeType;
+			var nodeType = $.type(node.nodeType) === undefined 
+				? Node.ATTRIBUTE_NODE
+				: node.nodeType;
 
 			// search all textnodes that aren't under protected spans
 			switch (nodeType) {
@@ -970,7 +971,7 @@
 			this.$div.find('a').each(function(i) {
 				replaceWithContents.push(this);
 			});
-			_.each(replaceWithContents, function(replaceMe) {
+			$.each(replaceWithContents, function(idx, replaceMe) {
 				var parentOfReplace = replaceMe.parentNode;
 				$(replaceMe).replaceWith($(replaceMe).contents());
 				parentOfReplace.normalize();
@@ -1158,7 +1159,7 @@
 			if ((node.nodeType == Node.TEXT_NODE) && (node.data === "")) {
 				$(node).remove();
 			} else {
-				_.each(node.childNodes, function(childNode) {
+				$.each(node.childNodes, function(idx, childNode) {
 					instance._killEmptyTextNodesRecursivePreorder(childNode);
 				});
 			}
@@ -1180,7 +1181,7 @@
 					current = current.nextSibling;
 				}
 			});
-			_.each(deleteSpans, function(span) {
+			$.each(deleteSpans, function(idx, span) {
 				span.remove();
 			});
 		},
@@ -1633,7 +1634,7 @@
 				var $child = $(child);
 
 				function pushStringSpan(stringSpan) {
-					if (!_.isString(stringSpan)) {
+					if ($.type(stringSpan) !== 'string') {
 						throw 'Pushing non-string as string span';
 					}
 					if (stringSpan.length === 0) {
@@ -1644,7 +1645,10 @@
 
 					var numSpans = commit.spans.length;
 
-					if ((numSpans > 0) && _.isString(commit.spans[numSpans-1])) {
+					if (
+						(numSpans > 0)
+						&& ($.type(commit.spans[numSpans-1]) === 'string')
+					) {
 						commit.spans[numSpans-1] += stringSpan;
 					} else {
 						commit.spans.push(stringSpan);
@@ -1652,7 +1656,7 @@
 				}
 				
 				function pushPlaceholderSpan(placeholder) {
-					if (_.isUndefined(placeholder.display_length)) {
+					if ($.type(placeholder.display_length) === undefined) {
 						throw 'Invalid placeholder pushed';
 					}
 					handleMergeableLineBreaks();
@@ -1711,7 +1715,7 @@
 						var protectionName = protectionNameForSpan(child);
 
 						var protection = protectionsByName[protectionName];
-						if (_.isUndefined(protection)) {
+						if ($.type(protection) === 'undefined') {
 							protection = {
 								'redactions': [],
 								'name': protectionName
@@ -1776,7 +1780,7 @@
 						exports.generateRandomUUID()
 					);
 					var contents = saltToHash;
-					_.each(protectionToHash.redactions, function(redaction) {
+					$.each(protectionToHash.redactions, function(idx, redaction) {
 						contents += redaction;
 					});
 					
@@ -1787,7 +1791,7 @@
 				}
 			}
 
-			_.each(placeholders, function(finalizeMe) {
+			$.each(placeholders, function(idx, finalizeMe) {
 				var obj = finalizeMe.obj;
 				var protection = finalizeMe.protection;
 				var order = finalizeMe.order;
@@ -1798,8 +1802,8 @@
 			
 			// Check that process did not produce two sequential string spans in commit
 			var lastWasString = false;
-			_.each(commit.spans, function(spanToCheck) {
-				if (_.isString(spanToCheck)) {
+			$.each(commit.spans, function(idx, spanToCheck) {
+				if ($.type(spanToCheck) === 'string') {
 					if (lastWasString) {
 						throw "Two sequential string spans in commit -- error in generateCommitAndProtections()"; 
 					}
@@ -1814,7 +1818,7 @@
 				commit = null;
 			} else if (commit.spans.length === 1) {
 				if (
-					_.isString(commit.spans[0])
+					($.type(commit.spans[0]) === 'string')
 					&& (exports.trimAllWhitespace(commit.spans[0]) === '')
 				) {
 					commit = null;
@@ -1860,7 +1864,7 @@
 						}
 
 						// Put the commit_id into the protection objects
-						_.each(temp.protections, function(val) {
+						$.each(temp.protections, function(idx, val) {
 							val.commit_id = temp.commit.commit_id;
 						});
 
@@ -1965,7 +1969,7 @@
 			}
 
 			var numPlaceholdersForKey = 0;
-			_.each(this.commit.spans, function (commitSpan) {
+			$.each(this.commit.spans, function (idx, commitSpan) {
 				if (commitSpan.sha256 == protection.sha256) {
 					numPlaceholdersForKey++;
 				}
@@ -2018,7 +2022,12 @@
 			// make multiple requests if we intend to do more than one).  For
 			// protocol simplicity in error reporting, the server now accepts
 			// only one reveal per XMLHttpRequest.
-			if (_.keys(this.protections).length != 1) {
+			var protectionArray = [];
+			$.each(this.protections, function(key, element) {
+				protectionArray.push(element);
+			});
+
+			if (protectionArray.length != 1) {
 				throw 'Multiple reveals feature not currently supported by client';
 			}
 			
@@ -2031,7 +2040,7 @@
 				// sends as UTF-8
 				data: {
 					reveal: JSON.stringify(
-						_.values(this.protections)[0], null, ' '
+						protectionArray[0], null, ' '
 					)
 				},
 				success: function(resultJson) {
@@ -2136,7 +2145,7 @@
 			if (arg1 === "mode") {
 				if (!instance) return undefined;
 
-				if (_.isUndefined(arg2)) {
+				if ($.type(arg2) === 'undefined') {
 					return instance.mode
 				} else {
 					instance.setMode(arg2);
@@ -2152,8 +2161,8 @@
 				var instance = Blackhighlighter.getInstance(this.get(0));
 
 				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
-					// Don't return the actual commit object!
-					return _.clone(instance.commit);
+					// Don't return the actual commit object!  Deep clone.
+					return $.extend(true, {}, instance.commit);
 				} else {
 					// REVIEW: should giving back the pre-commit and pre-reveal
 					// be a special debugging function only?
@@ -2166,8 +2175,8 @@
 				if (!instance) return undefined;
 
 				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
-					// Don't return the actual protection objects!
-					return _.clone(instance.protections);
+					// Don't return the actual protection objects!  Deep clone.
+					return $.extend(true, {}, instance.protections);
 				} else {
 					// REVIEW: should giving back the pre-commit and pre-reveal
 					// be a special debugging function only?
@@ -2180,8 +2189,8 @@
 				if (!instance) return undefined;
 
 				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
-					// Don't return the actual reveal objects!
-					return _.clone(instance.reveals);
+					// Don't return the actual reveal objects!  Deep clone.
+					return $.extend(true, {}, instance.reveals);
 				} else {
 					// Nothing is revealed to the server if we're still editing
 					return {};
@@ -2203,7 +2212,7 @@
 			if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 
 				if (arg1 === 'encode') {
-					if (!_.isObject(arg2)) {
+					if ($.type(arg2) !== 'object') {
 						throw "Parameter to certificate encode must be object";
 					}
 
@@ -2228,7 +2237,7 @@
 					return sMyBase64;
 
 				} else if (arg1 === 'decode') {
-					if (!_.isString(arg2)) {
+					if ($.type(arg2) !== 'string') {
 						throw "Parameter to certificate decode must be string";
 					}
 
@@ -2245,7 +2254,7 @@
 
 					var protections = null;
 					var parsedJson = JSON.parse(sMyOutput);
-					if (!_.isArray(parsedJson)) {
+					if ($.type(parsedJson) !== 'array') {
 						protections = [parsedJson];
 					} else {
 						protections = parsedJson;
@@ -2258,7 +2267,7 @@
 				}
 
 				// Don't return the actual reveal objects!
-				return _.clone(instance.reveals);
+				return instance.reveals.clone();
 			} else {
 				throw "Can't encode or decode certificates while editing/protecting";
 			}
@@ -2405,7 +2414,7 @@
 			//
 			// http://stackoverflow.com/a/2373823/211160
 			// 
-			var newText = _.escape(pastedText);
+			var newText = escapeHtml(pastedText);
 			var regex = new RegExp("\n", 'g');
 			newText = newText.replace(regex, "<br>");
 			regex = new RegExp("  ", 'g');
