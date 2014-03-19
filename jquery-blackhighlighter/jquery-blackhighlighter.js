@@ -1849,7 +1849,6 @@
 				success: function(result) {
 					if (result.error) {
 						notifyErrorOnTab('commit', result.error.msg);
-						finalizeCommitUI();
 					} else {
 						temp.commit.commit_date = result.commit.commit_date;
 						temp.commit.commit_id = hex_sha256(
@@ -1881,8 +1880,6 @@
 					}
 				},
 				error: function (XMLHttpRequest, textStatus, errorThrown) {
-					finalizeCommitUI();
-					
 					// Note that "this" contains the options for this ajax request
 					switch (textStatus) {
 						case 'timeout':
@@ -2045,7 +2042,6 @@
 					}
 				},
 				error: function (XMLHttpRequest, textStatus, errorThrown) {
-					finalizeRevealUI();
 					
 					// "this" contains the options for this ajax request
 
