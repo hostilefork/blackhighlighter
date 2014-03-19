@@ -22,20 +22,601 @@
 "use strict";
 
 
-// Basic structure borrowed from:
-// https://github.com/bgrins/BlackhighlighterTextareas
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// REQUIREJS AND MODULE PATTERN FOR WIDGET
+	//
+	// Basic structure borrowed from:
+	//
+	// https://github.com/bgrins/ExpandingTextareas
 
 (function(factory) {
 	// Add jQuery via AMD registration or browser globals
 	if (typeof define === 'function' && define.amd) {
-		define([ 'jquery', 'underscore', 'sha256', 'client-server-common', 'client-common'], factory);
+		define([ 'jquery', 'underscore'], factory);
 	}
 	else {
 		// How to pass in underscore in non-AMD cases?  Is this right?
 		factory(jQuery, _);
 	}
-}(function ($, _, SHA256, common, clientCommon) {
+}(function ($, _) {
 
+
+////////////////////////////////////////////////////////////////////////////////
+
+/*
+	//
+	// JQUERY DEPENDENCY
+	//
+	// The blackhighlighter widget is designed to offer some utility functions
+	// as a "common library" even if jQuery is not present.  This operates
+	// on the assumption that such failures will happens synchronously
+	// (e.g. in Node.JS) rather than waiting for a timeout.
+	//
+	// http://stackoverflow.com/a/22474864/211160
+
+		var $ = null;
+
+		require(['jquery'], function (jQuery) {
+			// This will execute only if jquery is present.
+
+			$ = jQuery;
+		}, function (err) {
+			// This will execute if there is an error.
+
+			// If server-side, do nothing. If client-side, scream!
+			if (window) {
+				throw "jQuery requirejs dependency not found for blackhighlighter";
+			}
+
+			console.log("Flibbety foo!");
+
+	       //undef is function only on the global requirejs object.
+	        //Use it to clear internal knowledge of jQuery. Any modules
+	        //that were dependent on jQuery and in the middle of loading
+	        //will not be loaded yet, they will wait until a valid jQuery
+	        //does load.
+	        requirejs.undef('jquery');
+		});
+
+	console.log("blackhighlighter called");
+*/
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// BASE64 ENCODE AND DECODE
+	//
+	// To reduce dependencies, we include this safe and suggested Base64
+	// implementation directly into the file.  There are functions btoa() and
+	// atob() in most major browsers, and a "polyfill" available:
+	//
+	//     https://github.com/davidchambers/Base64.js
+	//
+	// "it's best to use the native functions and polyfill rather than include
+	// a library that introduces a new API."
+	// 
+	//     http://stackoverflow.com/questions/246801/#comment34178292_247261
+	//
+	// However the mozilla docs emphasize there are some bugs ("issues") in
+	// the standard anyway.  So given that it's very little code, having a
+	// copy embedded gives browser compatibility and takes care of those bugs.
+	// 
+
+	/*\
+	|*|
+	|*|  Base64 / binary data / UTF-8 strings utilities
+	|*|
+	|*|  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Base64_encoding_and_decoding
+	|*|
+	\*/
+
+	/* Array of bytes to base64 string decoding */
+
+	function b64ToUint6 (nChr) {
+
+	  return nChr > 64 && nChr < 91 ?
+	      nChr - 65
+	    : nChr > 96 && nChr < 123 ?
+	      nChr - 71
+	    : nChr > 47 && nChr < 58 ?
+	      nChr + 4
+	    : nChr === 43 ?
+	      62
+	    : nChr === 47 ?
+	      63
+	    :
+	      0;
+
+	}
+
+	function base64DecToArr (sBase64, nBlocksSize) {
+
+	  var
+	    sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, ""), nInLen = sB64Enc.length,
+	    nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);
+
+	  for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {
+	    nMod4 = nInIdx & 3;
+	    nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
+	    if (nMod4 === 3 || nInLen - nInIdx === 1) {
+	      for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
+	        taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;
+	      }
+	      nUint24 = 0;
+
+	    }
+	  }
+
+	  return taBytes;
+	}
+
+	/* Base64 string to array encoding */
+
+	function uint6ToB64 (nUint6) {
+
+	  return nUint6 < 26 ?
+	      nUint6 + 65
+	    : nUint6 < 52 ?
+	      nUint6 + 71
+	    : nUint6 < 62 ?
+	      nUint6 - 4
+	    : nUint6 === 62 ?
+	      43
+	    : nUint6 === 63 ?
+	      47
+	    :
+	      65;
+
+	}
+
+	function base64EncArr (aBytes) {
+
+	  var nMod3 = 2, sB64Enc = "";
+
+	  for (var nLen = aBytes.length, nUint24 = 0, nIdx = 0; nIdx < nLen; nIdx++) {
+	    nMod3 = nIdx % 3;
+	    if (nIdx > 0 && (nIdx * 4 / 3) % 76 === 0) { sB64Enc += "\r\n"; }
+	    nUint24 |= aBytes[nIdx] << (16 >>> nMod3 & 24);
+	    if (nMod3 === 2 || aBytes.length - nIdx === 1) {
+	      sB64Enc += String.fromCharCode(uint6ToB64(nUint24 >>> 18 & 63), uint6ToB64(nUint24 >>> 12 & 63), uint6ToB64(nUint24 >>> 6 & 63), uint6ToB64(nUint24 & 63));
+	      nUint24 = 0;
+	    }
+	  }
+
+	  return sB64Enc.substr(0, sB64Enc.length - 2 + nMod3) + (nMod3 === 2 ? '' : nMod3 === 1 ? '=' : '==');
+
+	}
+
+	/* UTF-8 array to DOMString and vice versa */
+
+	function UTF8ArrToStr (aBytes) {
+
+	  var sView = "";
+
+	  for (var nPart, nLen = aBytes.length, nIdx = 0; nIdx < nLen; nIdx++) {
+	    nPart = aBytes[nIdx];
+	    sView += String.fromCharCode(
+	      nPart > 251 && nPart < 254 && nIdx + 5 < nLen ? /* six bytes */
+	        /* (nPart - 252 << 32) is not possible in ECMAScript! So...: */
+	        (nPart - 252) * 1073741824 + (aBytes[++nIdx] - 128 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+	      : nPart > 247 && nPart < 252 && nIdx + 4 < nLen ? /* five bytes */
+	        (nPart - 248 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+	      : nPart > 239 && nPart < 248 && nIdx + 3 < nLen ? /* four bytes */
+	        (nPart - 240 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+	      : nPart > 223 && nPart < 240 && nIdx + 2 < nLen ? /* three bytes */
+	        (nPart - 224 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+	      : nPart > 191 && nPart < 224 && nIdx + 1 < nLen ? /* two bytes */
+	        (nPart - 192 << 6) + aBytes[++nIdx] - 128
+	      : /* nPart < 127 ? */ /* one byte */
+	        nPart
+	    );
+	  }
+
+	  return sView;
+
+	}
+
+	function strToUTF8Arr (sDOMStr) {
+
+	  var aBytes, nChr, nStrLen = sDOMStr.length, nArrLen = 0;
+
+	  /* mapping... */
+
+	  for (var nMapIdx = 0; nMapIdx < nStrLen; nMapIdx++) {
+	    nChr = sDOMStr.charCodeAt(nMapIdx);
+	    nArrLen += nChr < 0x80 ? 1 : nChr < 0x800 ? 2 : nChr < 0x10000 ? 3 : nChr < 0x200000 ? 4 : nChr < 0x4000000 ? 5 : 6;
+	  }
+
+	  aBytes = new Uint8Array(nArrLen);
+
+	  /* transcription... */
+
+	  for (var nIdx = 0, nChrIdx = 0; nIdx < nArrLen; nChrIdx++) {
+	    nChr = sDOMStr.charCodeAt(nChrIdx);
+	    if (nChr < 128) {
+	      /* one byte */
+	      aBytes[nIdx++] = nChr;
+	    } else if (nChr < 0x800) {
+	      /* two bytes */
+	      aBytes[nIdx++] = 192 + (nChr >>> 6);
+	      aBytes[nIdx++] = 128 + (nChr & 63);
+	    } else if (nChr < 0x10000) {
+	      /* three bytes */
+	      aBytes[nIdx++] = 224 + (nChr >>> 12);
+	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+	      aBytes[nIdx++] = 128 + (nChr & 63);
+	    } else if (nChr < 0x200000) {
+	      /* four bytes */
+	      aBytes[nIdx++] = 240 + (nChr >>> 18);
+	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+	      aBytes[nIdx++] = 128 + (nChr & 63);
+	    } else if (nChr < 0x4000000) {
+	      /* five bytes */
+	      aBytes[nIdx++] = 248 + (nChr >>> 24);
+	      aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+	      aBytes[nIdx++] = 128 + (nChr & 63);
+	    } else /* if (nChr <= 0x7fffffff) */ {
+	      /* six bytes */
+	      aBytes[nIdx++] = 252 + /* (nChr >>> 32) is not possible in ECMAScript! So...: */ (nChr / 1073741824);
+	      aBytes[nIdx++] = 128 + (nChr >>> 24 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+	      aBytes[nIdx++] = 128 + (nChr & 63);
+	    }
+	  }
+
+	  return aBytes;
+	}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// SHA256 DIGEST CALCULATION
+	//
+	// To reduce dependencies, we include this SHA256 implementation which
+	// is... um... I guess it's okay.  It seems to agree with the Node.JS
+	// crypto calculations anyway; and it's small.
+	//
+
+	/* A JavaScript implementation of the Secure Hash Algorithm, SHA-256
+	 * Version 0.3 Copyright Angel Marin 2003-2004 - http://anmar.eu.org/
+	 * Distributed under the BSD License
+	 * Some bits taken from Paul Johnston's SHA-1 implementation
+	 */
+	var chrsz = 8;  /* bits per input character. 8 - ASCII; 16 - Unicode  */
+	function safe_add (x, y) {
+	  var lsw = (x & 0xFFFF) + (y & 0xFFFF);
+	  var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+	  return (msw << 16) | (lsw & 0xFFFF);
+	}
+	function S (X, n) {return ( X >>> n ) | (X << (32 - n));}
+	function R (X, n) {return ( X >>> n );}
+	function Ch(x, y, z) {return ((x & y) ^ ((~x) & z));}
+	function Maj(x, y, z) {return ((x & y) ^ (x & z) ^ (y & z));}
+	function Sigma0256(x) {return (S(x, 2) ^ S(x, 13) ^ S(x, 22));}
+	function Sigma1256(x) {return (S(x, 6) ^ S(x, 11) ^ S(x, 25));}
+	function Gamma0256(x) {return (S(x, 7) ^ S(x, 18) ^ R(x, 3));}
+	function Gamma1256(x) {return (S(x, 17) ^ S(x, 19) ^ R(x, 10));}
+	function core_sha256 (m, l) {
+	    var K = new Array(0x428A2F98,0x71374491,0xB5C0FBCF,0xE9B5DBA5,0x3956C25B,0x59F111F1,0x923F82A4,0xAB1C5ED5,0xD807AA98,0x12835B01,0x243185BE,0x550C7DC3,0x72BE5D74,0x80DEB1FE,0x9BDC06A7,0xC19BF174,0xE49B69C1,0xEFBE4786,0xFC19DC6,0x240CA1CC,0x2DE92C6F,0x4A7484AA,0x5CB0A9DC,0x76F988DA,0x983E5152,0xA831C66D,0xB00327C8,0xBF597FC7,0xC6E00BF3,0xD5A79147,0x6CA6351,0x14292967,0x27B70A85,0x2E1B2138,0x4D2C6DFC,0x53380D13,0x650A7354,0x766A0ABB,0x81C2C92E,0x92722C85,0xA2BFE8A1,0xA81A664B,0xC24B8B70,0xC76C51A3,0xD192E819,0xD6990624,0xF40E3585,0x106AA070,0x19A4C116,0x1E376C08,0x2748774C,0x34B0BCB5,0x391C0CB3,0x4ED8AA4A,0x5B9CCA4F,0x682E6FF3,0x748F82EE,0x78A5636F,0x84C87814,0x8CC70208,0x90BEFFFA,0xA4506CEB,0xBEF9A3F7,0xC67178F2);
+	    var HASH = new Array(0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19);
+	    var W = new Array(64);
+	    var a, b, c, d, e, f, g, h, i, j;
+	    var T1, T2;
+	    /* append padding */
+	    m[l >> 5] |= 0x80 << (24 - l % 32);
+	    m[((l + 64 >> 9) << 4) + 15] = l;
+	    for ( var i = 0; i<m.length; i+=16 ) {
+	        a = HASH[0]; b = HASH[1]; c = HASH[2]; d = HASH[3]; e = HASH[4]; f = HASH[5]; g = HASH[6]; h = HASH[7];
+	        for ( var j = 0; j<64; j++) {
+	            if (j < 16) W[j] = m[j + i];
+	            else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
+	            T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
+	            T2 = safe_add(Sigma0256(a), Maj(a, b, c));
+	            h = g; g = f; f = e; e = safe_add(d, T1); d = c; c = b; b = a; a = safe_add(T1, T2);
+	        }
+	        HASH[0] = safe_add(a, HASH[0]); HASH[1] = safe_add(b, HASH[1]); HASH[2] = safe_add(c, HASH[2]); HASH[3] = safe_add(d, HASH[3]); HASH[4] = safe_add(e, HASH[4]); HASH[5] = safe_add(f, HASH[5]); HASH[6] = safe_add(g, HASH[6]); HASH[7] = safe_add(h, HASH[7]);
+	    }
+	    return HASH;
+	}
+	function str2binb (str) {
+	  var bin = Array();
+	  var mask = (1 << chrsz) - 1;
+	  for(var i = 0; i < str.length * chrsz; i += chrsz)
+	    bin[i>>5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i%32);
+	  return bin;
+	}
+	function binb2hex (binarray) {
+	  var hexcase = 0; /* hex output format. 0 - lowercase; 1 - uppercase */
+	  var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
+	  var str = "";
+	  for (var i = 0; i < binarray.length * 4; i++) {
+	    str += hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8+4)) & 0xF) + hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8  )) & 0xF);
+	  }
+	  return str;
+	}
+	function hex_sha256(s){return binb2hex(core_sha256(str2binb(s),s.length * chrsz));}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	// Better to use these constants than test against "magic numbers"
+	//
+	// http://safalra.com/web-design/javascript/dom-node-type-constants/
+	//
+	// http://en.wikipedia.org/wiki/Document_Object_Model
+	//
+	var Node = {
+		ELEMENT_NODE: 1,
+		ATTRIBUTE_NODE: 2,
+		TEXT_NODE: 3,
+		CDATA_SECTION_NODE: 4,
+		ENTITY_REFERENCE_NODE: 5,
+		ENTITY_NODE: 6,
+		PROCESSING_INSTRUCTION_NODE: 7,
+		COMMENT_NODE: 8,
+		DOCUMENT_NODE: 9,
+		DOCUMENT_TYPE_NODE: 10,
+		DOCUMENT_FRAGMENT_NODE: 11,
+		NOTATION_NODE: 12
+	};
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// EXPORTED API
+	//
+	// What we return from this RequireJS "module function" is an object
+	// whose contents represent that which we wish to export to the browser
+	// or to NodeJS.  Though blackhighlighter can be loaded in the browser
+	// with a jQuery dependency, it
+	// can also be loaded in Node.JS passing in jQuery of null just to get
+	// the common non-UI functions.
+	//
+	// It should be noted that for the blackhighlighter widget itself, the
+	// functionality is exported by adding onto the jQuery ($) entity
+	// a .blackhighlighter() function.  That is not an option for exporting
+	// common routines to Node.JS as there is no jQuery, and the
+	// require("jquery.blackhighlighter") has to return something AND not
+	// trigger any calls to jQuery because it will be null. 
+	//
+
+    var exports = {
+		
+		// URL api
+		makeCommitUrl: function(base_url) {
+			return base_url + 'commit/';
+		},
+		makeVerifyUrl: function(base_url, commit_id) {
+			return base_url + 'verify/' + commit_id;
+		},
+		makeShowUrl: function(base_url, commit_id) {
+			return base_url + 'show/' + commit_id;
+		},
+		makeRevealUrl: function(base_url) {
+			return base_url + 'reveal/';
+		},
+		
+		// 
+		// UUID
+		// http://en.wikipedia.org/wiki/UUID
+		//
+
+		generateRandomUUID: function() {
+			// 128 bits of random data is the size of a Uuid
+			// http://bytes.com/groups/javascript/523253-how-create-Uuid-javascript
+
+			function fourHex(count) {
+				if (count === 0) {
+					return '';
+				}
+				
+				// if count is null or undefined, assume 1
+				var ret = '';
+				for (var index = 0; index < (count ? count : 1); index++) {
+					ret += (((1+Math.random()) * 0x10000)|0).toString(16).substring(1); 
+				}
+				return ret;
+			}
+
+			return (fourHex(2)+'-'+fourHex()+'-'+fourHex()+'-'+fourHex()+'-'+fourHex(3));
+		},
+
+		stripHyphensFromUUID: function(uuid) {
+			// standard Uuid format contains hyphens to improve readability
+			// freebase and other systems that use Uuids in URLs don't have the hyphens
+			
+			return uuid.replace(/-/g, '');
+		},
+
+
+		//
+		// TYPE DETECTION
+		//
+		// REVIEW: Use better approaches?  Something like this?
+		// 	http://mattsnider.com/javascript/type-detection/
+		// 	http://mattsnider.com/core/type-detection-revisited/
+		//
+
+		isWhitespace: function(charToCheck) {
+			// http://www.somacon.com/p355.php
+			
+			var whitespaceChars = ' \t\n\r\f\u00A0'; // added non-breaking space
+			return (whitespaceChars.indexOf(charToCheck) != -1);
+		},
+
+		//
+		// JAVASCRIPT HELPERS
+		//
+
+		escapeNonBreakingSpacesInString: function(str) {
+			// UNICODE \u00A0 is not escaped by JSON.stringify
+
+			var nbspSplit = str.split('\u00A0');
+			if (nbspSplit.length == 1) {
+				return str;
+			}
+			var ret = nbspSplit[0];
+			for (var nbspSplitIndex = 1; nbspSplitIndex < nbspSplit.length; nbspSplitIndex++) {
+				ret += '\\' + 'u00A0';
+				ret += nbspSplit[nbspSplitIndex];
+			}
+			return ret;
+		},
+
+		// http://www.somacon.com/p355.php
+		trimLeadingWhitespace: function(str) { 
+			var k = 0;
+			while ((k < str.length) && this.isWhitespace(str.charAt(k))) {
+				k++;
+			}
+			return str.substring(k, str.length);
+		},
+		
+		trimTrailingWhitespace: function(str) {
+			var j = str.length-1;
+			while ((j >= 0) && this.isWhitespace(str.charAt(j))) {
+				j--;
+			}
+			return str.substring(0, j + 1);
+		},
+		
+		trimAllWhitespace: function(str) {
+			return this.trimLeadingWhitespace(this.trimTrailingWhitespace(str));
+		},
+
+
+		//
+		// DATA FORMAT NOTES
+		//
+		// "PublicOne PublicTwo [HiddenOne] PublicThree [HiddenTwo] PublicFour"
+		//
+		// The commit looks like this, and when put into the database it will
+		// have added to it a MongoDB _id as well as a commit_date
+		// 
+		// { "spans": [
+		//		"PublicOne PublicTwo ", 
+		// 		{ "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
+		// 		" PublicThree ",
+		//		{ "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" }, 
+		//		" PublicFour"
+		//	] }
+		//
+		// We must be able to check that the server doesn't change the content
+		// of the commit out from under you.  Additionally, a client who *only*
+		// has been given a URL needs to be able to do this check.  That means
+		// the URL must encode enough information to test an unrevealed commit.
+		// To do this, we make a cryptographic hash of a string made by
+		// appending together the spans along with the commit_date.
+		//
+		// (Note: Because letters without redactions do not have reveal
+		// certificates, the only thing differentiating two unredacted letters
+		// is the commit_date.  Hence the client cannot know the actual URL
+		// until after the server has decided the commit time.)
+		//
+		// A single revealJson looks like this, and when put into the database
+		// it will have added to it a mongodb _id as well as a commit_date
+		//
+		// {
+		//     "commit_id": "4f89521b67032a424a000002",
+		//     "name": "black",
+		//     "redactions": [ "HiddenOne", "HiddenTwo" ], 
+		//     "salt": "26716853c86b247fc81834822b0ca058",
+		//     "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
+		// }
+		//
+		// (Note: Hash values are made up, will fix in real documentation.)
+		
+		canonicalJsonFromCommit: function(commit) {
+			// There are some things to consider here regarding Unicode
+			// Normalization and canonical JSON:
+			//
+			// http://wiki.laptop.org/go/Canonical_JSON
+			//
+			// In general, having a dependency on a library that may change
+			// (like how escaping of strings is done by JSON.stringify) could
+			// cause false negatives.  These could be investigated after the
+			// fact and rectified against a correct answer.
+			//
+			// REVIEW: Discuss this with peers to make sure there's no risk of
+			// false positives, and see if there are better ways to avoid false
+			// negatives.
+			
+			var result = '{"commit_date":';
+			result += JSON.stringify(commit.commit_date);
+			result += ',';
+
+			var isFirstSpan = true;			
+			result += '"spans":[';
+			_.each(commit.spans, function(span) {
+				if (isFirstSpan) {
+					isFirstSpan = false;
+				} else {
+					result += ',';
+				}
+				if (_.isString(span)) {
+					// We want to turn single quotes into \", etc.
+					// for our canonical representation
+					result += JSON.stringify(span);
+				} else {
+					result += '["display_length":';
+					result += span.display_length.toString(10);
+					result += ',';
+					result += '"sha256":';
+					result += JSON.stringify(span.sha256);
+					result += ']';
+				}
+			});
+			result += ']}';
+			return result;
+		},
+
+		canonicalStringFromReveal: function(reveal) {
+			var contents = reveal.salt;
+			_.each(reveal.redactions, function (redactionSpan) {
+				contents += redactionSpan;
+			});
+			return contents;
+		}
+    };
+
+    // Stop here if we don't have jQuery - all we want is the exports
+    if ($.isFakeJquery) {
+    	return exports;
+    }
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// INSTANCE INITIALIZATION
+	//
+	// While there is a DOM element in the tree representing the
+	// contenteditable div, there is also a separate object representing the
+	// properties of a blackhighlighter instance attached to that div.  I'm
+	// not entirely sure about the advantages or disadvantages of this vs.
+	// using jQuery .data() attached to the element (is that always cleared
+	// when you unplug an element from the DOM?) but it works.
+	//
+	// One of these objects is instantiated whenever you call something like
+	// $el.blackhighlighter({option: value}); and the instance lasts until
+	// you call $el.blackhighlighter("destroy");
+	//
 	var Blackhighlighter = function($div, opts) {
 		Blackhighlighter._registry.push(this);
 
@@ -105,6 +686,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+
 	Blackhighlighter.prototype = {
 /*
 		// Attaches input events
@@ -137,6 +719,11 @@
 		},
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+		//
+		// MODE TRANSITIONS
+		//
 
 		_addSuggestionsRecursive: function(node) {
 		
@@ -551,7 +1138,13 @@
 			this.mode = newMode;
 		},
 
+
 ////////////////////////////////////////////////////////////////////////////////
+
+
+		//
+		// PROTECT MODE
+		//
 
 		// We seem to get empty text nodes for some reason, at least in Firefox
 		// Jquery is not good at dealing with text nodes so best to use DOM to kill them
@@ -610,10 +1203,20 @@
 			this._killEmptyTextNodesRecursivePreorder(parent);
 		},
 
+		_clearUserSelection: function() {
+			// http://www.webmasterworld.com/javascript/3074874.htm
+			
+			if (window.getSelection) {
+				window.getSelection().removeAllRanges();
+			} else if (document.selection) {
+				document.selection.empty();
+			}
+		},
+
 		_unprotectSpanListener: function(eventObj) {
 			// http://www.quirksmode.org/js/events_properties.html
 			var $target = $(eventObj.target);
-			clientCommon.clearUserSelection();
+			this._clearUserSelection();
 			this._unprotectSpan($target);
 			this.update();
 			return true;
@@ -646,7 +1249,7 @@
 		_takeSuggestionListener: function(eventObj) {
 			// http://www.quirksmode.org/js/events_properties.html
 			var $target = $(eventObj.target);
-			clientCommon.clearUserSelection();
+			this._clearUserSelection();
 			this._takeSuggestion($target);
 			this.update();
 			return true;
@@ -789,7 +1392,7 @@
 			// First we clear the selection, because regardless of what we 
 			// do we don't want the visual XORing to happen.
 
-			clientCommon.clearUserSelection();
+			this._clearUserSelection();
 
 			var startOffset = range.startOffset;
 			var endOffset = range.endOffset;
@@ -966,7 +1569,7 @@
 			// we must unselect the selection, or the XORing will make it look
 			// bad and not all blacked out
 			// http://www.webreference.com/js/column12/selectionobject.html
-			clientCommon.clearUserSelection();
+			this._clearUserSelection();
 
 			this.update();
 			return true;
@@ -1001,7 +1604,13 @@
 			return true;
 		},
 
+
 ////////////////////////////////////////////////////////////////////////////////
+
+
+		//
+		// COMMIT AND PROTECTION GENERATION
+		//
 
 		generateCommitAndProtections: function() {
 
@@ -1163,14 +1772,16 @@
 			for (var protectionNameToHash in protectionsByName) {
 				if (protectionsByName.hasOwnProperty(protectionNameToHash)) {
 					var protectionToHash = protectionsByName[protectionNameToHash];
-					var saltToHash = common.stripHyphensFromUUID(common.generateRandomUUID());
+					var saltToHash = exports.stripHyphensFromUUID(
+						exports.generateRandomUUID()
+					);
 					var contents = saltToHash;
 					_.each(protectionToHash.redactions, function(redaction) {
 						contents += redaction;
 					});
 					
 					protectionToHash.salt = saltToHash;
-					protectionToHash.sha256 = SHA256(contents);
+					protectionToHash.sha256 = hex_sha256(contents);
 					
 					protectionsByHash[protectionToHash.sha256] = protectionToHash;
 				}
@@ -1202,7 +1813,10 @@
 			if (commit.spans.length === 0) {
 				commit = null;
 			} else if (commit.spans.length === 1) {
-				if (_.isString(commit.spans[0]) && (common.trimAllWhitespace(commit.spans[0]) === '')) {
+				if (
+					_.isString(commit.spans[0])
+					&& (exports.trimAllWhitespace(commit.spans[0]) === '')
+				) {
 					commit = null;
 				}
 			}
@@ -1215,8 +1829,6 @@
 			}
 		},
 
-////////////////////////////////////////////////////////////////////////////////
-
 		makeCommitment: function(base_url, callback) {
 
 			// Should be parameterized with the server.
@@ -1228,9 +1840,11 @@
 			$.ajax({
 				type: 'POST',
 				dataType: 'json', // expected response type from server
-				url: common.makeCommitUrl(base_url),
+				url: exports.makeCommitUrl(base_url),
 				data: {
-					'commit': common.escapeNonBreakingSpacesInString(JSON.stringify(temp.commit, null, ' '))
+					'commit': exports.escapeNonBreakingSpacesInString(
+						JSON.stringify(temp.commit, null, ' ')
+					)
 				},
 				success: function(result) {
 					if (result.error) {
@@ -1238,7 +1852,9 @@
 						finalizeCommitUI();
 					} else {
 						temp.commit.commit_date = result.commit.commit_date;
-						temp.commit.commit_id = SHA256(common.canonicalJsonFromCommit(temp.commit));
+						temp.commit.commit_id = hex_sha256(
+							exports.canonicalJsonFromCommit(temp.commit)
+						);
 
 						if (temp.commit.commit_id != result.commit.commit_id) {
 							callback('Server accepted data but did not calculate same commit hash we did!', null);
@@ -1290,7 +1906,13 @@
 			});
 		},
 
+
 ////////////////////////////////////////////////////////////////////////////////
+
+
+		//
+		// SHOW MODE
+		//
 
 		// For the moment, we assume the HTML with the placeholders was
 		// already in the blackhighlighter region in the case of showing
@@ -1338,7 +1960,8 @@
 
 		seeProtection: function(protection, isFromServer) {
 
-			var actualHash = SHA256(common.canonicalStringFromReveal(protection));
+			var actualHash =
+				hex_sha256(exports.canonicalStringFromReveal(protection));
 			if (actualHash != protection.sha256) {
 				throw 'Invalid certificate: content hash is ' + actualHash 
 					+ ' while claimed hash is ' + protection.sha256;
@@ -1388,6 +2011,10 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+		//
+		// REVEAL MODE
+		//
+
 		revealSecret: function(base_url, callback) {
 			// If there is more than one reveal in the UI, we'd need to have a
 			// way to indicate which one we are revealing in the request.  (or
@@ -1398,7 +2025,7 @@
 				throw 'Multiple reveals feature not currently supported by client';
 			}
 			
-			var reveal_url = common.makeRevealUrl(PARAMS.base_url);
+			var reveal_url = exports.makeRevealUrl(PARAMS.base_url);
 			// http://docs.jquery.com/Ajax/jQuery.ajax
 			$.ajax({
 				type: 'POST',
@@ -1444,12 +2071,14 @@
 				}
 			});
 		}
-
-
-////////////////////////////////////////////////////////////////////////////////
 	};
 
 
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// JQUERY EXTENSION REGISTRATION
 	//
 	// This is the jQuery extension function which allows you to choose any
 	// jQuery collection and run $(selector).blackhighlighter(...)
@@ -1474,6 +2103,11 @@
 	}, $.blackhighlighter || {});
 
 
+////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// JQUERY BLACKHIGHLIGHTER INSTANTIATOR + METHOD DISPATCHER
 	//
 	// This is the method dispatcher, and if a method is not detected then it
 	// can initialize a new blackhighlighter on an element.
@@ -1559,6 +2193,80 @@
 			}
 
 			throw "Unknown option passed to blackhighlighter";
+		}
+
+		if (o === "certificate") {
+			if (this.length != 1) {
+				throw new Error("Currently not handling length > 1 collections in certificate.");
+			}
+
+			var instance = Blackhighlighter.getInstance(this.get(0));
+
+			if (!instance) return undefined;
+
+			if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
+
+				if (arg1 === 'encode') {
+					if (!_.isObject(arg2)) {
+						throw "Parameter to certificate encode must be object";
+					}
+
+					// Validate input object?
+					var sMyInput = exports.escapeNonBreakingSpacesInString(
+						JSON.stringify(arg2, null, ' ')
+					);
+
+					var aMyUTF8Input = strToUTF8Arr(sMyInput);
+					var sMyBase64 = base64EncArr(aMyUTF8Input);
+
+					// We go ahead and standardize the certificate to 60
+					// columns of text.  If you want to go it your own
+					// don't use this encoding, but it's nice to have
+					// a standard in the module.  I chose 60 because UUENCODE
+					// uses 61 for some historic reason.
+					//
+					// http://stackoverflow.com/a/1772997/211160
+					//
+					sMyBase64.replace(/(.{60})/g,"$1\n");
+
+					return sMyBase64;
+
+				} else if (arg1 === 'decode') {
+					if (!_.isString(arg2)) {
+						throw "Parameter to certificate decode must be string";
+					}
+
+					// We tolerate whitespace, due to the encoding throwing
+					// in newlines (and all the other things that can happen
+					// between when we gave the person a certificate and it
+					// wound up in the hands of the recipient)
+					// 
+					// http://stackoverflow.com/a/6623252/211160
+					// 
+					var sEncoded = arg2.replace(/\s/g, ""); 
+					var aMyUTF8Output = base64DecToArr(sEncoded);
+					var sMyOutput = UTF8ArrToStr(aMyUTF8Output);
+
+					var protections = null;
+					var parsedJson = JSON.parse(sMyOutput);
+					if (!_.isArray(parsedJson)) {
+						protections = [parsedJson];
+					} else {
+						protections = parsedJson;
+					}
+
+					return protections;
+
+				} else {
+					throw "Option to certificate other than encode/decode";
+				}
+
+				// Don't return the actual reveal objects!
+				return _.clone(instance.reveals);
+			} else {
+				throw "Can't encode or decode certificates while editing/protecting";
+			}
+
 		}
 
 		if (o === "ismodified") {
@@ -1647,6 +2355,16 @@
 		if(window.console && console.warn) console.warn(text);
 	}
 
+
+////////////////////////////////////////////////////////////////////////////////
+
+	
+	//
+	// GLOBAL PLUGIN INITIALIZATION CODE
+	//
+	// This is the code that runs only once at plugin initialization.
+	//
+
 	$(function () {
 		if ($.blackhighlighter.autoInitialize) {
 			$($.blackhighlighter.initialSelector).blackhighlighter();
@@ -1671,12 +2389,14 @@
 
 			// http://stackoverflow.com/questions/12027137/
 			var pastedText = undefined;
-			if (window.clipboardData && window.clipboardData.getData) { // IE
+			if (window.clipboardData && window.clipboardData.getData) {
+				// Internet Explorer
 				pastedText = window.clipboardData.getData('Text');
 			} else if (
 				eventObj.originalEvent.clipboardData 
 				&& eventObj.originalEvent.clipboardData.getData
 			) {
+				// Everyone else but Internet Explorer
 				pastedText = eventObj.originalEvent
 					.clipboardData.getData('text/plain');
 			}
@@ -1704,5 +2424,23 @@
 			return false;
 		});
 	});
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+	// 
+	// RETURN EXPORTS
+	//
+	// What we export is what we return.  If you write something like
+	// var bh = require("blackhighlighter"); in Node.JS using the requirejs
+	// plugin, the bh object you get back from that require statement is going
+	// to be what we return here.
+	//
+	// Note that if jQuery is unavailable, we returned the exports much earlier
+	// in the file and did not define Blackhighlighter.
+	//
+
+	return exports;
 
 }));

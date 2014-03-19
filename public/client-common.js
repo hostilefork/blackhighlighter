@@ -21,64 +21,10 @@
 // Whole-script strict mode syntax
 "use strict";
 
-//
-// DOM
-// http://en.wikipedia.org/wiki/Document_Object_Model
-//
-
-if (!window.Node) {
-	// Better to use these constants than test against "magic numbers"
-	// http://safalra.com/web-design/javascript/dom-node-type-constants/
-	window.Node = {
-		ELEMENT_NODE: 1,
-		ATTRIBUTE_NODE: 2,
-		TEXT_NODE: 3,
-		CDATA_SECTION_NODE: 4,
-		ENTITY_REFERENCE_NODE: 5,
-		ENTITY_NODE: 6,
-		PROCESSING_INSTRUCTION_NODE: 7,
-		COMMENT_NODE: 8,
-		DOCUMENT_NODE: 9,
-		DOCUMENT_TYPE_NODE: 10,
-		DOCUMENT_FRAGMENT_NODE: 11,
-		NOTATION_NODE: 12
-	};
-}
-
 // The module standard being used is the "asynchronous module definition"
 //     https://github.com/amdjs/amdjs-api/wiki/AMD
 define(['jquery', 'underscore'], function($, _){
     return {
-
-		outerXHTML: function($source) {
-			// I don't understand why, if I have an element like <div><p>Foo</p></div>, it's
-			// so much more interesting to get the innerXHTML ("<p>Foo</p>") than the outerXHTML
-			// ("<div><p>Foo</p></div>").
-
-			var ret = '';
-			// create a temporary parent
-			var tempParent = $('<span title="outerXHTML() temporary wrapper"></span>');
-			
-			if ($source.parentNode === null) {
-				tempParent.append($source);
-				ret = innerXHTML(tempParent.get(0));
-				$source.remove();
-			} else {
-				tempParent.append($source.clone());
-				ret = innerXHTML(tempParent.get(0));
-			}
-			
-			return ret;
-		},
-
-		absoluteFromRelativeURL: function(url) {
-			// http://objectmix.com/javascript/352627-relative-url-absolute-url.html
-
-			return $('<a href="' + url + '"></a>').get(0).href;
-		},
-
-
-
 		//
 		// SELECTIONS
 		//
@@ -112,16 +58,6 @@ define(['jquery', 'underscore'], function($, _){
 				var rangeIE = document.body.createTextRange();
 				rangeIE.moveToElementText(elm);
 				rangeIE.select();
-			}
-		},
-
-		clearUserSelection: function() {
-			// http://www.webmasterworld.com/javascript/3074874.htm
-			
-			if (window.getSelection) {
-				window.getSelection().removeAllRanges();
-			} else if (document.selection) {
-				document.selection.empty();
 			}
 		},
 

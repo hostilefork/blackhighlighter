@@ -68,19 +68,8 @@ requirejs.config({
 	
 	// Note: do not include the '.js' at the end of these paths!
 	paths: {
-		'use': 'public/js/use'
-		, 'sha256': "public/js/sha256"
-	},
-	
-	// https://github.com/tbranyen/use.js
-	// Similar to: https://github.com/gartz/RequireJS-Wrapper-Plugin
-	use: {
-		'underscore': {
-			attach: '_'
-		}
-		, 'sha256': {
-			attach: 'sha256export'
-		}
+		'jquery-blackhighlighter': 'public/js/blackhighlighter/blackhighlighter',
+		'jquery': 'jquery-fake'
 	}
 });
 
@@ -302,7 +291,7 @@ app.use(express.bodyParser());
 // moment, but hopefully someone will show me the "right" way.
 //
 
-var common = requirejs('public/client-server-common');
+var common = requirejs('jquery-blackhighlighter');
 
 
 //

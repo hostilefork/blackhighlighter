@@ -22,9 +22,9 @@ This is an attempt to list all the third-party components used by the Blackhighl
 
 * [jQuery](http://jquery.com/) *(MIT license)*
 
-* [ierange-m2.js](https://code.google.com/p/ierange/) *(MIT license)*
+* [jsSHA2](http://anmar.eu.org/projects/jssha2/) *(BSD license)* - Encapsulated in source, not required as a dependency.
 
-* [jsSHA2](http://anmar.eu.org/projects/jssha2/) *(BSD license)*
+* [Mozilla Safe Base64](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Base64_encoding_and_decoding) - Encapsulated in source, not required as a dependency.
 
 
 **Sandbox Demo Server**
@@ -49,6 +49,8 @@ This is an attempt to list all the third-party components used by the Blackhighl
 * [jQuery-actual](http://dreamerslab.com/blog/en/get-hidden-elements-width-and-height-with-jquery/) *(MIT license)*
 
 * [jQuery-expanding](http://bgrins.github.io/ExpandingTextareas/) *(MIT license)*
+
+* [ierange-m2.js](https://code.google.com/p/ierange/) *(MIT license)*
 
 
 **Testing**

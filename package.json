@@ -1,16 +1,16 @@
 {
 	"_comment_ThisFileFormatDescription": "http://package.json.nodejitsu.com/",
 	"_comment_JsonSucksForCommentingConfigs": "http://stackoverflow.com/questions/244777/",
-	"name": "blackhighlighter",
+	"name": "blackhighlighter-sandbox",
 	"subdomain": "blackhighlighter",
 	"domains": [
 		"blackhighlighter.org",
 		"www.blackhighlighter.org"
 	],
 	"preferGlobal": "false",
-	"version": "0.0.1-132",
-	"author": "Hostile Fork <hostilefork@gmail.com>",
-	"description": "protected public discussion server for node.js",
+	"version": "0.0.1-148",
+	"author": "Brian Dickens <brian@hostilefork.com>",
+	"description": "A basic walkthrough demo of the blackhighlighter system",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/hostilefork/blackhighlighter.git"

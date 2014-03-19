@@ -69,10 +69,16 @@ div.blackhighlighter-compose span.protected:hover {
 div.blackhighlighter-protect span.protected {
 	background-color: black;
 	color: black;
+	/*
+	 * We don't set the word-break here because we're not using dummy text
+	 * in the span... it's the right text, so things don't "jump" when you
+	 * redact/unredact.  Can't do this in the show/reveal phase though.
+	 */
 }
 div.blackhighlighter-protect span.protected:hover {
 	background-color: gray;
 	cursor: default;
+	/* See above notes on word-break */
 }
 div.blackhighlighter-protect span.suggested {
 	background-color: #FFA500; /* Orange */
@@ -89,6 +95,7 @@ div.blackhighlighter-protect span.suggested:hover {
 div.blackhighlighter-show span.protected {
 	background-color: black;
 	color: black;
+	word-break: break-all; /* let long redaction spans be split across lines */
 }
 div.blackhighlighter-show span.verified {
 	background-color: yellow;
@@ -103,6 +110,7 @@ div.blackhighlighter-show span.revealed {
 div.blackhighlighter-reveal span.protected {
 	background-color: black;
 	color: black;
+	word-break: break-all; /* let long redaction spans be split across lines */
 }
 div.blackhighlighter-reveal span.verified {
 	background-color: red;

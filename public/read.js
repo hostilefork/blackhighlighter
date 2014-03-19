@@ -22,23 +22,18 @@
 "use strict";
 
 define([
+	// libs which return exported objects to capture in the function prototype
 	'jquery',
 	'underscore',
-	'client-server-common',
+	'blackhighlighter',
 	'client-common',
-	// these libs have no results, purely additive...
+
+	// these libs have no results, they just add to the environment (via shims)
 	'jqueryui',
 	'expanding',
-	'blackhighlighter',
 	'actual'
-], function($, _, common, clientCommon) {
+], function($, _, blackhighlighter, clientCommon) {
 	
-	var Globals = {
-		// due to the fact that there's no "get currently active accordion section",
-		// we have to track it ourself.
-		lastAccordionId: null
-	};
-
 	// Theme all the button-type-things but not the <a href="#" ..> style
 	$("input:submit, button").button();
 
@@ -58,8 +53,9 @@ define([
         clearStyle: true
 	});
 	
-	// jquery UI does tabs by index, not ID.  using this to increase readability
-	// NOTE: a function as opposed to a raw map for consistency with accordionIndexForId
+	// jquery UI does tabs by index, not ID - using this to increase readability
+	// NOTE: a function as opposed to a raw map for consistency with
+	// accordionIndexForId
 	function tabIndexForId(id) {
 		return {
 			'tabs-verify': 0, 
@@ -484,7 +480,7 @@ define([
 		clearErrorOnTab('verify');
 	
 		var revealInput = $('#certificates').get(0).value;
-		if (common.trimAllWhitespace(revealInput) === '') {
+		if (blackhighlighter.trimAllWhitespace(revealInput) === '') {
 			// if they haven't typed anything into the box
 			$('#tabs').tabs('option', 'active', tabIndexForId('tabs-show'));
 		} else {
@@ -492,40 +488,33 @@ define([
 			$('#tabs').tabs('disable', tabIndexForId('tabs-reveal'));
 			$('#progress-verify').show();
 			$('#buttons-verify').hide();
-		
-			var parsedJson = null;
-			// Catch parsing errors and put them in an error message
-			try {
-				var tidyRevealText = tidyInputForJsonParser(revealInput);
-				
-				// http://stackoverflow.com/a/10362313/211160
-				parsedJson = jQuery.parseJSON(tidyRevealText);	
-			} catch(errParse) {
-				// do not continue to next tab
-				finalizeVerifyUI(errParse);
+
+			var tidyRevealText = tidyInputForJsonParser(revealInput);
+			if (!tidyRevealText) {
+				finalizeVerifyUI(Error("No certificates provided."));
+				return;
 			}
 
-			if (parsedJson) {
-				try {
-					var reveals = null;
-					if (!_.isArray(parsedJson)) {
-						reveals = [parsedJson];
-					} else {
-						reveals = parsedJson;
-					}
-					
-					if (reveals.length > 1) {
-						throw "User interface for multiple certificates is not currently available";
-					}
-					
-					$.each(reveals, function(index, reveal) {
-						$("#editor").blackhighlighter('seereveal', reveal, false);
-					});
+			var protections = null;
 
-					finalizeVerifyUI(null);
-				} catch(errAdd) {
-					finalizeVerifyUI(errAdd);
+			// Catch parsing errors and put them in an error message
+			try {				
+				protections = $("#editor").blackhighlighter(
+					"certificate", 'decode', tidyRevealText
+				);
+				if (protections.length > 1) {
+					throw "User interface for multiple certificates is not currently available";
 				}
+					
+				$.each(protections, function(index, reveal) {
+					$("#editor").blackhighlighter('seereveal', reveal, false);
+				});
+
+				finalizeVerifyUI(null);
+
+			} catch (err) {
+				// do not continue to next tab
+				finalizeVerifyUI(err);
 			}
 		}
 	});
@@ -549,6 +538,11 @@ define([
 	$("#reveal-button").on('click', function(eventObj) {
 
 		var finalizeRevealUI = _.debounce(function (err) {
+			function absoluteFromRelativeURL(url) {
+				// http://objectmix.com/javascript/352627-relative-url-absolute-url.html
+				return $('<a href="' + url + '"></a>').get(0).href;
+			}
+
 			if (err) {
 				notifyErrorOnTab('reveal');
 				$('#buttons-reveal').show();
@@ -566,7 +560,9 @@ define([
 					// http://grizzlyweb.com/webmaster/javascripts/refresh.asp
 					window.location.reload(true);
 				} else {
-					window.navigate(clientCommon.absoluteFromRelativeURL(PARAMS.show_url));
+					// http://stackoverflow.com/a/948242/211160
+					windowlocation.href =
+						clientCommon.absoluteFromRelativeURL(PARAMS.show_url);
 				}
 			}
 		}, 2000);

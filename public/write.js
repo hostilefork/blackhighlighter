@@ -23,17 +23,17 @@
 
 // Main script file, brings page to life in $(document).onload handler
 define([
+	// libs which return exported objects to capture in the function prototype
 	'jquery',
 	'underscore',
-	'client-server-common',
+	'blackhighlighter',
 	'client-common',
-	// these libs have no results, purely additive...
-	'sha256',
+
+	// these libs have no results, they just add to the environment (via shims)
 	'jqueryui',
 	'json2',
-	'blackhighlighter',
 	'actual'
-], function($, _, common, clientCommon, SHA256) {
+], function($, _, blackhighlighter, clientCommon) {
 
 	// Theme all the button-type-things but not the <a href="#" ..> style
 	$("input:submit, button").button();
@@ -112,9 +112,7 @@ define([
 			var commit = $("#editor").blackhighlighter('option', 'commit');
 			if (commit) {
 				$('#json-commit').text(
-					common.escapeNonBreakingSpacesInString(
-						JSON.stringify(commit, null, ' ')
-					)
+					JSON.stringify(commit, null, ' ')
 				);
 			}
 		}
@@ -210,13 +208,14 @@ define([
 					var certString = '';					
 					certString += '/* BEGIN REVEAL CERTIFICATE */' + '\n';
 					certString += '/* To use this, visit: http://' 
-						+ document.location.host + common.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
+						+ document.location.host + blackhighlighter.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
 						+ ' */' + '\n';
 
-					var protection = _.values(protections)[0];
-					certString += common.escapeNonBreakingSpacesInString(
-						JSON.stringify(protection, null, ' ')
-					) + '\n';
+					var certificate = $("#editor").blackhighlighter(
+						'certificate', 'encode', _.values(protections)[0]
+					);
+
+					certString += certificate + '\n';
 					certString += '/* END REVEAL CERTIFICATE */';
 
 					$('#json-protected').text(certString);
@@ -270,7 +269,7 @@ define([
 			var commit = $("#editor").blackhighlighter('option', 'commit');
 
 			// The JSON response tells us where the show_url is for our new letter
-			var showUrl = common.makeShowUrl(PARAMS.base_url, commit.commit_id);
+			var showUrl = blackhighlighter.makeShowUrl(PARAMS.base_url, commit.commit_id);
 
 			$('#url-public').html( 
 				'<a href="http://' + document.location.host + showUrl + '" target="_blank">'
