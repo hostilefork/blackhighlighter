@@ -68,7 +68,9 @@ requirejs.config({
 	
 	// Note: do not include the '.js' at the end of these paths!
 	paths: {
-		'jquery-blackhighlighter': 'public/js/blackhighlighter/blackhighlighter',
+		'jquery-blackhighlighter':
+			'jquery-blackhighlighter/jquery-blackhighlighter',
+
 		'jquery': 'jquery-fake'
 	}
 });
@@ -315,6 +317,9 @@ var common = requirejs('jquery-blackhighlighter');
 
 // Serve out all files in the public directory statically
 // http://stackoverflow.com/questions/5924072/
+app.use("/public/js/jquery-blackhighlighter",
+	express.static(__dirname + '/jquery-blackhighlighter')
+);
 app.use("/public", express.static(__dirname + '/public'));
 
 

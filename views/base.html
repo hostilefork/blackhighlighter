@@ -62,7 +62,7 @@ You will probably want to copy and customize this file.
 	to modernize it further yet.
 {% endcomment %}
 		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/theme/jquery-ui-1.10.4.custom.css" rel="stylesheet" />
-		<link type="text/css" href="{{ LIBS_URL }}blackhighlighter/blackhighlighter.css" rel="stylesheet" />
+		<link type="text/css" href="{{ LIBS_URL }}jquery-blackhighlighter/jquery-blackhighlighter.css" rel="stylesheet" />
 
 		<link type="text/css" href="{{ BLACKHIGHLIGHTER_MEDIA_URL }}demo.css" rel="stylesheet" />
 {% endblock css %}
@@ -92,7 +92,8 @@ You will probably want to copy and customize this file.
 
 			actual: '{{ LIBS_URL }}jquery-actual/jquery.actual',
 
-			blackhighlighter: '{{ LIBS_URL }}blackhighlighter/blackhighlighter',
+			blackhighlighter:
+				'{{ LIBS_URL }}jquery-blackhighlighter/jquery-blackhighlighter',
 
 			main: '{{ MAIN_SCRIPT }}'
         },
