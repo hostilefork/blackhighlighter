@@ -336,6 +336,7 @@
 		});
 	}
 
+
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -1152,29 +1153,37 @@
 		// REVIEW: Why are these showing up?  Is it this?
 		// http://markmail.org/message/uuoieaafwn6h6gxz
 		// http://reference.sitepoint.com/javascript/Node/normalize
-		_killEmptyTextNodesRecursivePreorder: function(node) {
+		_killEmptyTextNodesRecursivePreorder: function($node) {
 			var instance = this;
 
 			// http://www.jslab.dk/articles/non.recursive.preorder.traversal.part2
-			if ((node.nodeType == Node.TEXT_NODE) && (node.data === "")) {
-				$(node).remove();
+			if (
+				($node.get(0).nodeType == Node.TEXT_NODE)
+				&& (node.val() === "")
+			) {
+				$node.remove();
 			} else {
-				$.each(node.childNodes, function(idx, childNode) {
-					instance._killEmptyTextNodesRecursivePreorder(childNode);
+				$.each($node.children(), function(idx, child) {
+					var $child = $(child);
+					instance._killEmptyTextNodesRecursivePreorder($child);
 				});
 			}
 		},
 
 		_normalizeProtectionsInSubtree: function(elm) {
-			// Normalize protected spans so that ones sitting adjacent to each other
-			// are unified into a single protected span
+			// Normalize protected spans so that ones sitting adjacent to each
+			// other are unified into a single protected span
 			var deleteSpans = [];
 			$(elm).find('span').filter('.protected').each(function(i) {
 				// REVIEW: short circuit if this is in deleteSpans?
 				
 				var current = this.nextSibling;
-				while ((current !== null) && (current.nodeType == Node.ELEMENT_NODE) &&
-						(current.tagName.toLowerCase() == 'span') && $(current).hasClass('protected')) {
+				while (
+					(current !== null)
+					&& (current.nodeType == Node.ELEMENT_NODE)
+					&& (current.tagName.toLowerCase() == 'span')
+					&& $(current).hasClass('protected')
+				) {
 					$(current).contents().remove().appendTo(this);
 					this.normalize();
 					deleteSpans.push(current);
@@ -1194,14 +1203,14 @@
 				throw "trying to unprotect a non-protected span";
 			}
 
-			var parent = $span.parent().get(0);
+			var $parent = $span.parent();
 			$span.replaceWith($span.contents().remove());
 			// We shouldn't need to remove the event handler, it will GC
 			/* $span.off('click', this._unprotectSpan); */
 
 			// Merge all text nodes under the parent
-			parent.normalize();
-			this._killEmptyTextNodesRecursivePreorder(parent);
+			$parent.get(0).normalize();
+			this._killEmptyTextNodesRecursivePreorder($parent);
 		},
 
 		_clearUserSelection: function() {
@@ -1773,18 +1782,18 @@
 
 			var protectionsByHash = {};
 
-			for (var protectionNameToHash in protectionsByName) {
-				if (protectionsByName.hasOwnProperty(protectionNameToHash)) {
-					var protectionToHash = protectionsByName[protectionNameToHash];
-					var saltToHash = exports.stripHyphensFromUUID(
+			for (var protectionName in protectionsByName) {
+				if (protectionsByName.hasOwnProperty(protectionName)) {
+					var protectionToHash = protectionsByName[protectionName];
+					var salt = exports.stripHyphensFromUUID(
 						exports.generateRandomUUID()
 					);
-					var contents = saltToHash;
+					var contents = salt;
 					$.each(protectionToHash.redactions, function(idx, redaction) {
 						contents += redaction;
 					});
 					
-					protectionToHash.salt = saltToHash;
+					protectionToHash.salt = salt;
 					protectionToHash.sha256 = hex_sha256(contents);
 					
 					protectionsByHash[protectionToHash.sha256] = protectionToHash;
