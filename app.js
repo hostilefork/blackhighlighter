@@ -95,16 +95,6 @@ var _ = require('underscore')._;
 // http://stackoverflow.com/questions/22138759/
 var Q = require('q');
 
-// When I started the node.js port of Blackhighlighter from Python, I just
-// went ahead and tried to reuse the little SHA256 JavaScript file I had been
-// using in the browser (instead of Python's crypto).  However, that file
-// is not in the AMD Module format and it's more trouble than it's worth to
-// try and share the crypto code between server and browser.  Probably
-// better to use multiple implementations anyway.  So client-server-common
-// does not do the hashing; it just canonizes data so that the client and
-// server can call the SHA256 of their choice.
-var crypto = require('crypto');
-
 
 // 
 // BASIC HTTP SETUP
@@ -161,7 +151,7 @@ var mongoConnectURI = (
 //
 function ClientError(msg) {
 	// http://stackoverflow.com/a/13294728/211160
-	if (!(this instanceof ClientError)){ return ClientError(msg); }
+	if (!(this instanceof ClientError)){ return new ClientError(msg); }
 
 	Error.call(this);
 	Error.captureStackTrace(this, ClientError);
@@ -531,12 +521,12 @@ function showOrVerify(req, res, tabstate) {
 }
 
 
-app.get('/verify/:commit_id([0-9a-f]+)$', function (req, res) {
+app.get('/v/:commit_id([0-9A-Za-z~_\-]+)$', function (req, res) {
 	showOrVerify(req, res, 'verify');
 });
 
 
-app.get('/show/:commit_id([0-9a-f]+)$', function (req, res) {
+app.get('/s/:commit_id([0-9A-Za-z~_\-]+)$', function (req, res) {
 	showOrVerify(req, res, 'show');
 });
 
@@ -611,12 +601,7 @@ app.post('/commit/$', function (req, res) {
 		// mongodb JS driver knows about Date()?
 		// or do we need to use the .toJSON() method?
 		commit.commit_date = requestTime;
-
-		var shasum = crypto.createHash('sha256');
-		// options are utf8, ascii, binary... which to use?
-		// binary is default if input is a string...
-		shasum.update(common.canonicalJsonFromCommit(commit), 'binary');
-		commit.commit_id = shasum.digest('hex');
+		commit.commit_id = common.commitIdFromCommit(commit);
 		return Q.ninvoke(coll, "insert", commit, {safe: true});
 
 	}).then(function (records) {
@@ -699,9 +684,7 @@ app.post('/reveal/$', function (req, res) {
 	});
 
 	// Now make sure the reveal isn't lying about its contents hash
-	var shasum = crypto.createHash('sha256');
-	shasum.update(common.canonicalStringFromReveal(reveal), 'binary');
-	var actualHash = shasum.digest('hex');
+	var actualHash = common.revealIdFromReveal(reveal);
 	if (actualHash != reveal.sha256) {
 		throw ClientError(
 			'Actual reveal content hash is ' + actualHash

@@ -13,8 +13,6 @@ This is an attempt to list all the third-party components used by the Blackhighl
 
 * [Q Promise Library](https://github.com/kriskowal/q) *(MIT license)*
 
-* [NPM crypto package](https://www.npmjs.org/package/crypto) *(BSD license)*
-
 * [underscore.js](http://underscorejs.org/) *(MIT license)*
 
 

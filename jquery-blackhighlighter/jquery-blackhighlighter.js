@@ -81,36 +81,36 @@
 	function b64ToUint6 (nChr) {
 
 	  return nChr > 64 && nChr < 91 ?
-	      nChr - 65
-	    : nChr > 96 && nChr < 123 ?
-	      nChr - 71
-	    : nChr > 47 && nChr < 58 ?
-	      nChr + 4
-	    : nChr === 43 ?
-	      62
-	    : nChr === 47 ?
-	      63
-	    :
-	      0;
+		  nChr - 65
+		: nChr > 96 && nChr < 123 ?
+		  nChr - 71
+		: nChr > 47 && nChr < 58 ?
+		  nChr + 4
+		: nChr === 43 ?
+		  62
+		: nChr === 47 ?
+		  63
+		:
+		  0;
 
 	}
 
 	function base64DecToArr (sBase64, nBlocksSize) {
 
 	  var
-	    sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, ""), nInLen = sB64Enc.length,
-	    nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);
+		sB64Enc = sBase64.replace(/[^A-Za-z0-9\+\/]/g, ""), nInLen = sB64Enc.length,
+		nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);
 
 	  for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {
-	    nMod4 = nInIdx & 3;
-	    nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
-	    if (nMod4 === 3 || nInLen - nInIdx === 1) {
-	      for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
-	        taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;
-	      }
-	      nUint24 = 0;
+		nMod4 = nInIdx & 3;
+		nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;
+		if (nMod4 === 3 || nInLen - nInIdx === 1) {
+		  for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {
+			taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;
+		  }
+		  nUint24 = 0;
 
-	    }
+		}
 	  }
 
 	  return taBytes;
@@ -121,17 +121,17 @@
 	function uint6ToB64 (nUint6) {
 
 	  return nUint6 < 26 ?
-	      nUint6 + 65
-	    : nUint6 < 52 ?
-	      nUint6 + 71
-	    : nUint6 < 62 ?
-	      nUint6 - 4
-	    : nUint6 === 62 ?
-	      43
-	    : nUint6 === 63 ?
-	      47
-	    :
-	      65;
+		  nUint6 + 65
+		: nUint6 < 52 ?
+		  nUint6 + 71
+		: nUint6 < 62 ?
+		  nUint6 - 4
+		: nUint6 === 62 ?
+		  43
+		: nUint6 === 63 ?
+		  47
+		:
+		  65;
 
 	}
 
@@ -140,13 +140,13 @@
 	  var nMod3 = 2, sB64Enc = "";
 
 	  for (var nLen = aBytes.length, nUint24 = 0, nIdx = 0; nIdx < nLen; nIdx++) {
-	    nMod3 = nIdx % 3;
-	    if (nIdx > 0 && (nIdx * 4 / 3) % 76 === 0) { sB64Enc += "\r\n"; }
-	    nUint24 |= aBytes[nIdx] << (16 >>> nMod3 & 24);
-	    if (nMod3 === 2 || aBytes.length - nIdx === 1) {
-	      sB64Enc += String.fromCharCode(uint6ToB64(nUint24 >>> 18 & 63), uint6ToB64(nUint24 >>> 12 & 63), uint6ToB64(nUint24 >>> 6 & 63), uint6ToB64(nUint24 & 63));
-	      nUint24 = 0;
-	    }
+		nMod3 = nIdx % 3;
+		if (nIdx > 0 && (nIdx * 4 / 3) % 76 === 0) { sB64Enc += "\r\n"; }
+		nUint24 |= aBytes[nIdx] << (16 >>> nMod3 & 24);
+		if (nMod3 === 2 || aBytes.length - nIdx === 1) {
+		  sB64Enc += String.fromCharCode(uint6ToB64(nUint24 >>> 18 & 63), uint6ToB64(nUint24 >>> 12 & 63), uint6ToB64(nUint24 >>> 6 & 63), uint6ToB64(nUint24 & 63));
+		  nUint24 = 0;
+		}
 	  }
 
 	  return sB64Enc.substr(0, sB64Enc.length - 2 + nMod3) + (nMod3 === 2 ? '' : nMod3 === 1 ? '=' : '==');
@@ -160,22 +160,22 @@
 	  var sView = "";
 
 	  for (var nPart, nLen = aBytes.length, nIdx = 0; nIdx < nLen; nIdx++) {
-	    nPart = aBytes[nIdx];
-	    sView += String.fromCharCode(
-	      nPart > 251 && nPart < 254 && nIdx + 5 < nLen ? /* six bytes */
-	        /* (nPart - 252 << 32) is not possible in ECMAScript! So...: */
-	        (nPart - 252) * 1073741824 + (aBytes[++nIdx] - 128 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
-	      : nPart > 247 && nPart < 252 && nIdx + 4 < nLen ? /* five bytes */
-	        (nPart - 248 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
-	      : nPart > 239 && nPart < 248 && nIdx + 3 < nLen ? /* four bytes */
-	        (nPart - 240 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
-	      : nPart > 223 && nPart < 240 && nIdx + 2 < nLen ? /* three bytes */
-	        (nPart - 224 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
-	      : nPart > 191 && nPart < 224 && nIdx + 1 < nLen ? /* two bytes */
-	        (nPart - 192 << 6) + aBytes[++nIdx] - 128
-	      : /* nPart < 127 ? */ /* one byte */
-	        nPart
-	    );
+		nPart = aBytes[nIdx];
+		sView += String.fromCharCode(
+		  nPart > 251 && nPart < 254 && nIdx + 5 < nLen ? /* six bytes */
+			/* (nPart - 252 << 32) is not possible in ECMAScript! So...: */
+			(nPart - 252) * 1073741824 + (aBytes[++nIdx] - 128 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+		  : nPart > 247 && nPart < 252 && nIdx + 4 < nLen ? /* five bytes */
+			(nPart - 248 << 24) + (aBytes[++nIdx] - 128 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+		  : nPart > 239 && nPart < 248 && nIdx + 3 < nLen ? /* four bytes */
+			(nPart - 240 << 18) + (aBytes[++nIdx] - 128 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+		  : nPart > 223 && nPart < 240 && nIdx + 2 < nLen ? /* three bytes */
+			(nPart - 224 << 12) + (aBytes[++nIdx] - 128 << 6) + aBytes[++nIdx] - 128
+		  : nPart > 191 && nPart < 224 && nIdx + 1 < nLen ? /* two bytes */
+			(nPart - 192 << 6) + aBytes[++nIdx] - 128
+		  : /* nPart < 127 ? */ /* one byte */
+			nPart
+		);
 	  }
 
 	  return sView;
@@ -189,8 +189,8 @@
 	  /* mapping... */
 
 	  for (var nMapIdx = 0; nMapIdx < nStrLen; nMapIdx++) {
-	    nChr = sDOMStr.charCodeAt(nMapIdx);
-	    nArrLen += nChr < 0x80 ? 1 : nChr < 0x800 ? 2 : nChr < 0x10000 ? 3 : nChr < 0x200000 ? 4 : nChr < 0x4000000 ? 5 : 6;
+		nChr = sDOMStr.charCodeAt(nMapIdx);
+		nArrLen += nChr < 0x80 ? 1 : nChr < 0x800 ? 2 : nChr < 0x10000 ? 3 : nChr < 0x200000 ? 4 : nChr < 0x4000000 ? 5 : 6;
 	  }
 
 	  aBytes = new Uint8Array(nArrLen);
@@ -198,41 +198,41 @@
 	  /* transcription... */
 
 	  for (var nIdx = 0, nChrIdx = 0; nIdx < nArrLen; nChrIdx++) {
-	    nChr = sDOMStr.charCodeAt(nChrIdx);
-	    if (nChr < 128) {
-	      /* one byte */
-	      aBytes[nIdx++] = nChr;
-	    } else if (nChr < 0x800) {
-	      /* two bytes */
-	      aBytes[nIdx++] = 192 + (nChr >>> 6);
-	      aBytes[nIdx++] = 128 + (nChr & 63);
-	    } else if (nChr < 0x10000) {
-	      /* three bytes */
-	      aBytes[nIdx++] = 224 + (nChr >>> 12);
-	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
-	      aBytes[nIdx++] = 128 + (nChr & 63);
-	    } else if (nChr < 0x200000) {
-	      /* four bytes */
-	      aBytes[nIdx++] = 240 + (nChr >>> 18);
-	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
-	      aBytes[nIdx++] = 128 + (nChr & 63);
-	    } else if (nChr < 0x4000000) {
-	      /* five bytes */
-	      aBytes[nIdx++] = 248 + (nChr >>> 24);
-	      aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
-	      aBytes[nIdx++] = 128 + (nChr & 63);
-	    } else /* if (nChr <= 0x7fffffff) */ {
-	      /* six bytes */
-	      aBytes[nIdx++] = 252 + /* (nChr >>> 32) is not possible in ECMAScript! So...: */ (nChr / 1073741824);
-	      aBytes[nIdx++] = 128 + (nChr >>> 24 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
-	      aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
-	      aBytes[nIdx++] = 128 + (nChr & 63);
-	    }
+		nChr = sDOMStr.charCodeAt(nChrIdx);
+		if (nChr < 128) {
+		  /* one byte */
+		  aBytes[nIdx++] = nChr;
+		} else if (nChr < 0x800) {
+		  /* two bytes */
+		  aBytes[nIdx++] = 192 + (nChr >>> 6);
+		  aBytes[nIdx++] = 128 + (nChr & 63);
+		} else if (nChr < 0x10000) {
+		  /* three bytes */
+		  aBytes[nIdx++] = 224 + (nChr >>> 12);
+		  aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+		  aBytes[nIdx++] = 128 + (nChr & 63);
+		} else if (nChr < 0x200000) {
+		  /* four bytes */
+		  aBytes[nIdx++] = 240 + (nChr >>> 18);
+		  aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+		  aBytes[nIdx++] = 128 + (nChr & 63);
+		} else if (nChr < 0x4000000) {
+		  /* five bytes */
+		  aBytes[nIdx++] = 248 + (nChr >>> 24);
+		  aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+		  aBytes[nIdx++] = 128 + (nChr & 63);
+		} else /* if (nChr <= 0x7fffffff) */ {
+		  /* six bytes */
+		  aBytes[nIdx++] = 252 + /* (nChr >>> 32) is not possible in ECMAScript! So...: */ (nChr / 1073741824);
+		  aBytes[nIdx++] = 128 + (nChr >>> 24 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 18 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 12 & 63);
+		  aBytes[nIdx++] = 128 + (nChr >>> 6 & 63);
+		  aBytes[nIdx++] = 128 + (nChr & 63);
+		}
 	  }
 
 	  return aBytes;
@@ -270,32 +270,32 @@
 	function Gamma0256(x) {return (S(x, 7) ^ S(x, 18) ^ R(x, 3));}
 	function Gamma1256(x) {return (S(x, 17) ^ S(x, 19) ^ R(x, 10));}
 	function core_sha256 (m, l) {
-	    var K = new Array(0x428A2F98,0x71374491,0xB5C0FBCF,0xE9B5DBA5,0x3956C25B,0x59F111F1,0x923F82A4,0xAB1C5ED5,0xD807AA98,0x12835B01,0x243185BE,0x550C7DC3,0x72BE5D74,0x80DEB1FE,0x9BDC06A7,0xC19BF174,0xE49B69C1,0xEFBE4786,0xFC19DC6,0x240CA1CC,0x2DE92C6F,0x4A7484AA,0x5CB0A9DC,0x76F988DA,0x983E5152,0xA831C66D,0xB00327C8,0xBF597FC7,0xC6E00BF3,0xD5A79147,0x6CA6351,0x14292967,0x27B70A85,0x2E1B2138,0x4D2C6DFC,0x53380D13,0x650A7354,0x766A0ABB,0x81C2C92E,0x92722C85,0xA2BFE8A1,0xA81A664B,0xC24B8B70,0xC76C51A3,0xD192E819,0xD6990624,0xF40E3585,0x106AA070,0x19A4C116,0x1E376C08,0x2748774C,0x34B0BCB5,0x391C0CB3,0x4ED8AA4A,0x5B9CCA4F,0x682E6FF3,0x748F82EE,0x78A5636F,0x84C87814,0x8CC70208,0x90BEFFFA,0xA4506CEB,0xBEF9A3F7,0xC67178F2);
-	    var HASH = new Array(0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19);
-	    var W = new Array(64);
-	    var a, b, c, d, e, f, g, h, i, j;
-	    var T1, T2;
-	    /* append padding */
-	    m[l >> 5] |= 0x80 << (24 - l % 32);
-	    m[((l + 64 >> 9) << 4) + 15] = l;
-	    for ( var i = 0; i<m.length; i+=16 ) {
-	        a = HASH[0]; b = HASH[1]; c = HASH[2]; d = HASH[3]; e = HASH[4]; f = HASH[5]; g = HASH[6]; h = HASH[7];
-	        for ( var j = 0; j<64; j++) {
-	            if (j < 16) W[j] = m[j + i];
-	            else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
-	            T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
-	            T2 = safe_add(Sigma0256(a), Maj(a, b, c));
-	            h = g; g = f; f = e; e = safe_add(d, T1); d = c; c = b; b = a; a = safe_add(T1, T2);
-	        }
-	        HASH[0] = safe_add(a, HASH[0]); HASH[1] = safe_add(b, HASH[1]); HASH[2] = safe_add(c, HASH[2]); HASH[3] = safe_add(d, HASH[3]); HASH[4] = safe_add(e, HASH[4]); HASH[5] = safe_add(f, HASH[5]); HASH[6] = safe_add(g, HASH[6]); HASH[7] = safe_add(h, HASH[7]);
-	    }
-	    return HASH;
+		var K = new Array(0x428A2F98,0x71374491,0xB5C0FBCF,0xE9B5DBA5,0x3956C25B,0x59F111F1,0x923F82A4,0xAB1C5ED5,0xD807AA98,0x12835B01,0x243185BE,0x550C7DC3,0x72BE5D74,0x80DEB1FE,0x9BDC06A7,0xC19BF174,0xE49B69C1,0xEFBE4786,0xFC19DC6,0x240CA1CC,0x2DE92C6F,0x4A7484AA,0x5CB0A9DC,0x76F988DA,0x983E5152,0xA831C66D,0xB00327C8,0xBF597FC7,0xC6E00BF3,0xD5A79147,0x6CA6351,0x14292967,0x27B70A85,0x2E1B2138,0x4D2C6DFC,0x53380D13,0x650A7354,0x766A0ABB,0x81C2C92E,0x92722C85,0xA2BFE8A1,0xA81A664B,0xC24B8B70,0xC76C51A3,0xD192E819,0xD6990624,0xF40E3585,0x106AA070,0x19A4C116,0x1E376C08,0x2748774C,0x34B0BCB5,0x391C0CB3,0x4ED8AA4A,0x5B9CCA4F,0x682E6FF3,0x748F82EE,0x78A5636F,0x84C87814,0x8CC70208,0x90BEFFFA,0xA4506CEB,0xBEF9A3F7,0xC67178F2);
+		var HASH = new Array(0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19);
+		var W = new Array(64);
+		var a, b, c, d, e, f, g, h, i, j;
+		var T1, T2;
+		/* append padding */
+		m[l >> 5] |= 0x80 << (24 - l % 32);
+		m[((l + 64 >> 9) << 4) + 15] = l;
+		for ( var i = 0; i<m.length; i+=16 ) {
+			a = HASH[0]; b = HASH[1]; c = HASH[2]; d = HASH[3]; e = HASH[4]; f = HASH[5]; g = HASH[6]; h = HASH[7];
+			for ( var j = 0; j<64; j++) {
+				if (j < 16) W[j] = m[j + i];
+				else W[j] = safe_add(safe_add(safe_add(Gamma1256(W[j - 2]), W[j - 7]), Gamma0256(W[j - 15])), W[j - 16]);
+				T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
+				T2 = safe_add(Sigma0256(a), Maj(a, b, c));
+				h = g; g = f; f = e; e = safe_add(d, T1); d = c; c = b; b = a; a = safe_add(T1, T2);
+			}
+			HASH[0] = safe_add(a, HASH[0]); HASH[1] = safe_add(b, HASH[1]); HASH[2] = safe_add(c, HASH[2]); HASH[3] = safe_add(d, HASH[3]); HASH[4] = safe_add(e, HASH[4]); HASH[5] = safe_add(f, HASH[5]); HASH[6] = safe_add(g, HASH[6]); HASH[7] = safe_add(h, HASH[7]);
+		}
+		return HASH;
 	}
 	function str2binb (str) {
 	  var bin = Array();
 	  var mask = (1 << chrsz) - 1;
 	  for(var i = 0; i < str.length * chrsz; i += chrsz)
-	    bin[i>>5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i%32);
+		bin[i>>5] |= (str.charCodeAt(i / chrsz) & mask) << (24 - i%32);
 	  return bin;
 	}
 	function binb2hex (binarray) {
@@ -303,7 +303,7 @@
 	  var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
 	  var str = "";
 	  for (var i = 0; i < binarray.length * 4; i++) {
-	    str += hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8+4)) & 0xF) + hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8  )) & 0xF);
+		str += hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8+4)) & 0xF) + hex_tab.charAt((binarray[i>>2] >> ((3 - i%4)*8  )) & 0xF);
 	  }
 	  return str;
 	}
@@ -311,6 +311,53 @@
 
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+	//
+	// BASE64 + SHA256
+	//
+	// The strange internal format used by the SHA256 calculation represents
+	// the hash as an array of 8 integers.  We want to turn that into an
+	// array of bytes so we can Base64 encode it.
+	//
+	// Also, the default encoding for Base64 is not safe to use in URLs.
+	// This does the suggested substitutions:
+	//
+	//     '+' => '-'
+	//     '/' => '_'
+	//     '=' => '~'
+	//
+	// http://stackoverflow.com/a/5835352/211160
+	//
+
+	function intToByteArray(/*int*/num) {
+		if ((num & 0xFFFFFFFF) != num) {
+			throw Error("Integer out of range for intToByteArray");
+		}
+		var data = [];
+		for (var i = 0; i < 4; i++) {
+			data[i] = (num >> (i * 8)) & 0xff;
+		}
+		return data;
+	}
+
+	function urlencode_base64_sha256(s) {
+		var binb = core_sha256(str2binb(s),s.length * chrsz);
+		var bytes = [];
+		for (var i = 0; i < binb.length; i++) {
+			// http://stackoverflow.com/a/1374131/211160
+			bytes.push.apply(bytes, intToByteArray(binb[i]));
+		}
+		var str = base64EncArr(bytes);
+		str = str.replace(/\+/g, '-');
+		str = str.replace(/\//g, '_');
+		str = str.replace(/=/g, '~');
+		return str;
+	}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
 
 	//
 	// HTML ESCAPING
@@ -390,17 +437,21 @@
 	// http://stackoverflow.com/a/9329476/211160
 	//
 
-    var exports = {
+	var exports = {
 		
-		// URL api
-		makeCommitUrl: function(base_url) {
-			return base_url + 'commit/';
-		},
+		// These are URLs that get exposed to end users, and as they are
+		// already very long (base64 encodings of sha256) we try to keep
+		// them brief as possible.
 		makeVerifyUrl: function(base_url, commit_id) {
-			return base_url + 'verify/' + commit_id;
+			return base_url + 'v/' + commit_id;
 		},
 		makeShowUrl: function(base_url, commit_id) {
-			return base_url + 'show/' + commit_id;
+			return base_url + 's/' + commit_id;
+		},
+
+		// These are API points under the hood; no need to shorten them
+		makeCommitUrl: function(base_url) {
+			return base_url + 'commit/';
 		},
 		makeRevealUrl: function(base_url) {
 			return base_url + 'reveal/';
@@ -410,7 +461,6 @@
 		// UUID
 		// http://en.wikipedia.org/wiki/UUID
 		//
-
 		generateRandomUUID: function() {
 			// 128 bits of random data is the size of a Uuid
 			// http://bytes.com/groups/javascript/523253-how-create-Uuid-javascript
@@ -423,17 +473,26 @@
 				// if count is null or undefined, assume 1
 				var ret = '';
 				for (var index = 0; index < (count ? count : 1); index++) {
-					ret += (((1+Math.random()) * 0x10000)|0).toString(16).substring(1); 
+					ret += (((1 + Math.random()) * 0x10000) | 0)
+						.toString(16)
+						.substring(1); 
 				}
 				return ret;
 			}
 
-			return (fourHex(2)+'-'+fourHex()+'-'+fourHex()+'-'+fourHex()+'-'+fourHex(3));
+			return (
+				fourHex(2) + '-' 
+				+ fourHex() + '-'
+				+ fourHex() + '-'
+				+ fourHex() + '-' 
+				+ fourHex(3)
+			);
 		},
 
 		stripHyphensFromUUID: function(uuid) {
 			// standard Uuid format contains hyphens to improve readability
-			// freebase and other systems that use Uuids in URLs don't have the hyphens
+			// freebase and other systems that use Uuids in URLs don't have
+			// the hyphens
 			
 			return uuid.replace(/-/g, '');
 		},
@@ -584,20 +643,28 @@
 			return result;
 		},
 
-		canonicalStringFromReveal: function(reveal) {
+		canonicalJsonFromReveal: function(reveal) {
 			var contents = reveal.salt;
 			for (var index = 0; index < reveal.redactions.length; index++) {
 				var redactionSpan = reveal.redactions[index];
 				contents += redactionSpan;
 			}
 			return contents;
-		}
-    };
+		},
 
-    // Stop here if we don't have jQuery - all we want is the exports
-    if ($.isFakeJquery) {
-    	return exports;
-    }
+		commitIdFromCommit: function(commit) {
+			return urlencode_base64_sha256(this.canonicalJsonFromCommit(commit));
+		},
+
+		revealIdFromReveal: function(reveal) {
+			return urlencode_base64_sha256(this.canonicalJsonFromReveal(reveal));
+		}
+	};
+
+	// Stop here if we don't have jQuery - all we want is the exports
+	if ($.isFakeJquery) {
+		return exports;
+	}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -925,7 +992,7 @@
 					$el.after($('<br>'));
 					$el.remove();
 				} else {
-		 			$el.after($('<br>'));
+					$el.after($('<br>'));
 					$el.before($el.contents());
 					$el.remove();
 				}
@@ -1283,8 +1350,8 @@
 		},
 
 		_protectRangeIfApplicable: function(range) {
- 			var instance = this;
- 			
+			var instance = this;
+			
 			// Do inclusive test; if the common ancestor of the selection is
 			// not fully inside the blackhighlighter div, then some amount
 			// of the selection is outside.  A decision needs to be made
@@ -1368,11 +1435,11 @@
 			// http://stackoverflow.com/questions/16452127/
 			function indexIncludingTextNodes($node) {
 				var node = $node.get(0);
-			    var n = 0;
-			    while (node = node.previousSibling) {
-			        n++;
-			   	}
-			    return n;
+				var n = 0;
+				while (node = node.previousSibling) {
+					n++;
+				}
+				return n;
 			}
 
 			function redactFn (idx, el) {
@@ -1536,33 +1603,33 @@
 					$endContainer = $endContainer.parent();
 				}
 	 
-	 			// From this point on, the only text nodes we'll be processing
-	 			// will be redacted in their entirety.  $startContainer and
-	 			// $endContainer should be under sibling divs, so let's just
-	 			// check that to be sure.
+				// From this point on, the only text nodes we'll be processing
+				// will be redacted in their entirety.  $startContainer and
+				// $endContainer should be under sibling divs, so let's just
+				// check that to be sure.
 
-	 			if (!$startContainer.parent().is($endContainer.parent())) {
-	 				throw Error("Assertion failed: startContainer != endContainer");
-	 			}
+				if (!$startContainer.parent().is($endContainer.parent())) {
+					throw Error("Assertion failed: startContainer != endContainer");
+				}
 
-	 			if ($startContainer.is($endContainer)) {
-	 				$startContainer.contents().slice(startOffset, endOffset).each(redactFn);
-	 			} else {
-	 				// This is a div-spanning operation.  REVIEW: apply the
-	 				// redaction indicator to blank lines we cross in order
-	 				// to help with the unredaction of groups with
-	 				// continuity?
+				if ($startContainer.is($endContainer)) {
+					$startContainer.contents().slice(startOffset, endOffset).each(redactFn);
+				} else {
+					// This is a div-spanning operation.  REVIEW: apply the
+					// redaction indicator to blank lines we cross in order
+					// to help with the unredaction of groups with
+					// continuity?
 
-	 				$startContainer.contents().slice(startOffset).each(redactFn);
-	 				$endContainer.contents().slice(0, endOffset).each(redactFn);
-	 				$startContainer.nextUntil($endContainer).each(function (idx, div) {
-	 					var $div = $(div);
-	 					if (!$div.hasClass("zwnj-spacing-hack")) {
-	 						$(div).contents().each(redactFn);
-	 					}
-	 				});
-	 			}
-	 		}
+					$startContainer.contents().slice(startOffset).each(redactFn);
+					$endContainer.contents().slice(0, endOffset).each(redactFn);
+					$startContainer.nextUntil($endContainer).each(function (idx, div) {
+						var $div = $(div);
+						if (!$div.hasClass("zwnj-spacing-hack")) {
+							$(div).contents().each(redactFn);
+						}
+					});
+				}
+			}
 
 			// Our selection can potentially have two partial ranges
 			// Normalize the text nodes in each div so that if two Text nodes
@@ -1794,7 +1861,7 @@
 					});
 					
 					protectionToHash.salt = salt;
-					protectionToHash.sha256 = hex_sha256(contents);
+					protectionToHash.sha256 = urlencode_base64_sha256(contents);
 					
 					protectionsByHash[protectionToHash.sha256] = protectionToHash;
 				}
@@ -1864,9 +1931,9 @@
 						notifyErrorOnTab('commit', result.error.msg);
 					} else {
 						temp.commit.commit_date = result.commit.commit_date;
-						temp.commit.commit_id = hex_sha256(
-							exports.canonicalJsonFromCommit(temp.commit)
-						);
+						temp.commit.commit_id = 
+							exports.commitIdFromCommit(temp.commit)
+						;
 
 						if (temp.commit.commit_id != result.commit.commit_id) {
 							callback('Server accepted data but did not calculate same commit hash we did!', null);
@@ -1971,7 +2038,7 @@
 		seeProtection: function(protection, isFromServer) {
 
 			var actualHash =
-				hex_sha256(exports.canonicalStringFromReveal(protection));
+				exports.revealIdFromReveal(protection);
 			if (actualHash != protection.sha256) {
 				throw 'Invalid certificate: content hash is ' + actualHash 
 					+ ' while claimed hash is ' + protection.sha256;
@@ -2433,8 +2500,8 @@
 
 			document.execCommand('insertHtml', false, newText);
 
-		  	// cancel the original paste
-    		eventObj.preventDefault();
+			// cancel the original paste
+			eventObj.preventDefault();
 			return false;
 		});
 	});

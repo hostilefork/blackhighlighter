@@ -206,10 +206,13 @@ define([
 					// Review: clients shouldn't be generating this string
 
 					var certString = '';					
-					certString += '/* BEGIN REVEAL CERTIFICATE */' + '\n';
-					certString += '/* To use this, visit: http://' 
+					certString += '/* BEGIN REVEAL CERTIFICATE' + '\n';
+					certString += ' * To use this, visit:' + '\n';
+					certString += ' *' + '\n';
+					certString += ' * http://' 
 						+ document.location.host + blackhighlighter.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
-						+ ' */' + '\n';
+						+ '\n';
+					certString += ' */' + '\n';
 
 					var certificate = $("#editor").blackhighlighter(
 						'certificate', 'encode', _.values(protections)[0]
