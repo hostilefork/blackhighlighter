@@ -1,5 +1,5 @@
 //
-// blackhighlighter.js
+// jquery-blackhighlighter.js
 // Copyright (C) 2009-2014 HostileFork.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -731,8 +731,37 @@
 			this.protections = opts.protections;
 		}
 
+		// When the content of the text area is modified, we want to give
+		// an update notification to clients of the widget.
+		//
+		// REVIEW: Should we use the .trigger mechanism to offer all
+		// of our events, or is it better to pass the functions in as
+		// parameters to the config?
+		//
+		// http://stackoverflow.com/a/6263537/211160
+		//
+		this.$div.on('focus', function() {
+		    var $this = $(this);
+		    $this.data('before', $this.html());
+		    return $this;
+		}).on('blur keyup paste input', function() {
+			var instance = Blackhighlighter.getInstance(this);
+		    var $this = $(this);
+		    if ($this.data('before') !== $this.html()) {
+		        $this.data('before', $this.html());
+		        $this.trigger('change');
+		    }
+		    return $this;
+		});
+
 		// We need some kind of updating/event model so that clients can
-		// know at least if someone has redacted or unredacted...
+		// know at least if someone has redacted or unredacted...or typed
+		// into the widget.
+		this.$div.on('change', function() {
+			var instance = Blackhighlighter.getInstance(this);
+			instance.update();
+			return true;
+		});
 
 		if (opts.update) $div.bind("update.blackhighlighter", opts.update);
 	};
@@ -1005,27 +1034,25 @@
 			var $contents = this.$div.contents();
 			var $cur, $set, i;
 			$set = $();
-			if ($contents.length > 1) {
-				for (i = 0; i < $contents.length; i++) {
-					$cur = $contents.eq(i);
+			for (i = 0; i < $contents.length; i++) {
+				$cur = $contents.eq(i);
 
-					if ($cur.is("br")) {
-						if ($set.length > 0) {
-							$set.wrapAll("<div></div>");
-							$cur.remove();
-						} else {
-							// An actual line break.  Wrap in a span so that we
-							// don't have content as a direct child of the
-							// contenteditble (causes ugly selection UI)
-							$cur.replaceWith($('<div class="zwnj-spacing-hack">&zwnj;</div>'));
-						}
-						$set = $();
+				if ($cur.is("br")) {
+					if ($set.length > 0) {
+						$set.wrapAll("<div></div>");
+						$cur.remove();
 					} else {
-						$set = $set.add($cur);
+						// An actual line break.  Wrap in a span so that we
+						// don't have content as a direct child of the
+						// contenteditble (causes ugly selection UI)
+						$cur.replaceWith($('<div class="zwnj-spacing-hack">&zwnj;</div>'));
 					}
+					$set = $();
+				} else {
+					$set = $set.add($cur);
 				}
-				$set.wrapAll("<div></div>");
 			}
+			$set.wrapAll("<div></div>");
 
 			// REVIEW: IE has a "feature" where it will always turn things that
 			// look like hyperlinks or email addresses into anchors.  Seems
@@ -1062,13 +1089,15 @@
 			//
 			this.$div.children().each(function(idx, el) {
 				var $el = $(el);
-				if ($el.is("div") && (idx == 0)) {
-					$el.before($el.contents());
-					$el.remove();
-				} else if ($el.is("div") && $el.hasClass("zwnj-spacing-hack")) {
+				if ($el.is("div") && $el.hasClass("zwnj-spacing-hack")) {
 					$el.html($('<br>'));
 					$el.removeClass("zwnj-spacing-hack");
 				}
+				if ($el.is("div") && (idx == 0)) {
+					$el.before($el.contents());
+					$el.remove();
+				}
+				$el.get(0).normalize();
 				// Just leave it otherwise.
 			});
 		},
@@ -1691,11 +1720,31 @@
 
 		generateCommitAndProtections: function() {
 
-			// The editor must be cleaned up and switched into canonical mode
-			var modeSaved = this.mode;
-			this.setMode('protect');
+			if (!this.$div.text()) {
+				return {
+					commit: null,
+					protectionsByHash: null
+				}
+			}
 
 			var commit = {'spans': []};
+			var protectionsByHash = {};
+
+			if (this.mode === 'compose') {
+				// The editor must be switched into canonical mode, and this
+				// disrupts the DOM structure.  We return an answer of no
+				// protections and just the raw text, for now.
+				commit.spans.push(this.$div.text());
+				return {
+					commit: commit,
+					protectionsByHash: protectionsByHash
+				};
+			}
+
+			if (this.mode !== 'protect') {
+				throw "generateCommitAndProtections called in bad mode";
+			}
+
 			var protectedObjs = undefined;
 			
 			var protectionsByName = {};
@@ -1847,8 +1896,6 @@
 				processChild(this);			
 			});
 
-			var protectionsByHash = {};
-
 			for (var protectionName in protectionsByName) {
 				if (protectionsByName.hasOwnProperty(protectionName)) {
 					var protectionToHash = protectionsByName[protectionName];
@@ -1900,8 +1947,6 @@
 					commit = null;
 				}
 			}
-
-			this.setMode(modeSaved);
 
 			return {
 				commit: commit,

@@ -122,3 +122,15 @@ div.blackhighlighter-reveal span.verified {
 div.blackhighlighter-reveal span.revealed {
 	/* Don't confuse by showing already revealed info in different color */
 }
+
+
+/* INPUT PROMPTING */
+
+/* Use CSS2 compatible "title" attribute */
+/* http://stackoverflow.com/a/18368683/211160 */
+
+div.blackhighlighter-compose[title]:empty:before {
+	content: attr(title);
+	/* font-style: italic; */
+	color: #aaa;
+}

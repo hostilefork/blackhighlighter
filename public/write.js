@@ -106,17 +106,34 @@ define([
 	// open, you probably want to see it changing and are willing to pay for
 	// the slower performance.  If it's closed you don't pay for it.
 	function updateCommitPreviewIfNecessary() {
+		var mode = $("#editor").blackhighlighter('option', 'mode');
+
 		// can't just test for false if collapsed, since 0 is false!
-		if ($('#commit-json-accordion').accordion('option', 'active') === 0) {
-			$('#json-commit').empty();	
+		if (
+			(mode === 'protect')
+			&& ($('#commit-json-accordion').accordion('option', 'active') === 0)
+		) {
 			var commit = $("#editor").blackhighlighter('option', 'commit');
+			$('#json-commit').text(
+				JSON.stringify(commit, null, ' ')
+			);
+		}
+
+		if (mode === 'compose') {
+			// not necessarily the best way to expose whether there is content
+			// or not, but keeps us from having to make another API entry point
+			var commit = $("#editor").blackhighlighter('option', 'commit');
+
 			if (commit) {
-				$('#json-commit').text(
-					JSON.stringify(commit, null, ' ')
-				);
+				$('#tabs').tabs('enable', tabIndexForId('tabs-protect'));
+			} else {
+				$('#tabs').tabs('disable', tabIndexForId('tabs-protect'));
 			}
+			$("#tabs-compose button.next-step")
+				.button("option", "disabled", !commit);
 		}
 	}
+
 	$('#commit-json-accordion').on("accordionactivate", function(event, ui) {
 		// We don't update the json commit during redactions for performance
 		// reasons.  But if the user optens it, we do.  Because the check
@@ -130,6 +147,9 @@ define([
 		update: updateCommitPreviewIfNecessary
 	});
 	$('#editor').focus();
+
+	// Currently the update hook fires on any textual update...
+	updateCommitPreviewIfNecessary();
 
 	// http://www.siafoo.net/article/67
 	function closeEditorWarning() {
