@@ -8,7 +8,7 @@
 		"www.blackhighlighter.org"
 	],
 	"preferGlobal": "false",
-	"version": "0.0.1-157",
+	"version": "0.0.1-160",
 	"author": "Brian Dickens <brian@hostilefork.com>",
 	"description": "A basic walkthrough demo of the blackhighlighter system",
 	"repository": {
@@ -46,6 +46,7 @@
 	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
 	"files": [
 		"app.js",
+		"blackhighlighter.js",
 		"mytags.js",
 		"jquery-fake.js",
 		"public",
