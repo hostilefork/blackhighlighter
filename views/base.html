@@ -71,6 +71,17 @@ You will probably want to copy and customize this file.
 {% block scripts %}
 	<script type="text/javascript" src="{{ LIBS_URL }}require.js"></script>
     <script>
+    	document.addEventListener("DOMContentLoaded", function() {
+	    	// should really only be one element.  :-/
+			var bodies = document.getElementsByClassName("body");
+			bodies[0].setAttribute("class", "body preload");
+
+			var loaders = document.getElementsByClassName("loader");
+			loaders[0].setAttribute("style", "display: inline-block;");
+		});
+
+		var pageLoadStart = new Date();
+
     require.config({
         baseUrl: '{{ BLACKHIGHLIGHTER_MEDIA_URL }}',
 		
@@ -121,7 +132,19 @@ You will probably want to copy and customize this file.
     });
 
     require(['main'], function () {
-    	/* alert("everything loaded ok?"); */
+    	function endLoadingScreen() {
+    		$(".loader").hide();
+    		$("#body").removeClass("preload");
+    	}
+    	var minimumLoadMsec = 1500;
+
+    	var pageLoadEnd = new Date();
+    	var elapsedMsec = pageLoadEnd - pageLoadStart;
+    	if (elapsedMsec < minimumLoadMsec) {
+    		setTimeout(endLoadingScreen, minimumLoadMsec - elapsedMsec);
+    	} else {
+    		endLoadingScreen();
+    	}
     });
     
     // script "entry point"
@@ -134,6 +157,9 @@ You will probably want to copy and customize this file.
 
 	</head>
 	<body>
+	<div class="loader" style="display: none;">
+	</div>
+	<div id="body" class="body">
 
 {% block content %}
 	<p>Content</p>
@@ -152,5 +178,6 @@ You will probably want to copy and customize this file.
 
 	</div>
 
+	</div>
 	</body>
 </html>

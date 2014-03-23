@@ -100,6 +100,12 @@ div.tabs-content div.action-buttons {
 
 div.credits {
 	text-align: center;
+	color: #BBB;
+}
+
+div.credits a {
+	color: inherit;
+	font-weight: bold;
 }
 
 .indeterminate-progress {
@@ -117,4 +123,25 @@ div.leading-section li {
 
 div.action-buttons {
 	margin: 8px;
+}
+
+
+/* LOADING ANIMATION */
+
+div.loader {
+    width: 100%; 
+    position: absolute; 
+    top: 0; 
+    bottom: 0;         
+    left: 0; 
+    right: 0; 
+    display: block; 
+    height: 100%; 
+    z-index: 0; 
+    background: url(preload.gif) no-repeat center center; 
+    content: ""
+}
+
+div.preload {
+	display: none;
 }
