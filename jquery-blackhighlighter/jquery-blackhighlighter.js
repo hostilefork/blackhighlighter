@@ -1960,6 +1960,7 @@
 
 			var temp = this.generateCommitAndProtections();
 			var instance = this;
+			var clientDate = new Date();
 
 			// http://docs.jquery.com/Ajax/jQuery.ajax
 			$.ajax({
@@ -1973,7 +1974,7 @@
 				},
 				success: function(result) {
 					if (result.error) {
-						notifyErrorOnTab('commit', result.error.msg);
+						callback(result.error.msg);
 					} else {
 						temp.commit.commit_date = result.commit.commit_date;
 						temp.commit.commit_id = 
@@ -1981,7 +1982,36 @@
 						;
 
 						if (temp.commit.commit_id != result.commit.commit_id) {
-							callback('Server accepted data but did not calculate same commit hash we did!', null);
+							callback(
+								'Server gave back hash with signature '
+								+ result.commit.commit_id
+								+ ' but we calculated a signature of '
+								+ temp.commit.commit_id
+								+ " ... if you believe this may be acceptable "
+								+ " your message is viewable at: "
+								+ exports.makeShowUrl(
+									base_url,
+									result.commit.commit_id
+								)
+							);
+							return;
+						}
+
+						var serverDate = new Date(temp.commit.commit_date);
+						if (Math.abs(serverDate - clientDate)/1000 > 60) {
+							callback(
+								'Server signed data with timestamp '
+								+ serverDate.toUTCString()
+								+ " which doesn't match your browser's clock at "
+								+ clientDate.toUTCString()
+								+ " ... if you believe this may be acceptable "
+								+ " your message is viewable at: "
+								+ exports.makeShowUrl(
+									base_url,
+									result.commit.commit_id
+								)
+							);
+							return;
 						}
 
 						// Put the commit_id into the protection objects
@@ -2187,11 +2217,11 @@
 							
 						case 'notmodified':
 						case 'parsererror':
-							notifyErrorOnTab('Unexpected error code during Ajax POST: ' + textStatus);
+							callback('Unexpected error code during Ajax POST: ' + textStatus);
 							break;
 							
 						default:
-							notifyErrorOnTab('Unexpected error code during Ajax POST: ' + textStatus);
+							callback('Unexpected error code during Ajax POST: ' + textStatus);
 							break;
 					}
 				}

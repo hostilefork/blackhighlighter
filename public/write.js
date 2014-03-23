@@ -35,6 +35,12 @@ define([
 	'actual'
 ], function($, _, blackhighlighter, clientCommon) {
 
+	// We used to pass in a base URL in PARAMS.base_url, but now we go off
+	// of the browser's hostname and port for that...we could conceivably
+	// check to make sure the server and client are in agreement of what
+	// the server's base url is.
+	var base_url = "http://" + document.location.host + "/";
+
 	// Theme all the button-type-things but not the <a href="#" ..> style
 	$("input:submit, button").button();
 
@@ -50,7 +56,7 @@ define([
 		}[id];
 	}
 	
-	function notifyErrorOnTab(tabname, msg) {
+	function notifyErrorOnTab(tabname, err) {
 		var $tab = $("#tabs-" + tabname);
 		var message = "<span><b>" + err.toString() + "</b></span>";
 
@@ -229,9 +235,10 @@ define([
 					certString += '/* BEGIN REVEAL CERTIFICATE' + '\n';
 					certString += ' * To use this, visit:' + '\n';
 					certString += ' *' + '\n';
-					certString += ' * http://' 
-						+ document.location.host + blackhighlighter.makeVerifyUrl(PARAMS.base_url, commit.commit_id) 
-						+ '\n';
+					certString += ' * ' + blackhighlighter.makeVerifyUrl(
+						base_url, 
+						commit.commit_id
+					) + '\n';
 					certString += ' */' + '\n';
 
 					var certificate = $("#editor").blackhighlighter(
@@ -287,16 +294,20 @@ define([
 			$('#buttons-protect').show();
 			
 			$('#tabs').tabs('enable', tabIndexForId('tabs-compose'));
+			notifyErrorOnTab('protect', err);
 		} else {
 
 			var commit = $("#editor").blackhighlighter('option', 'commit');
 
 			// The JSON response tells us where the show_url is for our new letter
-			var showUrl = blackhighlighter.makeShowUrl(PARAMS.base_url, commit.commit_id);
+			var showUrl = blackhighlighter.makeShowUrl(
+				base_url,
+				commit.commit_id
+			);
 
 			$('#url-public').html( 
-				'<a href="http://' + document.location.host + showUrl + '" target="_blank">'
-				+ "http://" + document.location.host + showUrl
+				'<a href="' + showUrl + '" target="_blank">'
+				+ showUrl
 				+ '</a>'
 			);
 
@@ -328,7 +339,9 @@ define([
 
 		// This should probably be async?  Should take a server as an
 		// optional parameter, maybe default to blackhighlighter.org?
-		$("#editor").blackhighlighter('makecommitment', PARAMS.base_url, finalizeCommitUI);
-
+		$("#editor").blackhighlighter('makecommitment',
+			base_url,
+			finalizeCommitUI
+		);
 	});
 });

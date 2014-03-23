@@ -33,7 +33,13 @@ define([
 	'expanding',
 	'actual'
 ], function($, _, blackhighlighter, clientCommon) {
-	
+
+	// We used to pass in a base URL in PARAMS.base_url, but now we go off
+	// of the browser's hostname and port for that...we could conceivably
+	// check to make sure the server and client are in agreement of what
+	// the server's base url is.
+	var base_url = "http://" + document.location.host + "/";
+
 	// Theme all the button-type-things but not the <a href="#" ..> style
 	$("input:submit, button").button();
 
@@ -549,12 +555,14 @@ define([
 				$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
 				$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
 				
-				// we only hide the progress bar in the error case, because otherwise we
-				// want the animation to stick around until the redirect has completed
+				// we only hide the progress bar in the error case, because 
+				// otherwise we want the animation to stick around until the
+				// redirect has completed
 				$('#progress-reveal').hide();
 			} else {
 				// We want to redirect to the "show" page for this letter
-				// Which means we have to reload if we were already on the letter's "show" URL
+				// Which means we have to reload if we were already on the
+				// letter's "show" URL
 				if (PARAMS.tabstate == 'show') {
 					// Reload semantics vary in JavaScript and browser versions
 					// http://grizzlyweb.com/webmaster/javascripts/refresh.asp
@@ -562,7 +570,9 @@ define([
 				} else {
 					// http://stackoverflow.com/a/948242/211160
 					windowlocation.href =
-						clientCommon.absoluteFromRelativeURL(PARAMS.show_url);
+						blackhighlighter.makeShowUrl(
+							base_url, PARAMS.commit.commit_id
+						);
 				}
 			}
 		}, 2000);
@@ -574,6 +584,8 @@ define([
 		$('#buttons-reveal').hide();
 		$('#reveal-json-accordion').hide();
 		
-		$('#editor').blackhighlighter('revealsecret', PARAMS.base_url, finalizeRevealUI);
+		$('#editor').blackhighlighter(
+			'revealsecret', base_url, finalizeRevealUI
+		);
 	});
 });

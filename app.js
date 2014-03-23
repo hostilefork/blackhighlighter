@@ -278,7 +278,10 @@ function showOrVerify(req, res, tabstate) {
 				, commit: commit
 				, revealed_certificates: reveals
 				, public_html:
-					blackhighlighter.generateHtmlFromCommitAndReveals(commit, reveals)
+					blackhighlighter.generateHtmlFromCommitAndReveals(
+						commit,
+						reveals
+					)
 			});
 		}
 	});
