@@ -459,11 +459,11 @@ define([
 	};
 	*/
 
-	$(".previous-step").on('click', function(eventObj) {
+	$(".previous-step").on('click', function(event) {
 		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) - 1);
 	});
 
-	$(".next-step").on('click', function(eventObj) {
+	$(".next-step").on('click', function(event) {
 		$('#tabs').tabs('option', 'active', tabIndexForId(lastTabId) + 1);
 	});
 	
@@ -541,7 +541,7 @@ define([
 			accordionContentForId(reveal.sha256).empty().append(spanPart);*/
 
 
-	$("#reveal-button").on('click', function(eventObj) {
+	$("#reveal-button").on('click', function(event) {
 
 		var finalizeRevealUI = _.debounce(function (err) {
 			function absoluteFromRelativeURL(url) {

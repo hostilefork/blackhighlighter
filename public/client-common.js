@@ -78,7 +78,7 @@ define(['jquery', 'underscore'], function($, _){
 		    return h;
 		},
 
-		resizeListener: function(eventObj) {
+		resizeListener: function(event) {
 			// We want some leading text before the boxes containing data, but we
 			// want them to be the same size.  We can get their height by default
 			// and then style them to have the height of the maximum of any of them.

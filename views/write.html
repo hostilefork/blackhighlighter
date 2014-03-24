@@ -39,15 +39,6 @@ blackhighlighter|WRITE
 
 {% block scripts %}
 	{% parent %} {# inherit parent scripts, do not overwrite them! #}
-	
-	<!-- Compatibility Layer so that Internet Explorer will support W3C ranges -->
-	<!-- http://code.google.com/p/ierange/ -->
-	<!-- NOTE: Conditional comment is actually an IE "feature" -->
-	<!-- http://www.positioniseverything.net/articles/cc-plus.html -->
-    <!--[if IE]>
-	<script src="{{ LIBS_URL }}ierange-m2.js" type="text/javascript" ></script>
-    <![endif]-->
-
 {% endblock scripts %}
 
 

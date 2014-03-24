@@ -1,4 +1,9 @@
 <!doctype html>
+<!-- http://stackoverflow.com/a/11846837/211160 -->
+<!--[if lt IE 7]> <html lang="en" class="ie lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>    <html lang="en" class="ie lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>    <html lang="en" class="ie lt-ie9"> <![endif]-->
+<!--[if gt IE 8]> <html lang="en" class="ie"> <![endif]-->
 <html lang="en">
 
 {# This is a swig-templated HTML file #}
@@ -54,13 +59,6 @@ You will probably want to copy and customize this file.
 
 
 {% block css %}
-{% comment %}
-	In 2009, this was kind of my first big "web UI" application attempt.  I
-	pretty much copypasta'd the CSS to get layouts that came from people who
-	seemed to know what they were doing, and the one I found used YUI CSS.
-	I've since removed that dependency, but haven't really gone out hunting
-	to modernize it further yet.
-{% endcomment %}
 		<link type="text/css" href="{{ LIBS_URL }}jquery-ui/theme/jquery-ui-1.10.4.custom.css" rel="stylesheet" />
 		<link type="text/css" href="{{ LIBS_URL }}jquery-blackhighlighter/jquery-blackhighlighter.css" rel="stylesheet" />
 
@@ -71,14 +69,16 @@ You will probably want to copy and customize this file.
 {% block scripts %}
 	<script type="text/javascript" src="{{ LIBS_URL }}require.js"></script>
     <script>
-    	document.addEventListener("DOMContentLoaded", function() {
-	    	// should really only be one element.  :-/
-			var bodies = document.getElementsByClassName("body");
-			bodies[0].setAttribute("class", "body preload");
+    	if (document.addEventListener) {
+	    	document.addEventListener("DOMContentLoaded", function() {
+		    	// should really only be one element.  :-/
+				var bodies = document.getElementsByClassName("body");
+				bodies[0].setAttribute("class", "body preload");
 
-			var loaders = document.getElementsByClassName("loader");
-			loaders[0].setAttribute("style", "display: inline-block;");
-		});
+				var loaders = document.getElementsByClassName("loader");
+				loaders[0].setAttribute("style", "display: inline-block;");
+			});
+		}
 
 		var pageLoadStart = new Date();
 
@@ -92,12 +92,13 @@ You will probably want to copy and customize this file.
 
 			underscore: '{{ LIBS_URL }}underscore-min',
 
-			// http://www.webtoolkit.info/javascript-sha256.html
-			sha256: '{{ LIBS_URL }}sha256',
-
 			// Although jQuery has a parse, it doesn't have stringify...
 			// Though modern browsers include JSON.  Review inclusion.
 			json2: '{{ LIBS_URL }}json2', 
+
+			// Polyfill that gives old versions of IE range selection
+
+			ierange: '{{ LIBS_URL }}ierange/ierange-m2-packed', 
 
 			expanding: '{{ LIBS_URL }}jquery-expanding/expanding',
 
@@ -131,7 +132,7 @@ You will probably want to copy and customize this file.
 
     });
 
-    require(['main'], function () {
+	function finishLoading() {
     	function endLoadingScreen() {
     		$(".loader").hide();
     		$("#body").removeClass("preload");
@@ -145,6 +146,17 @@ You will probably want to copy and customize this file.
     	} else {
     		endLoadingScreen();
     	}
+	}
+
+    require(['main'], function () {
+    	/* http://stackoverflow.com/a/11846837/211160 */
+    	if ($('html.lt-ie9').size()) {
+    		require(['ierange'], function() {
+        		finishLoading();
+    		});
+		} else {
+			finishLoading();
+		}
     });
     
     // script "entry point"

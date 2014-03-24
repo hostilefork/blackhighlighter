@@ -276,12 +276,12 @@ define([
 
 	// These can be used on anything, <a href="#"> or <button>...
 
-	$(".previous-step").on('click', function(eventObj) {
+	$(".previous-step").on('click', function(event) {
 		var oldTabId = $('#tabs').tabs('option', 'active');
 		$('#tabs').tabs('option', 'active', oldTabId - 1);
 	});
 
-	$(".next-step").on('click', function(eventObj) {
+	$(".next-step").on('click', function(event) {
 		var oldTabId = $('#tabs').tabs('option', 'active');
 		$('#tabs').tabs('option', 'active', oldTabId + 1);
 	});
@@ -317,7 +317,7 @@ define([
 		}
 	}, 2000);
 	
-	$("#commit-button").button().on('click', function(eventObj) {
+	$("#commit-button").button().on('click', function(event) {
 		if ($("#editor").blackhighlighter('option', 'mode') === 'show') {
 			throw "Duplicate commit attempt detected.";
 		}

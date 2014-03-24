@@ -741,17 +741,17 @@
 		// http://stackoverflow.com/a/6263537/211160
 		//
 		this.$div.on('focus', function() {
-		    var $this = $(this);
-		    $this.data('before', $this.html());
-		    return $this;
+			var $this = $(this);
+			$this.data('before', $this.html());
+			return $this;
 		}).on('blur keyup paste input', function() {
 			var instance = Blackhighlighter.getInstance(this);
-		    var $this = $(this);
-		    if ($this.data('before') !== $this.html()) {
-		        $this.data('before', $this.html());
-		        $this.trigger('change');
-		    }
-		    return $this;
+			var $this = $(this);
+			if ($this.data('before') !== $this.html()) {
+				$this.data('before', $this.html());
+				$this.trigger('change');
+			}
+			return $this;
 		});
 
 		// We need some kind of updating/event model so that clients can
@@ -936,16 +936,49 @@
 			}
 		},
 		
+		// http://stackoverflow.com/a/22339405/211160
+		_safeNormalize: function (element) {
+			function collectTextNodes(textNode) {
+			  	// while there are text siblings, concatenate into the first   
+				while (textNode.nextSibling) {
+					var next = textNode.nextSibling;
+					if (next.nodeType == 3 || next.nodeType == 4) {
+						textNode.nodeValue += next.nodeValue;
+						textNode.parentNode.removeChild(next);
+					} else {
+						// Stop if not a text node
+						return;
+					}
+				}
+			}
+
+			var node = element.firstChild;
+
+			// Traverse siblings, call normalise for elements and 
+			// collectTextNodes for text nodes   
+			while (node && node.nextSibling) {
+				if (node.nodeType == 1) {
+					this._safeNormalize(node);
+				} else if (node.nodeType == 3) {
+					collectTextNodes(node);
+				}
+				node = node.nextSibling;
+			}
+		},
+
 		_removeSuggestions: function() {
+			var instance = this;
 			this.$div.find('span.suggested').each(function(idx, span) {
 				var $span = $(span);
 				var $parent = $span.parent();
 				$span.replaceWith($span.contents().remove());
-				$parent.get(0).normalize();
+				instance._safeNormalize.call(instance, $parent.get(0));
 			});
 		},
 
 		_canonizeContent: function() {
+			var instance = this;
+
 			// While HTML may collapse all whitespace as not being visually
 			// significant, we treat it as such.  If whitespace is not &nbsp;
 			// we have to collapse it in the text nodes.
@@ -1045,7 +1078,7 @@
 						// An actual line break.  Wrap in a span so that we
 						// don't have content as a direct child of the
 						// contenteditble (causes ugly selection UI)
-						$cur.replaceWith($('<div class="zwnj-spacing-hack">&zwnj;</div>'));
+						$cur.replaceWith($('<div class="nbsp-spacing-hack">&nbsp;</div>'));
 					}
 					$set = $();
 				} else {
@@ -1069,7 +1102,7 @@
 			$.each(replaceWithContents, function(idx, replaceMe) {
 				var parentOfReplace = replaceMe.parentNode;
 				$(replaceMe).replaceWith($(replaceMe).contents());
-				parentOfReplace.normalize();
+				instance._safeNormalize.call(instance, parentOfReplace);
 				if (notNormalized(parentOfReplace)) {
 					throw "Normalization failure trying to fix contenteditable.";
 				}
@@ -1078,6 +1111,7 @@
 		},
 		
 		_decanonizeContent: function() {
+			var instance = this;
 
 			// One simple way to decanonize is just to leave the first element
 			// outside of a div, with all the successive elements keeping their
@@ -1089,15 +1123,15 @@
 			//
 			this.$div.children().each(function(idx, el) {
 				var $el = $(el);
-				if ($el.is("div") && $el.hasClass("zwnj-spacing-hack")) {
+				if ($el.is("div") && $el.hasClass("nbsp-spacing-hack")) {
 					$el.html($('<br>'));
-					$el.removeClass("zwnj-spacing-hack");
+					$el.removeClass("nbsp-spacing-hack");
 				}
 				if ($el.is("div") && (idx == 0)) {
 					$el.before($el.contents());
 					$el.remove();
 				}
-				$el.get(0).normalize();
+				instance._safeNormalize.call(instance, $el.get(0));
 				// Just leave it otherwise.
 			});
 		},
@@ -1267,6 +1301,8 @@
 		},
 
 		_normalizeProtectionsInSubtree: function(elm) {
+			var instance = this;
+
 			// Normalize protected spans so that ones sitting adjacent to each
 			// other are unified into a single protected span
 			var deleteSpans = [];
@@ -1281,7 +1317,7 @@
 					&& $(current).hasClass('protected')
 				) {
 					$(current).contents().remove().appendTo(this);
-					this.normalize();
+					instance._safeNormalize.call(instance, this);
 					deleteSpans.push(current);
 					current = current.nextSibling;
 				}
@@ -1305,7 +1341,7 @@
 			/* $span.off('click', this._unprotectSpan); */
 
 			// Merge all text nodes under the parent
-			$parent.get(0).normalize();
+			this._safeNormalize.call(this, $parent.get(0));
 			this._killEmptyTextNodesRecursivePreorder($parent);
 		},
 
@@ -1319,9 +1355,9 @@
 			}
 		},
 
-		_unprotectSpanListener: function(eventObj) {
+		_unprotectSpanListener: function(event) {
 			// http://www.quirksmode.org/js/events_properties.html
-			var $target = $(eventObj.target);
+			var $target = $(event.target);
 			this._clearUserSelection();
 			this._unprotectSpan($target);
 			this.update();
@@ -1352,9 +1388,9 @@
 			this._normalizeProtectionsInSubtree($parent);
 		},
 
-		_takeSuggestionListener: function(eventObj) {
+		_takeSuggestionListener: function(event) {
 			// http://www.quirksmode.org/js/events_properties.html
-			var $target = $(eventObj.target);
+			var $target = $(event.target);
 			this._clearUserSelection();
 			this._takeSuggestion($target);
 			this.update();
@@ -1372,7 +1408,7 @@
 			return $span;
 		},
 
-		_inkOnListener: function(eventObj) {
+		_inkOnListener: function(event) {
 			var instance = this;
 			this.$div.addClass("blackhighlighter-ink");
 			return true;
@@ -1380,6 +1416,9 @@
 
 		_protectRangeIfApplicable: function(range) {
 			var instance = this;
+
+			var $startContainer = $(range.startContainer);
+			var $endContainer = $(range.endContainer)
 			
 			// Do inclusive test; if the common ancestor of the selection is
 			// not fully inside the blackhighlighter div, then some amount
@@ -1388,7 +1427,7 @@
 			//
 			// https://github.com/hostilefork/blackhighlighter/issues/30
 			//
-			if (!this.$div.get(0).contains(range.commonAncestorContainer)) {
+			if ($.contains(this.$div, $(range.commonAncestorContainer))) {
 				return false;
 			}
 
@@ -1409,10 +1448,7 @@
 			// make the selection... so if it's valid, we should accept it
 			// even if it's not clear how the UI could have gotten that way.
 
-			var $startContainer = $(range.startContainer);
 			var $startDiv = $startContainer;
-
-			var $endContainer = $(range.endContainer)
 			var $endDiv = $endContainer;
 
 			if ($startDiv.get(0).nodeType === Node.TEXT_NODE) {
@@ -1508,23 +1544,23 @@
 			// for UI reasons it might be considered to help unredact
 			// groups.  But for now just shift the start/end to skip them.
 
-			if ($startContainer.parent().hasClass("zwnj-spacing-hack")) {
+			if ($startContainer.parent().hasClass("nbsp-spacing-hack")) {
 				$startContainer = $startContainer.parent();
 			}
-			while ($startContainer.hasClass("zwnj-spacing-hack")) {
+			while ($startContainer.hasClass("nbsp-spacing-hack")) {
 				if ($startContainer.is($endContainer)) {
 					return false;
 				}
 				$startContainer = $startContainer.next();
 				startOffset = 0;
 			}
-			if ($endContainer.parent().hasClass("zwnj-spacing-hack")) {
+			if ($endContainer.parent().hasClass("nbsp-spacing-hack")) {
 				$endContainer = $endContainer.parent();
 			}
-			while ($endContainer.hasClass("zwnj-spacing-hack")) {
+			while ($endContainer.hasClass("nbsp-spacing-hack")) {
 				if ($endContainer.is($startContainer)) {
 					// Shouldn't happen, or we'd have hit it above!
-					throw "Internal error in zwnj-spacing-hack enumeration";
+					throw "Internal error in nbsp-spacing-hack enumeration";
 				}
 				$endContainer = $endContainer.prev();
 				endOffset = $endContainer.contents().length;
@@ -1653,7 +1689,7 @@
 					$endContainer.contents().slice(0, endOffset).each(redactFn);
 					$startContainer.nextUntil($endContainer).each(function (idx, div) {
 						var $div = $(div);
-						if (!$div.hasClass("zwnj-spacing-hack")) {
+						if (!$div.hasClass("nbsp-spacing-hack")) {
 							$(div).contents().each(redactFn);
 						}
 					});
@@ -1666,7 +1702,7 @@
 			// necessity of this given the new implementation technique)
 			//
 			this.$div.find("div").each(function(idx, el) {
-				el.normalize();
+				instance._safeNormalize.call(instance, el);
 			});
 			
 			this._killEmptyTextNodesRecursivePreorder(this.$div);
@@ -1681,24 +1717,18 @@
 			return true;
 		},
 
-		_inkOffListener: function(eventObj) {
-			var $target = eventObj.target;
+		_inkOffListener: function(event) {
+			var $target = event.target;
 
 			this.$div.removeClass("blackhighlighter-ink");
 
-			// We depend on this compatibility layer:
-			//
-			// http://code.google.com/p/ierange/
-			//
-			// How relevant are IE8 and lower now?
 			var sel = window.getSelection();
 
 			for(var i = 0; i < sel.rangeCount; i++) {
 				var range = sel.getRangeAt(i);
 				if (!range) {
-					throw "Empty range received from selection model";
-				}
-				if (!range.toString()) {
+					// this happens in IE
+				} else if (!range.toString()) {
 					// Because mouseup happens BEFORE click, it's important
 					// that we filter out the "insertion point" selections
 					// you form by just clicking.  We want the click events
@@ -1874,7 +1904,7 @@
 					}
 				} else if ($child.is('div')) {
 
-					if ($(child).hasClass("zwnj-spacing-hack")) {
+					if ($(child).hasClass("nbsp-spacing-hack")) {
 						// We canonize our contenteditable to put this odd char
 						// only in an empty <div>.  It's enough to get the div
 						// to space out, seemingly...and we'll just try and
@@ -2535,7 +2565,7 @@
 		//
 		// But I found this simpler solution seems to work well enough.
 		//
-		$(document).on('paste', function(eventObj) {
+		$(document).on('paste', function(event) {
 			// Don't use *:focus selector, it's slow.
 			// http://stackoverflow.com/a/11278006
 			var $oldActive = $(document.activeElement);
@@ -2549,11 +2579,11 @@
 				// Internet Explorer
 				pastedText = window.clipboardData.getData('Text');
 			} else if (
-				eventObj.originalEvent.clipboardData 
-				&& eventObj.originalEvent.clipboardData.getData
+				event.originalEvent.clipboardData 
+				&& event.originalEvent.clipboardData.getData
 			) {
 				// Everyone else but Internet Explorer
-				pastedText = eventObj.originalEvent
+				pastedText = event.originalEvent
 					.clipboardData.getData('text/plain');
 			}
 
@@ -2576,7 +2606,7 @@
 			document.execCommand('insertHtml', false, newText);
 
 			// cancel the original paste
-			eventObj.preventDefault();
+			event.preventDefault();
 			return false;
 		});
 	});
