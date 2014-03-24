@@ -50,6 +50,8 @@ This is an attempt to list all the third-party components used by the Blackhighl
 
 * [ierange-m2.js](https://code.google.com/p/ierange/) *(MIT license)*
 
+* [preloaders.net](http://preloaders.net/en/terms_of_use) *("All animated GIF and APNG images are completely free to use in all projects")* for the Ajax loading animation 
+
 
 **Testing**
 
