@@ -322,15 +322,19 @@ app.post('/reveal/$', function (req, res) {
 
 	// Difference between req.param and req.params:
 	// http://stackoverflow.com/a/9243020/211160
-	var reveal = JSON.parse(req.param('reveal', null));
+	var commit_id = req.param('commit_id');
+	var revealsArray = JSON.parse(req.param('reveals', null));
 
-	blackhighlighter.revealSecret(reveal, function(err, json) {
-		if (err) {
-			resSendJsonForErr(res, err);
-		} else {
-			res.json(json);
+	blackhighlighter.revealSecret(
+		commit_id, revealsArray,
+		function(err, json) {
+			if (err) {
+				resSendJsonForErr(res, err);
+			} else {
+				res.json(json);
+			}
 		}
-	});
+	);
 });
 
 

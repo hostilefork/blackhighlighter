@@ -587,10 +587,17 @@
 		//
 		// {
 		//     "commit_id": "4f89521b67032a424a000002",
-		//     "name": "black",
-		//     "redactions": [ "HiddenOne", "HiddenTwo" ], 
-		//     "salt": "26716853c86b247fc81834822b0ca058",
-		//     "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
+		//     "reveals": [ 
+		//			[
+		//              value: "HiddenOne", 
+		//              salt: "26716853c86b247fc81834822b0ca058",
+		//              sha256: "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
+		//          ], [
+		//              value: "HiddenTwo",
+		//              salt: "26716853c86b247fc81834822b0ca058",
+		//              sha256: "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
+		//			]
+		//		]						
 		// }
 		//
 		// (Note: Hash values are made up, will fix in real documentation.)
@@ -643,21 +650,12 @@
 			return result;
 		},
 
-		canonicalJsonFromReveal: function(reveal) {
-			var contents = reveal.salt;
-			for (var index = 0; index < reveal.redactions.length; index++) {
-				var redactionSpan = reveal.redactions[index];
-				contents += redactionSpan;
-			}
-			return contents;
-		},
-
 		commitIdFromCommit: function(commit) {
 			return urlencode_base64_sha256(this.canonicalJsonFromCommit(commit));
 		},
 
-		revealIdFromReveal: function(reveal) {
-			return urlencode_base64_sha256(this.canonicalJsonFromReveal(reveal));
+		hashOfReveal: function(reveal) {
+			return urlencode_base64_sha256(reveal.salt + reveal.contents);
 		}
 	};
 
@@ -936,13 +934,21 @@
 			}
 		},
 		
+		// IE does strange behaviors for the DOM element's normalize() function
+		// such as wrapping text nodes in divs sometimes (?)  This
+		// re-implementation is more explicit and avoids bugs with that.
+		//
 		// http://stackoverflow.com/a/22339405/211160
+		//
 		_safeNormalize: function (element) {
 			function collectTextNodes(textNode) {
 			  	// while there are text siblings, concatenate into the first   
 				while (textNode.nextSibling) {
 					var next = textNode.nextSibling;
-					if (next.nodeType == 3 || next.nodeType == 4) {
+					if (
+						next.nodeType == Node.TEXT_NODE
+						|| next.nodeType == Node.CDATA_SECTION_NODE
+					) {
 						textNode.nodeValue += next.nodeValue;
 						textNode.parentNode.removeChild(next);
 					} else {
@@ -986,9 +992,10 @@
 			// http://stackoverflow.com/a/4399718/211160
 			//
 			var getTextNodesIn = function(el) {
-				return $(el).find(":not(iframe)").addBack().contents().filter(function() {
-					return this.nodeType == Node.TEXT_NODE;
-				});
+				return $(el).find(":not(iframe)")
+					.addBack().contents().filter(function() {
+						return this.nodeType == Node.TEXT_NODE;
+					});
 			};
 			getTextNodesIn(this.$div).each(function(idx, el) {
 				// http://stackoverflow.com/questions/7635952/ 
@@ -1000,12 +1007,12 @@
 			});
 
 			// First canonize all the <p> tags for browsers that make them into
-			// <div> instead. As you might expect, an easy thing to change is hard;
-			// tags on elements can't change without disrupting content.  :-/
+			// <div> instead. As you might expect, an easy thing to change is
+			// hard; tags on elements can't change without disrupting content.
 			//
 			// Note we lose any attributes that may have been attached to the
 			// paragraph.  As we're going for canon, that's not a bad thing in
-			// this case...in fact we should probably strip *more* information off!
+			// this case...in fact we should probably strip *more* information!
 			//
 			// http://stackoverflow.com/a/1695200/211160
 			//
@@ -1020,7 +1027,9 @@
 			// If there are no divs or br at all, then wrap the whole thing up
 			// into one single div.
 			if (!this.$div.find("div, br").length) {
-				var $newDiv = $("<div></div>").append(this.$div.contents().remove());
+				var $newDiv = $("<div></div>").append(
+					this.$div.contents().remove()
+				);
 				this.$div.append($newDiv);
 			}
 
@@ -1034,7 +1043,7 @@
 			// It's hard to canonize any arbitrary input here, because you can't
 			// (for instance) blindly transform all <div>foo</div> into foo<br>.
 			// So this is an attempt to "make it work".  A common pattern in the
-			// contenteditable I've seen is to kick off the process with something
+			// contenteditable I've seen is to begin the process with something
 			// not in a div, with things after that put into divs...which causes
 			// a break similar to as if it was in a div.  So we can account for
 			// that one.
@@ -1078,7 +1087,9 @@
 						// An actual line break.  Wrap in a span so that we
 						// don't have content as a direct child of the
 						// contenteditble (causes ugly selection UI)
-						$cur.replaceWith($('<div class="nbsp-spacing-hack">&nbsp;</div>'));
+						$cur.replaceWith(
+							$('<div class="nbsp-spacing-hack">&nbsp;</div>')
+						);
 					}
 					$set = $();
 				} else {
@@ -1225,7 +1236,8 @@
 					// See notes on why I'm doing it this way.
 					// Using less-specificity in selectors, or delegates,
 					// led events to be snapped up by jQuery UI
-					this.$div.find("span.protected").on('click', this._unprotectSpanListener);
+					this.$div.find("span.protected")
+						.on('click', $.proxy(this._unprotectSpanListener, this));
 
 					// Selection changes are finalized by selected, or mouseup?  What
 					// do we really want to capture here?
@@ -1236,7 +1248,8 @@
 					//
 					// http://stackoverflow.com/a/12348816/211160
 					//
-					this.$div.on("mouseup mouseleave", $.proxy(this._inkOffListener, this));
+					this.$div.on("mouseup mouseleave",
+						$.proxy(this._inkOffListener, this));
 
 					this._addSuggestionsRecursive(this.$div.get(0));
 					break;
@@ -1289,11 +1302,11 @@
 			// http://www.jslab.dk/articles/non.recursive.preorder.traversal.part2
 			if (
 				($node.get(0).nodeType == Node.TEXT_NODE)
-				&& (node.val() === "")
+				&& !$node.text()
 			) {
 				$node.remove();
 			} else {
-				$.each($node.children(), function(idx, child) {
+				$.each($node.contents(), function(idx, child) {
 					var $child = $(child);
 					instance._killEmptyTextNodesRecursivePreorder($child);
 				});
@@ -1376,7 +1389,7 @@
 			}
 
 			$span.removeClass("suggested");
-			$span.off('click', this._takeSuggestionListener);
+			$span.off('click', $.proxy(this._takeSuggestionListener, this));
 
 			$span.addClass("protected");
 			$span.on('click', $.proxy(this._unprotectSpanListener, this));
@@ -1750,114 +1763,89 @@
 
 		generateCommitAndProtections: function() {
 
-			if (!this.$div.text()) {
-				return {
-					commit: null,
-					protectionsByHash: null
-				}
-			}
-
 			var commit = {'spans': []};
-			var protectionsByHash = {};
+			var protectionsByHash = {}; // Array instead?
 
 			if (this.mode === 'compose') {
 				// The editor must be switched into canonical mode, and this
 				// disrupts the DOM structure.  We return an answer of no
 				// protections and just the raw text, for now.
+				if (!this.$div.text()) {
+					return {
+						commit: null,
+						protectionsByHash: null
+					};
+				}
 				commit.spans.push(this.$div.text());
 				return {
 					commit: commit,
 					protectionsByHash: protectionsByHash
 				};
 			}
-
 			if (this.mode !== 'protect') {
 				throw "generateCommitAndProtections called in bad mode";
 			}
 
 			var protectedObjs = undefined;
 			
-			var protectionsByName = {};
 			var placeholders = [];
-			var mergeableLineBreakPending = false;
 			var redactionOrder = 1;
-
-			// Before the canonization, this process used to be more complex.
-			// It can most likely be simplified now since there are no uses of
-			// "mergeable line breaks"
-			function processChild(child) {
-				var $child = $(child);
-
-				function pushStringSpan(stringSpan) {
-					if ($.type(stringSpan) !== 'string') {
-						throw 'Pushing non-string as string span';
-					}
-					if (stringSpan.length === 0) {
-						throw 'Pushing zero length string span';
-					}
-					
-					handleMergeableLineBreaks();
-
-					var numSpans = commit.spans.length;
-
-					if (
-						(numSpans > 0)
-						&& ($.type(commit.spans[numSpans-1]) === 'string')
-					) {
-						commit.spans[numSpans-1] += stringSpan;
-					} else {
-						commit.spans.push(stringSpan);
-					}
+			
+			function pushStringSpan(stringSpan) {
+				if ($.type(stringSpan) !== 'string') {
+					throw 'Pushing non-string as string span';
 				}
-				
-				function pushPlaceholderSpan(placeholder) {
-					if ($.type(placeholder.display_length) === undefined) {
-						throw 'Invalid placeholder pushed';
-					}
-					handleMergeableLineBreaks();
-					commit.spans.push(placeholder);	
+				if (stringSpan.length === 0) {
+					throw 'Pushing zero length string span';
 				}
-				
-				function handleMergeableLineBreaks() {
-					if (mergeableLineBreakPending) {
-						mergeableLineBreakPending = false;
-						pushStringSpan('\n');
-					}	
+
+				var numSpans = commit.spans.length;
+
+				if (
+					(numSpans > 0)
+					&& ($.type(commit.spans[numSpans-1]) === 'string')
+				) {
+					commit.spans[numSpans-1] += stringSpan;
+				} else {
+					commit.spans.push(stringSpan);
 				}
-				
-				function pushMergeableLineBreak() {
-					mergeableLineBreakPending = true;
+			}
+			
+			function pushPlaceholderSpan(placeholder) {
+				if ($.type(placeholder.display_length) === undefined) {
+					throw 'Invalid placeholder pushed';
 				}
-				
-				function pushUnmergeableLineBreak() {
-					mergeableLineBreakPending = false;
+				commit.spans.push(placeholder);	
+			}
+
+			this.$div.contents().each(function(idx, subDiv) {
+				var $subDiv = $(subDiv);
+				if (!$subDiv.is('div')) {
+					throw 'Unknown DOM element found in canonized area';
+				}
+				if ($subDiv.hasClass("nbsp-spacing-hack")) {
 					pushStringSpan('\n');
-				}
-				
-				function protectionNameForSpan(span) {
-					// The server supports multiple reveals per letter, but currently there's no
-					// good interface for this... so we just have a single reveal name.  We'd
-					// have to sniff the color of the redaction region or some other property
-					// that was added during the marking....
-					return 'black';
-				}
-				
-				if (child.nodeType === Node.TEXT_NODE) {
-					// REVIEW: JSON.stringify seems not to escape \u00A0.  This is a problem because 
-					// it looks just like a space to the user's clipboard, and so we lose it when the
-					// user copies and pastes.  This will apply to other invisible unicode characters
-					// too... but hopefully they're taken care of inside JSON.stringify (?)
-					pushStringSpan.call(this, child.data);
 					return;
 				}
+				// contents() includes text nodes, children() does not
+				$subDiv.contents().each(function(idx, child) {
+					var $child = $(child);
+					if (child.nodeType === Node.TEXT_NODE) {
+						// REVIEW: JSON.stringify seems not to escape \u00A0.
+						// This is a problem because it looks just like a space
+						// to the user's clipboard, and so we lose it when the
+						// user copies and pastes.  This will apply to other
+						// invisible unicode characters too... but hopefully
+						// they're taken care of inside JSON.stringify (?)
+						pushStringSpan($child.text());
+						return;
+					}
 
-				if (child.nodeType !== Node.ELEMENT_NODE) {
-					throw 'Unexpected nodeType in canonized blackhighlighter area';
-				}
+					if (!$child.is('span')) {
+						throw 'Non span or textnode in canonized div';
+					}
 
-				if ($child.is('span')) {
-
-					if ($(child).hasClass('protected')) {
+					if ($child.hasClass('protected')) {
 
 						// Each protected span adds a placeholder to the commit 
 						// and a redaction to the reveal certificate
@@ -1866,23 +1854,22 @@
 						if (content.length === 0) {
 							throw "Zero length redaction found, illegal";
 						}
-							
-						var protectionName = protectionNameForSpan(child);
-
-						var protection = protectionsByName[protectionName];
-						if ($.type(protection) === 'undefined') {
-							protection = {
-								'redactions': [],
-								'name': protectionName
-							};
-							protectionsByName[protectionName] = protection;
-						}
 						
+						var protection = {
+							value: content,
+							salt: exports.stripHyphensFromUUID(
+								exports.generateRandomUUID()
+							)
+						};
+						protection.sha256 = exports.hashOfReveal(protection);
+						protectionsByHash[protection.sha256] = protection;
+
 						// http://www.javascripter.net/faq/convert3.htm
 						// we track the order but do not put it into the
 						// commit or protection as it is implicit
 						var placeholder = {
-							'display_length': content.length
+							display_length: content.length,
+							sha256: protection.sha256
 						};
 						placeholders.push({
 							obj: placeholder,
@@ -1890,75 +1877,30 @@
 							order: redactionOrder
 						});
 
-						protection.redactions.push(content);
 						redactionOrder++;
 						
-						pushPlaceholderSpan.call(this, placeholder);
+						pushPlaceholderSpan(placeholder);
 					} else if ($child.hasClass('suggested')) {
 						// Treat it identially to a text node.  Used to throw
 						// these out before calling generation, but it should
 						// now be safe to call generation at any time.
-						pushStringSpan.call(this, $child.text());
+						pushStringSpan($child.text());
 					} else {
-						throw "Illegal span found in canonized blackhighlighter area";
+						throw "Illegal span in canonized blackhighlighter area";
 					}
-				} else if ($child.is('div')) {
+				});
 
-					if ($(child).hasClass("nbsp-spacing-hack")) {
-						// We canonize our contenteditable to put this odd char
-						// only in an empty <div>.  It's enough to get the div
-						// to space out, seemingly...and we'll just try and
-						// make sure none of these are in the input code to
-						// start with.
-						pushUnmergeableLineBreak.call();
-					} else {
-						$(child).contents().each(function(i) {
-							processChild(this);
-						});
-						pushUnmergeableLineBreak.call();
-					}
-				} else {
-					throw 'Unknown DOM element found in blackhighlighter canonized area';
-				}
-			}
-
-			this.$div.contents().each(function(i){
-				processChild(this);			
+				// Put a line break after every div
+				pushStringSpan('\n');
 			});
 
-			for (var protectionName in protectionsByName) {
-				if (protectionsByName.hasOwnProperty(protectionName)) {
-					var protectionToHash = protectionsByName[protectionName];
-					var salt = exports.stripHyphensFromUUID(
-						exports.generateRandomUUID()
-					);
-					var contents = salt;
-					$.each(protectionToHash.redactions, function(idx, redaction) {
-						contents += redaction;
-					});
-					
-					protectionToHash.salt = salt;
-					protectionToHash.sha256 = urlencode_base64_sha256(contents);
-					
-					protectionsByHash[protectionToHash.sha256] = protectionToHash;
-				}
-			}
-
-			$.each(placeholders, function(idx, finalizeMe) {
-				var obj = finalizeMe.obj;
-				var protection = finalizeMe.protection;
-				var order = finalizeMe.order;
-
-				// Due to large random salt, hash is a unique ID for the reveal
-				obj.sha256 = protection.sha256;
-			});
-			
-			// Check that process did not produce two sequential string spans in commit
+			// Check that process did not produce two sequential string spans
+			// in the commit
 			var lastWasString = false;
 			$.each(commit.spans, function(idx, spanToCheck) {
 				if ($.type(spanToCheck) === 'string') {
 					if (lastWasString) {
-						throw "Two sequential string spans in commit -- error in generateCommitAndProtections()"; 
+						throw "Two sequential string spans in commit"; 
 					}
 					lastWasString = true;
 				} else {
@@ -2044,11 +1986,6 @@
 							return;
 						}
 
-						// Put the commit_id into the protection objects
-						$.each(temp.protections, function(idx, val) {
-							val.commit_id = temp.commit.commit_id;
-						});
-
 						instance.commit = temp.commit;
 						instance.protections = temp.protections;
 
@@ -2101,8 +2038,6 @@
 		// This will need to be revisited.
 
 		_refreshAllPlaceholders: function() {
-			var revealIndices = {};
-
 			// we used to convert the JSON into a public HTML fragment on the client side.
 			// but server-side generation is better for running in non-javascript contexts.
 			// and making it possible for search engines to index the letter.
@@ -2123,11 +2058,7 @@
 						reveal = instance.protections[shaHexDigest];
 					}
 					if (reveal) {
-						if (!revealIndices[shaHexDigest]) {
-							revealIndices[shaHexDigest] = 0;
-						}
-						placeholder.text(reveal.redactions[revealIndices[shaHexDigest]]);
-						revealIndices[shaHexDigest]++;
+						placeholder.text(reveal.value);
 
 						placeholder.removeClass('protected');
 						if (publiclyRevealed) {
@@ -2143,7 +2074,7 @@
 		seeProtection: function(protection, isFromServer) {
 
 			var actualHash =
-				exports.revealIdFromReveal(protection);
+				exports.hashOfReveal(protection);
 			if (actualHash != protection.sha256) {
 				throw 'Invalid certificate: content hash is ' + actualHash 
 					+ ' while claimed hash is ' + protection.sha256;
@@ -2157,21 +2088,19 @@
 			});
 			// warn user if certificate is useless, need better UI
 			if (numPlaceholdersForKey === 0) {
-				throw 'Certificate does not match any placeholders.';
+				throw 'Protection does not match any placeholders.';
 			}
-			if (numPlaceholdersForKey != protection.redactions.length) {
-				throw 'Certificate contains ' + protection.redactions.length +
-					' redactions for key when letter needs ' + 
-					numPlaceholdersForKey + ' for that key';
+			if (numPlaceholdersForKey > 1) {
+				throw 'Protection matches more than one placeholder.';
 			}
 		
 			if (isFromServer) {
 				this.reveals[protection.sha256] = protection;
 			} else {
 				if (protection.sha256 in this.reveals) {
-					throw 'Local certificate already revealed on server.';
+					throw 'Local redaction already revealed on server.';
 				} else if (protection.sha256 in this.protections) {
-					throw 'You have already revealed the local certificate.';
+					throw 'You are already viewing the local redaction.';
 				} else {
 					this.protections[protection.sha256] = protection;
 				}
@@ -2183,7 +2112,7 @@
 		unseeProtection: function(protectionKey) {
 		
 			if (!(protectionKey in this.protections)) {
-				throw 'Attempt to remove certificate that is not in the local list.';
+				throw 'Attempt to remove protection not in the local list.';
 			}
 			
 			delete this.protections[protctionKey];
@@ -2198,19 +2127,12 @@
 		//
 
 		revealSecret: function(base_url, callback) {
-			// If there is more than one reveal in the UI, we'd need to have a
-			// way to indicate which one we are revealing in the request.  (or
-			// make multiple requests if we intend to do more than one).  For
-			// protocol simplicity in error reporting, the server now accepts
-			// only one reveal per XMLHttpRequest.
+			var instance = this;
+
 			var protectionArray = [];
 			$.each(this.protections, function(key, element) {
 				protectionArray.push(element);
 			});
-
-			if (protectionArray.length != 1) {
-				throw 'Multiple reveals feature not currently supported by client';
-			}
 			
 			var reveal_url = exports.makeRevealUrl(PARAMS.base_url);
 			// http://docs.jquery.com/Ajax/jQuery.ajax
@@ -2220,8 +2142,9 @@
 				url: reveal_url,
 				// sends as UTF-8
 				data: {
-					reveal: JSON.stringify(
-						protectionArray[0], null, ' '
+					commit_id: instance.commit.commit_id,
+					reveals: JSON.stringify(
+						protectionArray, null, ' '
 					)
 				},
 				success: function(resultJson) {
@@ -2298,7 +2221,7 @@
 	// This is the method dispatcher, and if a method is not detected then it
 	// can initialize a new blackhighlighter on an element.
 	//
-	$.fn.blackhighlighter = function(o, arg1, arg2) {
+	$.fn.blackhighlighter = function(o, arg1, arg2, arg3) {
 
 		// 1. CHECK FOR METHOD CALLS
 		//
@@ -2393,13 +2316,19 @@
 			if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
 
 				if (arg1 === 'encode') {
-					if ($.type(arg2) !== 'object') {
-						throw "Parameter to certificate encode must be object";
+					if ($.type(arg2) !== 'string') {
+						throw "Certificate encode requires commit_id as string";
+					}
+					if ($.type(arg3) !== 'array') {
+						throw "Parameter to certificate encode must be array";
 					}
 
 					// Validate input object?
 					var sMyInput = exports.escapeNonBreakingSpacesInString(
-						JSON.stringify(arg2, null, ' ')
+						JSON.stringify({
+							commit_id: arg2,
+							reveals: arg3
+						}, null, ' ')
 					);
 
 					var aMyUTF8Input = strToUTF8Arr(sMyInput);
@@ -2433,15 +2362,7 @@
 					var aMyUTF8Output = base64DecToArr(sEncoded);
 					var sMyOutput = UTF8ArrToStr(aMyUTF8Output);
 
-					var protections = null;
-					var parsedJson = JSON.parse(sMyOutput);
-					if ($.type(parsedJson) !== 'array') {
-						protections = [parsedJson];
-					} else {
-						protections = parsedJson;
-					}
-
-					return protections;
+					return JSON.parse(sMyOutput);
 
 				} else {
 					throw "Option to certificate other than encode/decode";

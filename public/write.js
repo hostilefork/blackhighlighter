@@ -227,7 +227,7 @@ define([
 						"Note: No protections made, post is viewable in full."
 					);
 
-				} else if (keyCount === 1) {
+				} else {
 
 					// Review: clients shouldn't be generating this string
 
@@ -242,7 +242,9 @@ define([
 					certString += ' */' + '\n';
 
 					var certificate = $("#editor").blackhighlighter(
-						'certificate', 'encode', _.values(protections)[0]
+						'certificate', 'encode',
+						commit.commit_id,
+						_.values(protections)
 					);
 
 					certString += certificate + '\n';
@@ -254,12 +256,6 @@ define([
 					// http://groups.google.com/group/jquery-ui/browse_thread/thread/cf272e3dbb75f201
 					// waiting is a workaround
 					window.setTimeout(highlightCertificateText, 200); 
-				} else {
-					// Before I tried to put HTML inside the textarea but,
-					// but that was hard to escape properly.  If there were
-					// multiple redaction pens it really should be done with
-					// an accordion.  
-					throw "UI for multiple redaction pens is not yet implemented.";
 				}
 				break;
 

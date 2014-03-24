@@ -291,14 +291,7 @@ exports.generateHtmlFromCommitAndReveals = function(commit, reveals) {
 	var revealsByHash = _.groupBy(reveals, function(reveal) { 
 		return reveal.sha256;
 	});
-	
-	// No efficient way to do this?
-	// http://stackoverflow.com/questions/1295584/
-	var redactionIndexByHash = {};
-	_.each(revealsByHash, function(reveal, hash) {
-		redactionIndexByHash[hash] = 0;
-	});
-	
+		
 	var result = '';
 	_.each(commit.spans, function (commitSpan) {
 
@@ -313,16 +306,12 @@ exports.generateHtmlFromCommitAndReveals = function(commit, reveals) {
 			// Also, line breaks must be converted to br nodes
 			result += commitSpan.split('\n').join('<br />');
 		} else {
-			var revealGroup = revealsByHash[commitSpan.sha256]; 
-			if (revealGroup) {
-				var reveal = revealGroup[0];
+			if (revealsByHash[commitSpan.sha256]) {
 				result += 
 					'<span class="placeholder revealed" title="'
 					+ commitSpan.sha256 + '">'
-					+ reveal.redactions[redactionIndexByHash[commitSpan.sha256]]
+					+ revealsByHash[commitSpan.sha256].value
 					+ '</span>';
-
-				redactionIndexByHash[commitSpan.sha256]++;
 			} else {				
 				var display_length = parseInt(commitSpan.display_length, 10);
 
@@ -417,10 +406,10 @@ exports.getCommitAndReveals = function(commit_id, callback) {
 		// REVIEW: is the length the only thing we need to check?
 		return [commitsArray[0], revealsArray];
 
-	}).spread(function (commit, reveals) {
+	}).spread(function (commit, revealsArray) {
 
 		// 6: Return the results
-		callback(null, commit, reveals);
+		callback(null, commit, revealsArray);
 
 	}).catch(function (err) {
 
@@ -439,7 +428,7 @@ exports.getCommitAndReveals = function(commit_id, callback) {
 // REVEALING
 //
 
-exports.revealSecret = function(reveal, callback) {
+exports.revealSecret = function(commit_id, revealsArray, callback) {
 	var requestTime = new Date();
 
 	// We don't want to put "extra junk" in the MongoDB database, as it
@@ -448,54 +437,52 @@ exports.revealSecret = function(reveal, callback) {
 	// REVIEW: This seems pretty tedious, but what else can we do when
 	// storing JSON from a potentially hostile/hacked client?
 
-	// Must be an object
-	if (!_.isObject(reveal)) {
-		throw ClientError('reveal must be an object');
-	}
-
 	// Verify the keyset
 	// REVIEW: Should "naming" each redaction in a certificate be optional?
-	if (!_.isEqual(_.keys(reveal).sort(), 
-		["commit_id", "name", "redactions", "salt", "sha256"])
-	) { 
-		throw ClientError('reveal has extra or missing keys');
-	}
-
-	// Verify the values
-	if (!_.isString(reveal.commit_id)) {
+	if (!_.isString(commit_id)) {
 		throw ClientError('commit_id should be a string');
 	}
-	if (!_.isString(reveal.salt)) {
-		throw ClientError('salt should be a string');
+
+	// Verify the spans
+	if (!_.isArray(revealsArray)) {
+		throw ClientError('reveals should be an array');
 	}
-	if (!_.isString(reveal.sha256)) {
-		throw ClientError('sha256 should be a string');
+	if (!revealsArray.length) {
+		throw ClientError('reveals array should not be empty');
 	}
-	if (!_.isString(reveal.name)) {
-		throw ClientError('name should be a string');
-	}
-	if (!_.isArray(reveal.redactions)) {
-		throw ClientError('redactions should be an array');
-	}
-	_.each(reveal.redactions, function (redactionSpan) {
-		if (!_.isString(redactionSpan)) {
-			throw ClientError('all redaction spans must be strings');
+	_.each(revealsArray, function (reveal) {
+		if (!_.isObject(reveal)) {
+			throw ClientError('all reveals must be objects');
 		}
+		if (!_.isEqual(_.keys(reveal).sort(), 
+			["salt", "sha256", "value"])
+		) { 
+			throw ClientError('reveal has extra or missing keys');
+		}
+		if (!_.isString(reveal.salt)) {
+			throw ClientError('reveal salt should be a string');
+		}
+		if (!_.isString(reveal.sha256)) {
+			throw ClientError('reveal sha256 should be a string');
+		}
+		if (!_.isString(reveal.value)) {
+			throw ClientError('reveal value should be a string');
+		}
+
+		// Now make sure the reveal isn't lying about its contents hash
+		var actualHash = common.hashOfReveal(reveal);
+		if (actualHash != reveal.sha256) {
+			throw ClientError(
+				'Actual redaction hash is ' + actualHash
+				+ ' while claimed hash is ' + reveal.sha256
+			);
+		}
+
 	});
 
-	// Now make sure the reveal isn't lying about its contents hash
-	var actualHash = common.revealIdFromReveal(reveal);
-	if (actualHash != reveal.sha256) {
-		throw ClientError(
-			'Actual reveal content hash is ' + actualHash
-			+ ' while claimed hash is ' + reveal.sha256
-		);
-	}
 
-	// Okay the reveal is "well-formed".  For more we have to start talking
-	// to the database...
-
-	var commit_id = reveal.commit_id;
+	// Okay the certificate is "well-formed".  For more we have to start
+	// talking to the database...
 
 	Q.try(function() {
 
@@ -540,16 +527,7 @@ exports.revealSecret = function(reveal, callback) {
 
 	}).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
 
-		// 5: Add new reveal if it passes verification
-
-		// Ensure it hasn't *already* been revealed
-		_.each(oldRevealsArray, function(oldReveal) {
-			if (reveal.sha256 == oldReveal.sha256) {
-				throw ClientError(
-					"Reveal " + reveal.sha256 + " was already published."
-				);
-			}
-		});
+		// 5: Add new reveals if it passes verification
 
 		// Make sure there's exactly one commit with that ID
 		if (commitsArray.length == 0) {
@@ -560,34 +538,49 @@ exports.revealSecret = function(reveal, callback) {
 
 		var commit = commitsArray[0];
 
-		// Now make sure the hash matches at least one existing span hash
-		// Note: Some spans are strings!  So .sha256 is not defined for them.
-		var matchedSpan = null;
-		_.every(commit.spans, function(span) {
-			if (span.sha256 == reveal.sha256) {
-				matchedSpan = span;
-				// http://stackoverflow.com/a/8779920/211160
-				return false;
+		// Now verify the redactions against the database
+		_.each(revealsArray, function (reveal) {
+
+			// Ensure the redaction hasn't *already* been revealed
+			_.each(oldRevealsArray, function(oldReveal) {
+				if (reveal.sha256 == oldReveal.sha256) {
+					throw ClientError(
+						"Redaction " + reveal.sha256 + " was already published."
+					);
+				}
+			});
+
+			// Make sure the hash matches an exist hash in the commit
+			// Note: Some spans are strings!  .sha256 is not defined for them.
+			var matchedSpan = null;
+			_.every(commit.spans, function(span) {
+				if (span.sha256 == reveal.sha256) {
+					matchedSpan = span;
+					// http://stackoverflow.com/a/8779920/211160
+					return false;
+				}
+				return true;
+			});
+			if (!matchedSpan) {
+				throw ClientError("A reveal hash matched no span in commit.");
 			}
-			return true;
+
+			// we need to poke the commit_id into the reveal so that the
+			// database can connect them to the commit in our query
+			//
+			// REVIEW: Should we be keeping the reveals inside the commit
+			// object instead of connecting them in this relational-DB way?
+			//
+			reveal.commit_id = commit_id;
+
+			// mongodb JS driver knows about Date(), or do we need to use
+			// the .toJSON() method?
+			reveal.reveal_date = requestTime;
 		});
-		if (!matchedSpan) {
-			throw ClientError("Reveal's hash matches no span in commit.");
-		}
 
-		// mongodb JS driver knows about Date(), or do we need to use
-		// the .toJSON() method?
-		reveal.reveal_date = requestTime;
-
-		// Is string matching not workable, and is it actually necessary 
-		// to convert to the ObjectID BSON type to properly run the join query?
-		if (false) {
-			reveal.commit_id = new mongodb.DBRef(
-				'commits', new mongodb.ObjectID(reveal.commit_id)
-			);
-		}
-
-		return Q.ninvoke(revealsCollection, 'insert', reveal, {safe: true});
+		return Q.ninvoke(
+			revealsCollection, 'insert', revealsArray, {safe: true}
+		);
 
 	}).then(function (insertedRecords) {
 
