@@ -501,18 +501,13 @@ define([
 				return;
 			}
 
-			var protections = null;
-
 			// Catch parsing errors and put them in an error message
-			try {				
-				protections = $("#editor").blackhighlighter(
+			try {
+				var certificate = $("#editor").blackhighlighter(
 					"certificate", 'decode', tidyRevealText
 				);
-				if (protections.length > 1) {
-					throw "User interface for multiple certificates is not currently available";
-				}
 					
-				$.each(protections, function(index, reveal) {
+				$.each(certificate.reveals, function(index, reveal) {
 					$("#editor").blackhighlighter('seereveal', reveal, false);
 				});
 
@@ -550,7 +545,7 @@ define([
 			}
 
 			if (err) {
-				notifyErrorOnTab('reveal');
+				notifyErrorOnTab('reveal', err);
 				$('#buttons-reveal').show();
 				$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
 				$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
