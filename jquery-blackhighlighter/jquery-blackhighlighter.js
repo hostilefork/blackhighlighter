@@ -1197,7 +1197,7 @@
 
 						clearInterval(this.blinkTimer);
 
-						this.$div.find('.placeholder.verified')
+						this.$div.find('.placeholder.verified.unmasked')
 							.css('background-color', '');
 						break;
 					}
@@ -1214,7 +1214,7 @@
 			// likes best for non-blackhighlighter divs.
 
 			function blinker() {
-				this.$div.find('.placeholder.verified')
+				this.$div.find('.placeholder.verified.unmasked')
 					.css('background-color',
 						blinker.isRed ? '' : 'transparent');
 				blinker.isRed = !blinker.isRed;
@@ -2033,6 +2033,25 @@
 		// SHOW MODE
 		//
 
+		_toggleMask: function ($span) {
+			if (!$span.is('span') || !$span.hasClass('verified')) {
+				throw "Bad element received by _toggleMask";
+			}
+
+			// We have separate classes because the :not css selector is not
+			// implemented everywhere.
+			$span.toggleClass('masked');
+			$span.toggleClass('unmasked');
+
+			this.update();
+		},
+
+		_toggleMaskListener: function(event) {
+			event.preventDefault();
+			this._toggleMask($(event.target));
+			return false;
+		},
+
 		// For the moment, we assume the HTML with the placeholders was
 		// already in the blackhighlighter region in the case of showing
 		// This will need to be revisited.
@@ -2063,48 +2082,70 @@
 						placeholder.removeClass('protected');
 						if (publiclyRevealed) {
 							placeholder.addClass('revealed');
-						} else {
+						} else {	
 							placeholder.addClass('verified');
+							placeholder.addClass('unmasked');
+							placeholder.click( 
+								$.proxy(instance._toggleMaskListener, instance)
+							);
 						}
 					}
 				}	
 			});
 		},
 
-		seeProtection: function(protection, isFromServer) {
-
-			var actualHash =
-				exports.hashOfReveal(protection);
-			if (actualHash != protection.sha256) {
-				throw 'Invalid certificate: content hash is ' + actualHash 
-					+ ' while claimed hash is ' + protection.sha256;
+		getProtectionsClone: function(includeMasked) {
+			var protectionsClone = $.extend(true, {}, this.protections);
+ 
+			if (!includeMasked) {
+				var $masked = this.$div.find('span.verified.masked');
+				$masked.each(function(idx, el) {
+					var $el = $(el);
+					delete protectionsClone[$el.attr('title')];
+				});
 			}
+			return protectionsClone;
+		},
 
-			var numPlaceholdersForKey = 0;
-			$.each(this.commit.spans, function (idx, commitSpan) {
-				if (commitSpan.sha256 == protection.sha256) {
-					numPlaceholdersForKey++;
+		seeProtections: function(protectionArray, isFromServer) {
+
+			var instance = this;
+			$.each(protectionArray, function (idx, protection) {
+				var actualHash =
+					exports.hashOfReveal(protection);
+				if (actualHash != protection.sha256) {
+					throw 'Invalid certificate: content hash is ' + actualHash 
+						+ ' while claimed hash is ' + protection.sha256;
+				}
+
+				var numPlaceholdersForKey = 0;
+				$.each(instance.commit.spans, function (idx, commitSpan) {
+					if (commitSpan.sha256 == protection.sha256) {
+						numPlaceholdersForKey++;
+					}
+				});
+				// warn user if certificate is useless, need better UI
+				if (numPlaceholdersForKey === 0) {
+					throw 'Protection does not match any placeholders.';
+				}
+				if (numPlaceholdersForKey > 1) {
+					throw 'Protection matches more than one placeholder.';
+				}
+			
+				if (isFromServer) {
+					instance.reveals[protection.sha256] = protection;
+				} else {
+					if (protection.sha256 in instance.reveals) {
+						// local redaction already revealed on server
+						// don't throw an error, but warning of some kind?
+					} else if (protection.sha256 in instance.protections) {
+						// local redaction already locally revealed
+						// don't throw an error, but warning of some kind?
+					} else {
+						instance.protections[protection.sha256] = protection;
+					}
 				}
 			});
-			// warn user if certificate is useless, need better UI
-			if (numPlaceholdersForKey === 0) {
-				throw 'Protection does not match any placeholders.';
-			}
-			if (numPlaceholdersForKey > 1) {
-				throw 'Protection matches more than one placeholder.';
-			}
-		
-			if (isFromServer) {
-				this.reveals[protection.sha256] = protection;
-			} else {
-				if (protection.sha256 in this.reveals) {
-					throw 'Local redaction already revealed on server.';
-				} else if (protection.sha256 in this.protections) {
-					throw 'You are already viewing the local redaction.';
-				} else {
-					this.protections[protection.sha256] = protection;
-				}
-			}
 
 			this._refreshAllPlaceholders();
 		},
@@ -2130,7 +2171,7 @@
 			var instance = this;
 
 			var protectionArray = [];
-			$.each(this.protections, function(key, element) {
+			$.each(this.getProtectionsClone(false), function(key, element) {
 				protectionArray.push(element);
 			});
 			
@@ -2196,8 +2237,8 @@
 	//
 	$.blackhighlighter = $.extend({
 		// Global options for the behavior of the blackhighlighter plugin
-		autoInitialize: true,
-		initialSelector: "div.blackhighlighter",
+/*		autoInitialize: true,
+		initialSelector: "div.blackhighlighter",*/
 
 		// These are the per-instance options.  If there's a piece of state
 		// or a hook that might be different between one div and another
@@ -2275,12 +2316,12 @@
 				}
 			}
 
-			if (arg1 === "protections") {
+			if (arg1 === "protected") {
 				if (!instance) return undefined;
 
 				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
-					// Don't return the actual protection objects!  Deep clone.
-					return $.extend(true, {}, instance.protections);
+					// arg2 tells us whether you want the masked ones also.
+					return instance.getProtectionsClone(arg2);
 				} else {
 					// REVIEW: should giving back the pre-commit and pre-reveal
 					// be a special debugging function only?
@@ -2289,7 +2330,7 @@
 				}
 			}
 
-			if (arg1 === "reveals") {
+			if (arg1 === "revealed") {
 				if (!instance) return undefined;
 
 				if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
@@ -2376,26 +2417,7 @@
 
 		}
 
-		if (o === "ismodified") {
-			if (this.length != 1) {
-				throw new Error("Currently not handling length > 1 collections in debuginfo.");
-			}
-
-			var instance = Blackhighlighter.getInstance(this.get(0));
-
-			if ((instance.mode === 'show') || (instance.mode === 'reveal')) {
-				// Once in the show state, it's too late to make changes
-				// But does adding reveals count as a modification?
-				return false;
-			} else {
-				// If an uncommitted editor has anything in the commit,
-				// that's a sign that some editing has happened
-				var temp = instance.generateCommitAndProtections();				
-				return (temp.commit !== null);
-			}
-		}
-
-		if (o === "makecommitment") {
+		if (o === "commit") {
 			if (this.length != 1) {
 				throw new Error("Currently not handling length > 1 collections in commit.");
 			}
@@ -2404,16 +2426,16 @@
 			instance.makeCommitment(arg1, arg2);
 		}
 
-		if (o === "seereveal") {
+		if (o === "verify") {
 			if (this.length != 1) {
 				throw new Error("Currently not handling length > 1 collections in commit.");
 			}
 
 			var instance = Blackhighlighter.getInstance(this.get(0));
-			return instance.seeProtection(arg1, arg2);
+			return instance.seeProtections(arg1, arg2);
 		}
 
-		if (o === "revealsecret") {
+		if (o === "reveal") {
 			if (this.length != 1) {
 				throw new Error("Currently not handling length > 1 collections in commit.");
 			}
@@ -2473,9 +2495,17 @@
 	//
 
 	$(function () {
-		if ($.blackhighlighter.autoInitialize) {
+		// I've disabled this because the auto initialization runs out of
+		// order with manual initialization; basically the $() functions seem
+		// to run in an arbitrary order, and if one uses this (even in
+		// requirejs) the ordering may run in the wrong order; such that the
+		// client's document ready handler happens before the auto initialize.
+		// I'm not sure auto initialize is such a great idea in the first
+		// place, but leaving it here for review.
+		//
+		/* if ($.blackhighlighter.autoInitialize) {
 			$($.blackhighlighter.initialSelector).blackhighlighter();
-		}
+		}*/
 
 		// We want to stop pastes of arbitrary content into the contenteditable
 		// div.  There were some suggestions like making invisible textareas

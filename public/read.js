@@ -100,86 +100,34 @@ define([
 		$tab.find('.error-display').hide();
 	}
 
-/*
-	// NOTE: This is a function, not a map.
-	function accordionIndexAndChildForId(revealKey) {
-		var index = null;
-		var child = null;
-		$('#accordion').children().each(function(i) {
-			if ($(this).attr('title') == revealKey) {
-				if (index !== null) {
-					throw 'More than one accordion tab for certificate' + revealKey;
-				}
-				index = i;
-				child = $(this);
-			}
-		});
-		if (index === null) {
-			throw 'Cannot find accordion tab for certificate ' + revealKey;
-		}
-		return {'index': index, 'child': child};
-	}
-	
-	function accordionIndexForId(revealKey) {
-		return accordionIndexAndChildForId(revealKey).index;
-	}
+	function updateTabEnables() {
+		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
+		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
 
-	function accordionHeaderForId(revealKey) {
-		return accordionIndexAndChildForId(revealKey).child.children().filter("a");
-	}
-	
-	function accordionContentForId(revealKey) {
-		return accordionIndexAndChildForId(revealKey).child.children().filter("div");
-	}
-	
-	// Hide the accordion from view until multiple reveals have UI better implemented
-	// and CSS issues are solved
-	$('#accordion').hide();
-	
-	// Bring accordion to life
-	// http://jqueryui.com/accordion/
-	$('#accordion').accordion({ 
-		'collapsible': true
-	});
-	
-	$('#accordion').on('accordionchange', function(event, ui) {
-		// we don't get the index, we get the header and the content
-		// the header seems to be the expected object, but the
-		// content is incorrect
-		// http://dev.jqueryui.com/ticket/4469
-		if ((ui.newHeader !== null) && (ui.newHeader.length !== 0)) {
-			Globals.lastAccordionId = ui.newHeader.parent().attr('title');
+		var protections = $("#editor").blackhighlighter('option', 'protected');
+
+		if (_.values(protections).length) {
+			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
+			$('#buttons-show-before').hide();			
+			$('#buttons-show-after').show();
 		} else {
-			Globals.lastAccordionId = null;
+			$('#tabs').tabs('disable', tabIndexForId('tabs-reveal'));
+			$('#buttons-show-after').hide();			
+			$('#buttons-show-before').show();
 		}
-	});
-
-	// Pass false to close all (only possible with collapsible:true).
-	$('#accordion').accordion('option', 'active', false);
-
-*/
-
-/*
-			accordionHeaderForId(revealKey).empty().append(
-					'<span>' + 'Certificate not revealed' + '</span>');
-			accordionContentForId(revealKey).empty().append(
-					'<span>' + 'No information about this reveal available' + '</span>');
-			
-*/
-
+	}
 
 	$("#editor").blackhighlighter({
 		mode: 'show',
-		commit: PARAMS.commit
+		commit: PARAMS.commit,
+		update: updateTabEnables
 	});
 
 	try {
 		if (!_.isArray(PARAMS.reveals)) {
 			throw "Expected server to give reveals[] as JSON array";
 		}
-		$.each(PARAMS.reveals, function(index, reveal) {
-			$("#editor").blackhighlighter('seereveal', reveal, true);
-		});
+		$("#editor").blackhighlighter('verify', PARAMS.reveals, true);
 	} catch(err) {
 		throw 'Reveal posted on server did not pass client verification check: ' + err; 
 	}
@@ -368,28 +316,7 @@ define([
 
 		return tidyJson;
 	}
-	
-	
-	function updateTabEnables() {
-		$('#tabs').tabs('enable', tabIndexForId('tabs-verify'));
-		$('#tabs').tabs('enable', tabIndexForId('tabs-show'));
-
-		// REVIEW: hasOwnProperty(), does it matter?
-		// http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
-
-		var protections = $("#editor").blackhighlighter('option', 'protections');
-
-		if (_.keys(protections).length > 0) {
-			$('#tabs').tabs('enable', tabIndexForId('tabs-reveal'));
-			$('#buttons-show-before').hide();			
-			$('#buttons-show-after').show();
-		} else {
-			$('#tabs').tabs('disable', tabIndexForId('tabs-reveal'));
-			$('#buttons-show-after').hide();			
-			$('#buttons-show-before').show();
-		}
-	}
-	
+		
 	updateTabEnables();
 	
 	var lastTabId = 'tabs-verify'; // we start on verify tab, and don't get a select message
@@ -406,7 +333,7 @@ define([
 			case 'tabs-show':		
 				// Shouldn't have to do anything?
 				$("#tabs-show .textarea-wrapper").append(
-					$editor.remove()
+					$editor.detach()
 				);
 				$editor.blackhighlighter('option', 'mode', 'show');
 				break;
@@ -414,11 +341,11 @@ define([
 			case 'tabs-reveal':
 				clearErrorOnTab('reveal');
 				$("#tabs-reveal .textarea-wrapper").append(
-					$editor.remove()
+					$editor.detach()
 				);
 				$editor.blackhighlighter('option', 'mode', 'reveal');
 
-				var protections = $("#editor").blackhighlighter("option", "protections");
+				var protections = $("#editor").blackhighlighter("option", "protected");
 				// REVIEW: used to sort values in array by key (hash)
 				// Does it matter?  Should there be a "canonized" ordering?
 				$('#json-reveal').text(
@@ -507,9 +434,9 @@ define([
 					"certificate", 'decode', tidyRevealText
 				);
 					
-				$.each(certificate.reveals, function(index, reveal) {
-					$("#editor").blackhighlighter('seereveal', reveal, false);
-				});
+				$("#editor").blackhighlighter('verify', 
+					certificate.reveals, false
+				);
 
 				finalizeVerifyUI(null);
 
@@ -580,7 +507,7 @@ define([
 		$('#reveal-json-accordion').hide();
 		
 		$('#editor').blackhighlighter(
-			'revealsecret', base_url, finalizeRevealUI
+			'reveal', base_url, finalizeRevealUI
 		);
 	});
 });

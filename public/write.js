@@ -216,7 +216,7 @@ define([
 				}
 
 				var commit = $("#editor").blackhighlighter('option', 'commit');
-				var protections = $("#editor").blackhighlighter('option', 'protections');
+				var protections = $("#editor").blackhighlighter('option', 'protected');
 				var keyCount = _.keys(protections).length;
 
 				if (keyCount === 0) {
@@ -335,7 +335,7 @@ define([
 
 		// This should probably be async?  Should take a server as an
 		// optional parameter, maybe default to blackhighlighter.org?
-		$("#editor").blackhighlighter('makecommitment',
+		$("#editor").blackhighlighter('commit',
 			base_url,
 			finalizeCommitUI
 		);

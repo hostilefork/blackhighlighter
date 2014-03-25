@@ -272,7 +272,7 @@ exports.makeCommitment = function(commit, callback) {
 // READING
 //
 
-exports.generateHtmlFromCommitAndReveals = function(commit, reveals) {
+exports.generateHtmlFromCommitAndReveals = function(commit, revealsArray) {
 	// Note: We do this on the server side rather than in JavaScript code on
 	// the client for purposes of search engines, and also based on the
 	// general principle that while writing and verifying a blackhighlighter
@@ -288,9 +288,16 @@ exports.generateHtmlFromCommitAndReveals = function(commit, reveals) {
 	// how will auditing be done?
 
 	// http://documentcloud.github.com/underscore/#groupBy
-	var revealsByHash = _.groupBy(reveals, function(reveal) { 
+	var revealsByHash = _.groupBy(revealsArray, function(reveal) { 
 		return reveal.sha256;
 	});
+
+	// Just a sanity check -- make sure there's only one reveal per hash!
+	_.each(revealsByHash, function(value) {
+		if (value.length !== 1) {
+			throw Error("More than one reveal for hash on server.");
+		}
+	}); 
 		
 	var result = '';
 	_.each(commit.spans, function (commitSpan) {
@@ -307,10 +314,11 @@ exports.generateHtmlFromCommitAndReveals = function(commit, reveals) {
 			result += commitSpan.split('\n').join('<br />');
 		} else {
 			if (revealsByHash[commitSpan.sha256]) {
+				var reveal = revealsByHash[commitSpan.sha256][0];
 				result += 
 					'<span class="placeholder revealed" title="'
 					+ commitSpan.sha256 + '">'
-					+ revealsByHash[commitSpan.sha256].value
+					+ reveal.value
 					+ '</span>';
 			} else {				
 				var display_length = parseInt(commitSpan.display_length, 10);
