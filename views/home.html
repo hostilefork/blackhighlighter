@@ -1,0 +1,99 @@
+{% extends "base.html" %} {# "extends" must be first tag in template, needed so DOCTYPE is first line #}
+
+{# This is a django-templated HTML file #}
+{# http://docs.djangoproject.com/en/dev/topics/templates/#topics-templates #}
+
+{% comment %}
+ home.html
+ Homepage for blackhighlighter
+ Copyright (C) 2009-2014 HostileFork.com
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   See http://blackhighlighter.hostilefork.com for documentation.
+{% endcomment %}
+
+
+{% block title %}
+blackhighlighter|HOME
+{% endblock title %}
+
+
+{% block params_javascript %}
+	{% parent %} {# inherit any existing parameter block #}
+	PARAMS.blackhighlighter_media_url = "{{ BLACKHIGHLIGHTER_MEDIA_URL }}"; 
+
+	PARAMS.base_url = "{% url blackhighlighter.views.base %}";
+{% endblock params_javascript %}
+
+
+{% block scripts %}
+	{% parent %} {# inherit parent scripts, do not overwrite them! #}
+{% endblock scripts %}
+
+
+{% block content %}
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+	<div id="tabs">
+		<ul class="tabs">
+			<li><a href="#tabs-welcome">Welcome!</a></li>		
+		</ul>
+		
+<div class="tabs-content" id="tabs-welcome">
+
+	<div class="leading-section">
+		<p>Welcome to the demo sandbox for the Black Highlighter jQuery plug-in.  Our goal is to provide an open-source web widget you can easily integrate into any workflow, which facilitates 3 important things in communication:</p>
+		<p><b>Transparency.  Security.  Accountability.</b></p>
+		<p>The system is different from other commenting and email you've seen in web browsers.  Prior to publishing, you're given a redaction pen.  Everything you mark out is cryptographically signed by code in your browser <i>with no server communication</i>.  You receive a certificate that you can choose to give out or not--as you wish--for each redaction.</p>
+	</div>
+
+	<div class="homepage-animation">
+		<canvas id="anim_target" class="anim_target" width="800" height="450">
+			<div id="anim_fallback" class="anim_target" style="width: 800px; height: 450px; position: relative;">
+			</div>
+		</canvas>
+	</div>
+
+	<div class="trailing-section">
+		<p>It's easy to use and has wide cross-browser compatibility.  Both the server component and the widget are free open-source software, with the only dependency for the widget being jQuery.</p>
+
+		<div class="action-buttons">
+			<button class="next-step">
+				<b>Try Writing A Message Now!</b>
+			</button>
+		</div>
+
+		<p>The implications might not be immediately obvious.  But ask yourself a few questions:</p>
+		<ul>
+		<li>If you send a letter to an elected government representative, and they don't act on it, what happens to your message?  You must include enough information to prove they should take you seriously as a constituent--which you may not want to publish to the whole world.  But what tool do you have for closing the accountability loop on their side?  How can others research and diagnose a systemic problem no one is addressing?  <b>Publish your letter with Black Highlighter and send the intended recipient the full certificate.</b><br><br></li>
+		<li>Many government agencies are legally obligated to make certain aspects of their operations public record, but have some liberty to withold their inner dialogue.  What if you're a watchdog and you demand the information you have a right to, but they refuse because the tools they used mixed the information together so that lawyers would have to separate the information.  What if you take it to court, and they cite the cost to the government to pay the legal fees, and the judge asks you <i>"Well, what do you need it for that justifies the price?"</i>  You are put in the adversarial position of making a politically volatile accusation of "why you need" information that legally should have been published without the public's reasons for wanting it called into question. <b>Demand the organization use Black Highlighter, and publish the redacted form on a regular basis.</b><br><br></li>
+		<li>When a company wants to hire someone from another country and get them a work visa, they are required to make a domestic job listing.  This is to prove to immigration that they've done due diligence in making sure a qualified citizen is not being passed over.  Yet these listings are often posted when the company has no intention of replying to any contact--<i>they have already decided who they're going to hire</i>.  Moreover, some listings are just put up as a way of "testing the waters" so that a company can have some metrics on how marketable they are.  How do qualified local candidates tip the balance and catch these frauds?  <b>Have job outreaches managed on a Black Highlighter system, so the gist of applications can be monitored by job seekers and other watchdogs.</b><br><br></li>
+		<li>If you sign up for an Internet personal ad site and write a letter to someone who strikes your interest, you want to be clever and creative enough to warrant their attention.  They'd have every reason to ignore a short and uninformative response.  But should you really be trusting that person <i>(or trusting that service, which may well have scraped the picture and data from elsewhere to inflate their numbers... this is common)</i>?  Do you really want your messages to be so private they're sent to the circular file?  <b>Use Black Highlighter and transform this possibly-not-even-real stranger's inbox from being <i>"totally private"</i> to being <i>"mostly public"</i></b></li>
+		</ul>
+
+		<p>We know that more data can open doors.  And it already has, Google assists the CDC by taking all the trends in "anonymized" search data that is still geo-tagged to track disease epidemics.  There is huge latent value in our data.  But should Google and the NSA be the only people with the ability to measure, mine, and oversee that?  Should the inbox of those you outreach to--who aren't necessarily trustworthy to read or execute on what you're sending--be where the buck stops?</p>
+
+		<p>As Bjork says, <a href="https://www.youtube.com/watch?v=B1EVtoHAJvY" target="_blank"><b>"Don't let them do that to you."</b></a>  </p>
+
+		<p>Society will not change to be more transparent or accountable unless those who are being marginalized demand changes to the process.  Black Highlighter is a free and open tool for changing this balance.  And it isn't just an idea, it's working today.</p>
+
+		<p>Demand transparency, security, and accountability.  Share this demonstration with others.  And if you are able then please don't hesitate to get in touch about helping develop it, or adapt it for use by your organization.</p>
+	</div>
+
+</div>
+		
+	</div>
+
+{% endblock content %}

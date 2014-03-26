@@ -52,6 +52,8 @@ This is an attempt to list all the third-party components used by the Blackhighl
 
 * [preloaders.net](http://preloaders.net/en/terms_of_use) *("All animated GIF and APNG images are completely free to use in all projects")* for the Ajax loading animation 
 
+* [SublimeText PNG animator](http://www.sublimetext.com/~jps/animated_gifs_the_hard_way.html) was used for the homepage animation
+
 
 **Testing**
 

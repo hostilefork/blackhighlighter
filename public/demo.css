@@ -145,3 +145,10 @@ div.loader {
 div.preload {
 	display: none;
 }
+
+
+/* HOMEPAGE */
+
+div.homepage-animation {
+	text-align: center;
+}

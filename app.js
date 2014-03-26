@@ -229,7 +229,11 @@ app.use("/public", express.static(__dirname + '/public'));
 
 // No homepage for now, just redirect to write URL
 app.get('/', function (req, res) {
-	res.redirect('/write/');
+    res.render('home', {
+    	MAIN_SCRIPT: "home"
+    	, HOSTING_SERVICE: process.env.HOSTING_SERVICE
+    	, HOSTING_SERVICE_URL: process.env.HOSTING_SERVICE_URL
+    });
 });
 
 
