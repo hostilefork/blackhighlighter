@@ -316,8 +316,10 @@ exports.generateHtmlFromCommitAndReveals = function(commit, revealsArray) {
 			if (revealsByHash[commitSpan.sha256]) {
 				var reveal = revealsByHash[commitSpan.sha256][0];
 				result += 
-					'<span class="placeholder revealed" title="'
-					+ commitSpan.sha256 + '">'
+					'<span class="placeholder revealed">'
+					+ '<span class="placeholder-sha256">'
+					+ commitSpan.sha256
+					+ '</span>'
 					+ reveal.value
 					+ '</span>';
 			} else {				
@@ -330,9 +332,12 @@ exports.generateHtmlFromCommitAndReveals = function(commit, revealsArray) {
 				// more clever?  e.g. we could add a method onto the element
 				// or keep a sidestructure
 				var placeholder = 
-					'<span class="placeholder protected" title="'
-					+ commitSpan.sha256 + '">'
-					+ placeholderString + '</span>';
+					'<span class="placeholder protected">'
+					+ '<span class="placeholder-sha256">'
+					+ commitSpan.sha256
+					+ '</span>'
+					+ placeholderString 
+					+ '</span>';
 
 				result += placeholder;
 			}

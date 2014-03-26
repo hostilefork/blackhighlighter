@@ -686,6 +686,10 @@
 		Blackhighlighter._registry.push(this);
 
 		this.$div = $div;
+
+		// Grab a copy of whatever was in the div at the time of initialization
+		this.initialContent = $div.contents().clone();
+
 		// keep track of if we added it to take it off?
 		$div.addClass("blackhighlighter"); 
 
@@ -708,7 +712,6 @@
 			$.proxy(this._unprotectSpanListener, this)
 		); */
 
-		this.setMode(opts.mode, true);
 		if (opts.mode === 'show') {
 			if (opts.commit) {
 				this.commit = opts.commit;
@@ -721,13 +724,17 @@
 			}
 		}
 
-		// Do more checking on this
+		// Protections are local reveals in the show/reveal modes
+		this.protections = {};
+
+		// We want to set up the reveals and check that their hashes match
+		this.reveals = {};
 		if (opts.reveals) {
-			this.reveals = opts.reveals;
+			this.seeProtections(opts.reveals, true);
 		}
-		if (opts.protections) {
-			this.protections = opts.protections;
-		}
+
+		// Set the mode (needs the commit/protections to update titles)
+		this.setMode(opts.mode, true);
 
 		// When the content of the text area is modified, we want to give
 		// an update notification to clients of the widget.
@@ -826,7 +833,11 @@
 			// the match was at the first position.
 			
 			function pushSuggestSpan(str) {
-				var suggestSpan = $('<span class="suggested">' + str + '</span>');
+				var suggestSpan = $(
+					'<span class="placeholder suggested">' +
+					str +
+					'</span>'
+				);
 				$(node).before(suggestSpan);
 				suggestSpan.on('click', $.proxy(this._takeSuggestionListener, this));
 				lastPushWasText = false;
@@ -1256,14 +1267,9 @@
 				}
 
 				case 'show':
-					// only good for initializing...
-					if (initializing) {
-						this.initialLetterText = this.$div.contents().clone();
-					} else {
-						// we transition to show in the editor in a broken
-						// way, but eventually we will transition in a smooth
-						// way...
-					}
+					// we transition to show in the editor in a broken
+					// way, but eventually we will transition in a smooth
+					// way...
 
 					this.$div.addClass("blackhighlighter-show");
 					break;
@@ -1281,6 +1287,8 @@
 			}
 
 			this.mode = newMode;
+
+			this._updateSpanTitles(this.$div.find('span').filter('.placeholder'));
 		},
 
 
@@ -1388,11 +1396,13 @@
 				throw "trying to take non-suggested span";
 			}
 
-			$span.removeClass("suggested");
+			$span.removeClass("placeholder suggested");
 			$span.off('click', $.proxy(this._takeSuggestionListener, this));
 
-			$span.addClass("protected");
+			$span.addClass("placeholder protected");
 			$span.on('click', $.proxy(this._unprotectSpanListener, this));
+
+			this._updateSpanTitles($span);
 		},
 
 		_takeSuggestion: function($span) {
@@ -1414,10 +1424,11 @@
 			if (!str) {
 				throw "Empty string passed to _makeProtectedSpan";
 			}
-			var $span = $('<span class="protected">' + str + '</span>');
+			var $span = $('<span class="placeholder protected">' + str + '</span>');
 			if (this.mode === 'protect') {
 				$span.on('click', $.proxy(this._unprotectSpanListener, this));
 			}
+			this._updateSpanTitles($span);
 			return $span;
 		},
 
@@ -2043,6 +2054,7 @@
 			$span.toggleClass('masked');
 			$span.toggleClass('unmasked');
 
+			this._updateSpanTitles($span);
 			this.update();
 		},
 
@@ -2056,42 +2068,111 @@
 		// already in the blackhighlighter region in the case of showing
 		// This will need to be revisited.
 
+		_updateSpanTitles: function ($spanArray) {
+			var instance = this;
+			if (instance.mode === 'compose') {
+				$spanArray.each(function() {
+					var $span = $(this);
+					attr('title', '');
+				});
+				return;
+			}
+			if (instance.mode === 'protect') {
+				$spanArray.each(function() {
+					var $span = $(this);
+					if ($span.hasClass('suggested')) {
+						$span.attr('title', 'Suggested protection, click to accept');
+					} else {
+						$span.attr('title', 'Protected content, click to unprotect');
+					}
+				});
+				return;
+			}
+			$spanArray.each(function() {
+				var $span = $(this);
+				var sha256 = $span.find('span.placeholder-sha256').text();
+
+				if ($span.hasClass('revealed')) {
+					var reveal_date = new Date(instance.reveals[sha256].reveal_date);
+					$span.attr('title', 'Publicly revealed ' +
+						reveal_date.toUTCString()
+					);
+				} else if ($span.hasClass('verified') && instance.mode !== 'reveal') {
+					if ($span.hasClass('masked')) {
+						$span.attr('title', 'Verified locally, click to unmask');
+					} else {
+						$span.attr('title', 'Verified locally, click to mask');
+					}
+				} else if (
+					$span.hasClass('verified')
+					&& (instance.mode === 'reveal')
+					&& $span.hasClass('unmasked')
+				) {
+					$span.attr('title', 'WARNING: Will be revealed publicly!');
+				} else {
+					var commit_date = new Date(instance.commit.commit_date);
+
+					$span.attr('title', 'Redacted by author ' +
+						commit_date.toUTCString()
+					);
+				}
+			});
+		},
+
 		_refreshAllPlaceholders: function() {
 			// we used to convert the JSON into a public HTML fragment on the client side.
 			// but server-side generation is better for running in non-javascript contexts.
 			// and making it possible for search engines to index the letter.
 			// Save what the server made in the beginning so that if we mess with it we
 			// can restore it back.			
-			this.$div.empty().append(this.initialLetterText.clone());
+			this.$div.empty().append(this.initialContent.clone());
 
 			var instance = this;
 			this.$div.find('span').filter('.placeholder').each(function(i) {
-				var placeholder = $(this);
-				var shaHexDigest = placeholder.attr('title');
+				var $span = $(this);
+				var sha256 = $span.find('span.placeholder-sha256').text();
 
-				if (!placeholder.hasClass('revealed')) {
+				if (!$span.hasClass('revealed')) {
 					var publiclyRevealed = true;
-					var reveal = instance.reveals[shaHexDigest];
+					var reveal = instance.reveals[sha256];
 					if (!reveal) {
 						publiclyRevealed = false;
-						reveal = instance.protections[shaHexDigest];
+						reveal = instance.protections[sha256];
 					}
 					if (reveal) {
-						placeholder.text(reveal.value);
+						// Don't want to disrupt the hash and stuff
+						var foundTextNode = false;
+						$span.contents().each(function () {
+							var $el = $(this)
+							if (this.nodeType === Node.TEXT_NODE) {
+								if (foundTextNode) {
+									throw "More than one text node in span!";
+								}
+								$el.replaceWith(
+									document.createTextNode(reveal.value)
+								);
+								foundTextNode = true;
+							}
+    					});
+						if (!foundTextNode) {
+							throw "No text nodes found in span";
+						}
 
-						placeholder.removeClass('protected');
+						$span.removeClass('protected');
 						if (publiclyRevealed) {
-							placeholder.addClass('revealed');
+							$span.addClass('revealed');
 						} else {	
-							placeholder.addClass('verified');
-							placeholder.addClass('unmasked');
-							placeholder.click( 
+							$span.addClass('verified');
+							$span.addClass('unmasked');
+							$span.click( 
 								$.proxy(instance._toggleMaskListener, instance)
 							);
 						}
 					}
-				}	
+				}
 			});
+
+			this._updateSpanTitles(this.$div.find('span').filter('.placeholder'));
 		},
 
 		getProtectionsClone: function(includeMasked) {
@@ -2101,7 +2182,11 @@
 				var $masked = this.$div.find('span.verified.masked');
 				$masked.each(function(idx, el) {
 					var $el = $(el);
-					delete protectionsClone[$el.attr('title')];
+					var sha256 = $el.find('span.placeholder-sha256').text();
+					if (!protectionsClone[sha256]) {
+						throw "Masked protection span not in protections";
+					}
+					delete protectionsClone[sha256];
 				});
 			}
 			return protectionsClone;
@@ -2432,7 +2517,7 @@
 			}
 
 			var instance = Blackhighlighter.getInstance(this.get(0));
-			return instance.seeProtections(arg1, arg2);
+			return instance.seeProtections(arg1, false);
 		}
 
 		if (o === "reveal") {

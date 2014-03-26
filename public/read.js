@@ -120,18 +120,9 @@ define([
 	$("#editor").blackhighlighter({
 		mode: 'show',
 		commit: PARAMS.commit,
+		reveals: PARAMS.reveals,
 		update: updateTabEnables
-	});
-
-	try {
-		if (!_.isArray(PARAMS.reveals)) {
-			throw "Expected server to give reveals[] as JSON array";
-		}
-		$("#editor").blackhighlighter('verify', PARAMS.reveals, true);
-	} catch(err) {
-		throw 'Reveal posted on server did not pass client verification check: ' + err; 
-	}
-	
+	});	
 	
 	// The user is allowed to type in or paste certificates.  For reasons of readability
 	// and to give users the ability to easily extract individual certificates, we
@@ -434,9 +425,7 @@ define([
 					"certificate", 'decode', tidyRevealText
 				);
 					
-				$("#editor").blackhighlighter('verify', 
-					certificate.reveals, false
-				);
+				$("#editor").blackhighlighter('verify', certificate.reveals);
 
 				finalizeVerifyUI(null);
 
