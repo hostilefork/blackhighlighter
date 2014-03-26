@@ -232,7 +232,14 @@ define([
 					// Review: clients shouldn't be generating this string
 
 					var certString = '';					
-					certString += '/* BEGIN REVEAL CERTIFICATE' + '\n';
+					certString += '/* BEGIN BLACKHIGHLIGHTER CERTIFICATE' + '\n';
+					certString += ' * This contains ' + keyCount;
+					if (keyCount > 1) {
+						certString += ' protections';
+					} else {
+						certString += ' protection';
+					}
+					certString += '\n';
 					certString += ' * To use this, visit:' + '\n';
 					certString += ' *' + '\n';
 					certString += ' * ' + blackhighlighter.makeVerifyUrl(
@@ -248,7 +255,7 @@ define([
 					);
 
 					certString += certificate + '\n';
-					certString += '/* END REVEAL CERTIFICATE */';
+					certString += '/* END BLACKHIGHLIGHTER CERTIFICATE */';
 
 					$('#json-protected').text(certString);
 					
