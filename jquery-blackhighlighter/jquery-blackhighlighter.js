@@ -2609,6 +2609,8 @@
 				return true;
 			}
 
+			var instance = Blackhighlighter.getInstance($oldActive.get(0));
+
 			// http://stackoverflow.com/questions/12027137/
 			var pastedText = undefined;
 			if (window.clipboardData && window.clipboardData.getData) {
@@ -2643,6 +2645,10 @@
 
 			// cancel the original paste
 			event.preventDefault();
+
+			// Is this the best place to put this update call?
+			instance.update();
+
 			return false;
 		});
 	});
