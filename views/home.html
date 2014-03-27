@@ -54,9 +54,7 @@ blackhighlighter|HOME
 <div class="tabs-content" id="tabs-welcome">
 
 	<div class="leading-section">
-		<p>Welcome to the demo sandbox for the Black Highlighter jQuery plug-in.  Our goal is to provide an open-source web widget you can easily integrate into any workflow, which facilitates 3 important things in communication:</p>
-		<p><b>Transparency.  Security.  Accountability.</b></p>
-		<p>The system is different from other commenting and email you've seen in web browsers.  Prior to publishing, you're given a redaction pen.  Everything you mark out is cryptographically signed by code in your browser <i>with no server communication</i>.  You receive a certificate that you can choose to give out or not--as you wish--for each redaction.</p>
+		<p>Welcome to the demo sandbox for the open-source <a href="https://github.com/hostilefork/blackhighlighter" target="_blank">Black Highlighter project</a>!  It promotes <b>Transparency</b>, <b>Security</b> and <b>Accountability</b> through a server component and a browser widget that make cryptographically verifiable redaction available to <i>everyone</i>.  Read on for more background, or jump in <a href="http://blackhighlighter.org/write/" target="_blank">and try it now</a>... </p>
 	</div>
 
 	<div class="homepage-animation">
@@ -67,7 +65,15 @@ blackhighlighter|HOME
 	</div>
 
 	<div class="trailing-section">
-		<p>It's easy to use and has wide cross-browser compatibility.  Both the server component and the widget are free open-source software, with the only dependency for the widget being jQuery.</p>
+		<h3>"...how does it work?"</h3>
+
+		<p>The system is different from other commenting and email you've seen on the web.  Prior to publishing, you're given a redaction pen.  Everything you mark out is cryptographically signed by client JavaScript code; there is no server communication <i>until the protections have been made</i>.  Your browser generates a certificate for the missing portions&mdash;given only to you&mdash;which you may share subsets of with whomever you wish.<p>
+
+		<p>Both client and server are  secured against anyone seeing forged information in the missing parts.  The checks can be done without sending the sensitive data to a server to make a verificiation.  It's then possible for anyone with the certificate to choose to reveal information to the server <i>if that becomes necessary</i>.  But that can be done on a per-redaction basis without publishing everything.</p>
+
+		<p>Currently there is some support for making it possible for your browser to look for patterns in text, and automatically suggest things that may be sensitive.  These suggestions can easily be taken with a one-click protection.  Of course there are infinite features one can imagine, and feel free to submit yours to the project's issue tracker on GitHub!</p>
+
+		<p>It's easy to use and has wide cross-browser compatibility, although the redaction pen doesn't work on touch interfaces (yet).  The server component is written in Node.JS, and the only dependency for the browser widget is jQuery.  <i>(Read the <a href="https://github.com/hostilefork/blackhighlighter/blob/master/CREDITS.md" target="_blank">full credits</a> for the technologies used; both in the components themselves...as well as in this sample sandbox "app".)</i></p>
 
 		<div class="action-buttons">
 			<button class="next-step">
@@ -75,21 +81,37 @@ blackhighlighter|HOME
 			</button>
 		</div>
 
-		<p>The implications might not be immediately obvious.  But ask yourself a few questions:</p>
+		<h3>"...but what's it <i>for</i>?"</h3>
+		<p>The applications might not be immediately obvious.  But let's imagine a few sample scenarios:</p>
 		<ul>
-		<li>If you send a letter to an elected government representative, and they don't act on it, what happens to your message?  You must include enough information to prove they should take you seriously as a constituent--which you may not want to publish to the whole world.  But what tool do you have for closing the accountability loop on their side?  How can others research and diagnose a systemic problem no one is addressing?  <b>Publish your letter with Black Highlighter and send the intended recipient the full certificate.</b><br><br></li>
-		<li>Many government agencies are legally obligated to make certain aspects of their operations public record, but have some liberty to withold their inner dialogue.  What if you're a watchdog and you demand the information you have a right to, but they refuse because the tools they used mixed the information together so that lawyers would have to separate the information.  What if you take it to court, and they cite the cost to the government to pay the legal fees, and the judge asks you <i>"Well, what do you need it for that justifies the price?"</i>  You are put in the adversarial position of making a politically volatile accusation of "why you need" information that legally should have been published without the public's reasons for wanting it called into question. <b>Demand the organization use Black Highlighter, and publish the redacted form on a regular basis.</b><br><br></li>
-		<li>When a company wants to hire someone from another country and get them a work visa, they are required to make a domestic job listing.  This is to prove to immigration that they've done due diligence in making sure a qualified citizen is not being passed over.  Yet these listings are often posted when the company has no intention of replying to any contact--<i>they have already decided who they're going to hire</i>.  Moreover, some listings are just put up as a way of "testing the waters" so that a company can have some metrics on how marketable they are.  How do qualified local candidates tip the balance and catch these frauds?  <b>Have job outreaches managed on a Black Highlighter system, so the gist of applications can be monitored by job seekers and other watchdogs.</b><br><br></li>
-		<li>If you sign up for an Internet personal ad site and write a letter to someone who strikes your interest, you want to be clever and creative enough to warrant their attention.  They'd have every reason to ignore a short and uninformative response.  But should you really be trusting that person <i>(or trusting that service, which may well have scraped the picture and data from elsewhere to inflate their numbers... this is common)</i>?  Do you really want your messages to be so private they're sent to the circular file?  <b>Use Black Highlighter and transform this possibly-not-even-real stranger's inbox from being <i>"totally private"</i> to being <i>"mostly public"</i></b></li>
+		<li>If you send a letter to an elected government representative, and they don't act on it, what happens to your message?  You must include enough information to prove they should take you seriously as a constituent&mdash;which you may not want to publish to the whole world.  But what tool do you have for closing the accountability loop on their side?  How can others research and diagnose a systemic problem no one is addressing?<br><br>
+		<b>Publish your letter with Black Highlighter and send the representative the full certificate through normal email.  Others will be able to browse and read the public portions, and a credentialed third-party may even solicit you for some of the protected portions to follow-up on.  The representative will be accountable to you, and you will be accountable due to not being able to change the information after-the-fact.</b><br><br></li>
+
+		<li>Many government agencies are legally obligated to make certain aspects of their operations public record, but have some liberty to withold their inner dialogue.  What if you're a watchdog and you demand the information you have a right to, but they refuse because the tools they used mixed the information together so that lawyers would have to separate it out?  What if you take them to court, and they cite the cost to the government to pay the legal fees, and the judge says "That's a lot of money, <i>why do you need it?</i>"  You are put in the adversarial position of making a politically volatile accusation of "why you need" information, when the law says you shouldn't have to.<br><br>
+		<b>The public should demand that when maintaining their records, the agency use Black Highlighter as part of the system.  They may make protections conservatively; <i>(or even have a different department doing the redacting than who generated the information)</i>.  But if it's an integral part of the workflow from the beginning, then redacted data can be published regularly&mdash;even daily.  This will bring scrutiny in the event that it seems they're redacting too much, and accountability to not change the information if it needs to come to light.</b><br><br></li>
+
+		<li>When a company wants to hire someone from another country and get them a work visa, they are required to make a domestic job listing.  This is to prove to immigration that they've done due diligence in ensuring a qualified citizen is not being passed over.  Yet these listings are often posted when the company has no intention of replying to any contact&mdash;<i>they have already decided who they're going to hire</i>.  Moreover, some listings are just put up as a way of "testing the waters" so that a company can keep tabs on their popularity.  How do qualified local candidates tip the balance to catch frauds and avoid wasting their own time by composing a thoughtful and sincere inquiry?<br><br>
+		<b>Job applicants and immigration should require that these outreaches be conducted on a Black Highlighter system.  That way, they can see the trends in how many applications are being sent from the public...and get a pulse on whether the ad is serious or a hoax.</b><br><br></li>
+
+		<li>If you sign up for a personal ad site and write a letter to someone who strikes your interest, you want to be clever and creative enough to warrant their attention.  They'd have every reason to ignore a short and uninformative response!  But your time is valuable (maybe), and if they have no intention of responding you shouldn't put too much into it.  Unfortunately, the account might well not be real...it's common practice for illegitimate sites to scrape pictures and text to create fake ads.  Even plausibily legitimate sites will keep knowingly inactive accounts around to inflate their numbers.  How do you make such a situation more fair?<br><br>
+		<b>Insist on using a personals site which includes some Black Highlighter functionality.  If you don't receive a response, the site could offer the ability to publish your protected message alongside the person's profile; and a collection of their pattern of lack of response could be established.  Yet the person who didn't write back might be real, and just felt your message didn't warrant a response <i>(perhaps due to something rude in the hidden portions)</i>.  They could elect to reveal that as evidence, balancing the challenge.</b></li>
 		</ul>
 
-		<p>We know that more data can open doors.  And it already has, Google assists the CDC by taking all the trends in "anonymized" search data that is still geo-tagged to track disease epidemics.  There is huge latent value in our data.  But should Google and the NSA be the only people with the ability to measure, mine, and oversee that?  Should the inbox of those you outreach to--who aren't necessarily trustworthy to read or execute on what you're sending--be where the buck stops?</p>
+		<p>There's a pattern in all of these scenarios.  Some piece of a puzzle where information was "totally private" is reshaped to become "<i>somewhat</i> public".  One person summarized it as <i>"flipping the inbox"</i>, to where instead of your messages disappearing into someone else's inbox...they effectively stay in your outbox and have some amount of searchability.  That transition brings the potential for more parties to see what's going on, and act on better data.</p>
 
-		<p>As Bjork says, <a href="https://www.youtube.com/watch?v=B1EVtoHAJvY" target="_blank"><b>"Don't let them do that to you."</b></a>  </p>
+		<p>And opening data opens doors.  Google already assists the CDC by taking all the trends in "anonymized" data (that is still geo-tagged) to track disease epidemics based on searches for symptoms.  But should Google and the NSA be the only people with the ability to measure, mine, and oversee the big picture?  Or should the inbox of strangers you invest in outreaching to&mdash;who aren't necessarily trustworthy to read or execute on what you're sending&mdash;be where the buck stops?</p>
 
-		<p>Society will not change to be more transparent or accountable unless those who are being marginalized demand changes to the process.  Black Highlighter is a free and open tool for changing this balance.  And it isn't just an idea, it's working today.</p>
+		<p>Right now, that <i>is</i> where the buck stops, all too often.  But as Bjork says in verse: <a href="https://www.youtube.com/watch?v=B1EVtoHAJvY" target="_blank"><b>"Don't let them do that to you."</b></a></p>
 
-		<p>Demand transparency, security, and accountability.  Share this demonstration with others.  And if you are able then please don't hesitate to get in touch about helping develop it, or adapt it for use by your organization.</p>
+		<h3>"...but will people <i>actually</i> work this way?"</h3>
+
+		<p>That's a reasonable question; and we don't really know.  The empirical evidence suggests that those who enjoy a position of power aren't eager to give it up.  So what is almost certainly true is that systems will not change to be more transparent or accountable <i>unless</i> those who are being marginalized stick to their guns, and demand changes to the process.  Black Highlighter isn't the only idea, but it's a new one that deserves a fair shot.</p>
+
+		<p>So if you like the concept, then share this demonstration with others.  And if you are a JavaScript developer, web developer, or cryptographer...then please don't hesitate to get in touch about helping develop it.  A good first goal is to get it adopted in government scenarios where the law requires transparency, though any application would be a fine start.  Don't hesitate to make contact, and feel free to send your message body as a Black Highlighter certificate.  :-)</p>
+
+		<p>But most of all: demand <b>Transparency, Security, and Accountability</b> &mdash;however it is achieved.</p>
+
+		<p><b>[&aelig;]</b></p>
 	</div>
 
 </div>
