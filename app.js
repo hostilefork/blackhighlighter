@@ -161,17 +161,6 @@ app.locals.NODE_VERSION = process.version;
 // optionals, set in your environment somewhere...
 /* app.locals.HOSTING_SERVICE: "string"; */
 
-app.configure('development', function() {
-	app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
-});
-
-app.configure('production', function() {
-	app.use(express.errorHandler());
-	
-	// Express is already set to cache templates in production, apparently
-	// https://github.com/kof/node-jqtpl/pull/34
-	// app.set('view cache', true);
-});
 
 // We need the "bodyParser" middleware to get the various fields out of form
 // data passed to us in HTTP post requests
