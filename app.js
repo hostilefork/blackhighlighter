@@ -152,16 +152,14 @@ swig.setTag(
 );
 
 
-app.locals({
-	// These are provided to every template context by default
-	LIBS_URL: '/public/js/'
-	, BLACKHIGHLIGHTER_MEDIA_URL: '/public/'
-	, PROJECT_MEDIA_URL: '/public/'
-	, NODE_VERSION: process.version
+// These are provided to every template context by default
+app.locals.LIBS_URL = '/public/js/';
+app.locals.BLACKHIGHLIGHTER_MEDIA_URL = '/public/';
+app.locals.PROJECT_MEDIA_URL = '/public/';
+app.locals.NODE_VERSION = process.version;
 
-	// optionals, set in your environment somewhere...
-	// HOSTING_SERVICE: string
-});
+// optionals, set in your environment somewhere...
+/* app.locals.HOSTING_SERVICE: "string"; */
 
 app.configure('development', function() {
 	app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
