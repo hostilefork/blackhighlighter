@@ -1386,7 +1386,7 @@
 				}
 			});
 			$.each(deleteSpans, function(idx, span) {
-				span.remove();
+				$(span).remove();
 			});
 		},
 		
