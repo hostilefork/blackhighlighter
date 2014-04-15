@@ -1794,11 +1794,6 @@
 				var range = sel.getRangeAt(i);
 				if (!range) {
 					// this happens in IE
-				} else if (!range.toString()) {
-					// Because mouseup happens BEFORE click, it's important
-					// that we filter out the "insertion point" selections
-					// you form by just clicking.  We want the click events
-					// to be passed to the takeSuggestion and unprotectSpan
 				} else {
 					this._protectRangeIfApplicable(range);
 				}
