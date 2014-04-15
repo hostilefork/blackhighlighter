@@ -162,13 +162,6 @@ app.locals.NODE_VERSION = process.version;
 /* app.locals.HOSTING_SERVICE: "string"; */
 
 
-// We need the "bodyParser" middleware to get the various fields out of form
-// data passed to us in HTTP post requests
-//    http://stackoverflow.com/a/5710916/211160
-app.use(express.bodyParser());
-
-
-
 //
 // BLACKHIGHLIGHTER COMPONENT
 //
