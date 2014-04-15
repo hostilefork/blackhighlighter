@@ -24,6 +24,7 @@
 	],
 	"dependencies": {
 		"requirejs": "*",
+		"body-parser": "*",
 		"express": ">=3.0.0",
 		"swig": "*",
 		"mongodb": "*",

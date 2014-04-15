@@ -112,7 +112,14 @@ function resSendJsonForErr(res, err) {
 //
 
 var express = require('express');
+// Body Parser was moved to a separate module, there are some controversial
+// things about the behavior of the bundled bodyParser that was in Express but
+// by making it separate these are supposedly solved.
+// https://github.com/expressjs/body-parser
+var bodyParser = require('body-parser');
 var app = express();
+app.use(bodyParser());
+
 var swig = require('swig');
 
 // Register the template engine
@@ -155,6 +162,7 @@ app.locals.NODE_VERSION = process.version;
 
 // optionals, set in your environment somewhere...
 /* app.locals.HOSTING_SERVICE: "string"; */
+/* app.locals.HOSTING_SERVICE_URL: "http://wherever/to/link"; */
 
 
 //
