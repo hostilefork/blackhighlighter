@@ -875,13 +875,10 @@
 			// the match was at the first position.
 			
 			function pushSuggestSpan(str) {
-				var suggestSpan = $(
-					'<span class="placeholder suggested">' +
-					str +
-					'</span>'
-				);
-				$(node).before(suggestSpan);
-				suggestSpan.on('click', $.proxy(this._takeSuggestionListener, this));
+				var $span = $('<span class="placeholder suggested"></span>');
+				$span.append($(document.createTextNode(str)));
+				$(node).before($span);
+				$span.on('click', $.proxy(this._takeSuggestionListener, this));
 				lastPushWasText = false;
 			}
 
@@ -1038,27 +1035,6 @@
 		_canonizeContent: function() {
 			var instance = this;
 
-			// While HTML may collapse all whitespace as not being visually
-			// significant, we treat it as such.  If whitespace is not &nbsp;
-			// we have to collapse it in the text nodes.
-			//
-			// http://stackoverflow.com/a/4399718/211160
-			//
-			var getTextNodesIn = function(el) {
-				return $(el).find(":not(iframe)")
-					.addBack().contents().filter(function() {
-						return this.nodeType == Node.TEXT_NODE;
-					});
-			};
-			getTextNodesIn(this.$div).each(function(idx, el) {
-				// http://stackoverflow.com/questions/7635952/ 
-				var str = el.nodeValue;
-				str = str.replace(/\s+/g, " ");
-				str = str.replace(/^\s+|\s+$/g, "");
-				// should we also do something with zero-no-width joiners?
-				el.nodeValue = str;
-			});
-
 			// First canonize all the <p> tags for browsers that make them into
 			// <div> instead. As you might expect, an easy thing to change is
 			// hard; tags on elements can't change without disrupting content.
@@ -1151,27 +1127,59 @@
 			}
 			$set.wrapAll("<div></div>");
 
-			// REVIEW: IE has a "feature" where it will always turn things that
+			// We want only text nodes or to preserve any protection spans.
+			// There may be things other than these that made it into
+			// the contenteditable, even with our pasting filter.  Example:
+			// IE has a "feature" where it will always turn things that
 			// look like hyperlinks or email addresses into anchors.  Seems
 			// you can't turn it off.
 			//
 			//   http://drupal.org/node/191644
 			//
-			// Removing all anchors is okay at this point, since we're not
-			// allowing the user to deliberately insert anchors...
-			var replaceWithContents = [];
-			this.$div.find('a').each(function(i) {
-				replaceWithContents.push(this);
-			});
-			$.each(replaceWithContents, function(idx, replaceMe) {
-				var parentOfReplace = replaceMe.parentNode;
-				$(replaceMe).replaceWith($(replaceMe).contents());
-				instance._safeNormalize.call(instance, parentOfReplace);
-				if (notNormalized(parentOfReplace)) {
-					throw "Normalization failure trying to fix contenteditable.";
+
+			this.$div.contents().each(function () {
+				var $subDiv = $(this);
+				if (!$subDiv.is('div')) {
+					throw Error("Canonization produced non-div toplevel elem");
 				}
+
+				// Only look at the non-text nodes...
+				$subDiv.children().each(function () {
+					var $child = $(this);
+					if (!$child.is('span') && !$child.hasClass('placeholder')) {
+						$child.replaceWith(
+							$(document.createTextNode($child.text()))
+						);
+					}
+				});
+
+				instance._safeNormalize.call(instance, $subDiv.get(0));
 			});
 
+
+			// HTML collapses all whitespace as not being visually significant
+			// but if the content is in a text node, it's not a problem.  We
+			// may need to do some processing on the text nodes, but leaving
+			// it out for now.
+			//
+			// http://stackoverflow.com/a/4399718/211160
+			//
+/*
+			var getTextNodesIn = function(el) {
+				return $(el).find(":not(iframe)")
+					.addBack().contents().filter(function() {
+						return this.nodeType == Node.TEXT_NODE;
+					});
+			};
+			getTextNodesIn(this.$div).each(function(idx, el) {
+				// http://stackoverflow.com/questions/7635952/ 
+				var str = el.nodeValue;
+				str = str.replace(/\s+/g, " ");
+				str = str.replace(/^\s+|\s+$/g, "");
+				// should we also do something with zero-no-width joiners?
+				el.nodeValue = str;
+			});
+*/
 		},
 		
 		_decanonizeContent: function() {
@@ -1466,7 +1474,8 @@
 			if (!str) {
 				throw "Empty string passed to _makeProtectedSpan";
 			}
-			var $span = $('<span class="placeholder protected">' + str + '</span>');
+			var $span = $('<span class="placeholder protected"></span>');
+			$span.append($(document.createTextNode(str)));
 			if (this.mode === 'protect') {
 				$span.on('click', $.proxy(this._unprotectSpanListener, this));
 			}
@@ -1699,6 +1708,8 @@
 				if ($startContainer.get(0).nodeType === Node.TEXT_NODE) {
 					if ($startParent.is("span") && $startParent.hasClass("protected")) {
 						// ignore it (you can't redact it more) but climb a level
+						// startOffset is always 0 here, because spans contain
+						// only one text node; hardcode it?
 						startOffset = indexIncludingTextNodes($startContainer);
 						$startContainer = $startContainer.parent();
 					} else {
@@ -1733,6 +1744,8 @@
 				if ($endContainer.get(0).nodeType === Node.TEXT_NODE) {
 					if ($endParent.is("span") && $endParent.hasClass("protected")) {
 						// ignore it (you can't redact it more)
+						// endOffset is always 0 here, because spans contain
+						// only one text node; hardcode it?
 						endOffset = indexIncludingTextNodes($endContainer);
 						$endContainer = $endContainer.parent();
 					} else {
@@ -1768,6 +1781,8 @@
 				}
 
 				if ($startContainer.is($endContainer)) {
+					// Slice goes up to but does not include end
+					// So should this be endOffset + 1 ?
 					$startContainer.contents().slice(startOffset, endOffset).each(redactFn);
 				} else {
 					// This is a div-spanning operation.  REVIEW: apply the
@@ -1818,6 +1833,12 @@
 				var range = sel.getRangeAt(i);
 				if (!range) {
 					// this happens in IE
+				} else if (
+					(range.startContainer == range.endContainer) &&
+					(range.startOffset == range.endOffset)
+				) {
+					// Don't do anything, they're clicking in place,
+					// not selecting a range...the click handler will get it
 				} else {
 					this._protectRangeIfApplicable(range);
 				}
