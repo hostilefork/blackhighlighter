@@ -39,14 +39,9 @@ var _ = require('underscore')._;
 // 
 // BASIC HTTP SETUP
 //
-// The Virtual Cloud tells us our port and host, but if we are running
-// locally we default to localhost and port 8080 (used by nodejitsu).
+// The http module is one of Node's built-in facilities
 //
 
-// JavaScriptOR (||) variable assignment:
-// http://stackoverflow.com/questions/2100758/
-var port = (process.env.PORT || 3000);
-var host = (process.env.HOST || 'localhost');
 var http = require('http');
 
 
@@ -330,5 +325,8 @@ app.post('/reveal/$', function (req, res) {
 // listening for connections.
 //
 
+// JavaScriptOR (||) variable assignment:
+// http://stackoverflow.com/questions/2100758/
+var port = (process.env.PORT || 3000);
 console.log("Listening on port " + port);
-app.listen(port, host);
+app.listen(port);
