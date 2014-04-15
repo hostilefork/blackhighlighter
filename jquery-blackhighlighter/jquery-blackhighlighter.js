@@ -1485,7 +1485,7 @@
 
 			var $startContainer = $(range.startContainer);
 			var $endContainer = $(range.endContainer)
-			
+
 			// Do inclusive test; if the common ancestor of the selection is
 			// not fully inside the blackhighlighter div, then some amount
 			// of the selection is outside.  A decision needs to be made
@@ -1495,6 +1495,30 @@
 			//
 			if ($.contains(this.$div, $(range.commonAncestorContainer))) {
 				return false;
+			}
+
+			// Note: Though it may seem that you'd always be selecting
+			// the text node in the span instead of the span itself, the
+			// IE range shim sometimes treats a span with a text node in it
+			// as the container, for no good reason.  We adjust that to
+			// use the contents and hope for the best.
+			if ($startContainer.is('span')) {
+				$startContainer = $startContainer.contents();
+				if ($startContainer.length != 1) {
+					throw Error("Unexpected span length in selection.");
+				}
+				if ($startContainer.get(0).nodeType !== Node.TEXT_NODE) {
+					throw Error("Unexpected span contents in selection.");
+				}
+			}
+			if ($endContainer.is('span')) {
+				$endContainer = $endContainer.contents();
+				if ($endContainer.length != 1) {
+					throw Error("Unexpected span length in selection.");
+				}
+				if ($endContainer.get(0).nodeType !== Node.TEXT_NODE) {
+					throw Error("Unexpected span contents in selection.");
+				}
 			}
 
 			// SANITY CHECK!
