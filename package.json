@@ -8,7 +8,7 @@
 		"www.blackhighlighter.org"
 	],
 	"preferGlobal": "false",
-	"version": "0.0.1-160",
+	"version": "0.0.1-199",
 	"author": "Brian Dickens <brian@hostilefork.com>",
 	"description": "A basic walkthrough demo of the blackhighlighter system",
 	"repository": {
@@ -43,6 +43,8 @@
 		"start": "app.js",
 		"test": "node test/all.js"
 	},
+	"_comment_NeededByOpenShift": "https://github.com/ramr/nodejs-custom-version-openshift/blob/master/package.json",
+	"main": "app.js",
 	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
 	"files": [
 		"app.js",
