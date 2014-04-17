@@ -18,9 +18,6 @@
 //   See http://blackhighlighter.hostilefork.com for documentation.
 //
 
-// Whole-script strict mode syntax
-"use strict";
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -40,6 +37,10 @@
 		factory(jQuery);
 	}
 }(function ($) {
+
+	// http://stackoverflow.com/questions/1335851/
+	// http://stackoverflow.com/questions/4462478/
+	"use strict";
 
 	// Mask global underscore library in browser in order to avoid any
 	// underscore-dependent code creeping in.
