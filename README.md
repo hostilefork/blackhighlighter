@@ -17,7 +17,7 @@ As an additional security step, the URL which is used to share Blackhighighter p
 Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.hostilefork.com) for philosophy, videos, and more articles about this project.
 
 
-### NOTE ABOUT THE LICENSE
+# LICENSE
 
 I'm a pretty strong believer in the Stallman-style of "Software Freedom".  It would be a better world if those who adapted free software (and then deployed it to users) would share their adaptations back with the community.  His arguments have always seemed pretty solid to me:
 
@@ -32,7 +32,27 @@ But I'll back off if anyone writes me about it.  I don't have a legal department
 http://blog.hostilefork.com/extjs-licensing-fiasco/
 
 
-### CONVENTIONS
+# DEPLOYMENT
+
+When Blackhighlighter was initially ported from Django to Node.JS, the Node ecology was just beginning.  In theory you can write a Node.JS app and seamlessly switch from one host to another because the metadata for the deployment is contained in the `package.json` file.
+
+But theory doesn't always mesh with practice, and while there is a grain of truth in the idea that the application behaviors are contained there... still there are other settings to be concerned with.  As I experiment with Blackhighlighter deployments, I'll try and note the variations in settings to be concerned with.
+
+
+### Nodejitsu
+
+In Nodejitsu, to set the environment variables you go to the control panel for your application on the website under your account and set them.
+
+### Heroku
+
+On Heroku, if you want to set an environment variable, you do it with the `heroku config:set` command.  For blackhighlighter to work, it must know these variables:
+
+heroku config:set MONGO_CONNECT_URI=mongodb://whatever/your/connect/string/is
+heroku config:set HOSTING_SERVICE=Heroku
+heroku config:set HOSTING_SERVICE_URL=https://www.heroku.com/features
+
+
+# CONVENTIONS
 
 Node.js directory structure chosen to follow this suggestion:
 
