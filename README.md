@@ -14,7 +14,9 @@ As an additional security step, the URL which is used to share Blackhighighter p
 
 *(Note: Forging signatures wouldn't allow them to know the original missing content if it hadn't been revealed.  However if the link to the post were shared, and they manipulated the data at that link, it would let them make a fake revelation of the missing content appear legitimate to a reader.)*
 
-Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.hostilefork.com) for philosophy, videos, and more articles about this project.
+Please see [http://blackhighlighter.hostilefork.com/](http://blackhighlighter.hostilefork.com) for philosophy, videos, and more articles about this project.  The demonstration suite is a [separate project](https://github.com/hostilefork/blackhighlighter.org/), and a live demo is running of that at:
+
+http://blackhighlighter.org
 
 
 # LICENSE

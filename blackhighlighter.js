@@ -61,18 +61,26 @@
 //
 var requirejs = require('requirejs');
 requirejs.config({
+    // Use node's special variable __dirname to
+    // get the directory containing this file.
+    // Useful if building a library that will
+    // be used in node but does not require the
+    // use of node outside
+    // https://github.com/jrburke/requirejs/issues/150
+    baseUrl: __dirname,
+
     //Pass the top-level main.js/index.js require
     //function to requirejs so that node modules
     //are loaded relative to the top-level JS file.
     nodeRequire: require,
-	
-	// Note: do not include the '.js' at the end of these paths!
-	paths: {
-		'jquery-blackhighlighter':
-			'jquery-blackhighlighter/jquery-blackhighlighter',
+    
+    // Note: do not include the '.js' at the end of these paths!
+    paths: {
+        'jquery-blackhighlighter':
+            'jquery-blackhighlighter/jquery-blackhighlighter',
 
-		'jquery': 'jquery-fake'
-	}
+        'jquery': 'jquery-fake'
+    }
 });
 
 
@@ -141,13 +149,13 @@ var Q = require('q');
 // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 //
 function ClientError(msg) {
-	// http://stackoverflow.com/a/13294728/211160
-	if (!(this instanceof ClientError)){ return new ClientError(msg); }
+    // http://stackoverflow.com/a/13294728/211160
+    if (!(this instanceof ClientError)){ return new ClientError(msg); }
 
-	Error.call(this);
-	Error.captureStackTrace(this, ClientError);
-	this.message = msg;
-	this.name = 'ClientError';
+    Error.call(this);
+    Error.captureStackTrace(this, ClientError);
+    this.message = msg;
+    this.name = 'ClientError';
 };
 ClientError.prototype.__proto__ = Error.prototype;
 exports.ClientError = ClientError;
@@ -161,109 +169,117 @@ exports.ClientError = ClientError;
 // Not sure what things besides the database will wind up going in here.
 //
 var configuration = {
-	/* MONGO_CONNECT_URI: ... */
+    /* MONGO_CONNECT_URI: ... */
 };
 exports.configure = function(config) {
-	configuration = config;
+    configuration = config;
 }
 
+
+
+//
+// DIRECTORY FOR STATIC FILES JQUERY-BLACKHIGHLIGHTER
+//
+exports.pathForJqueryBlackhighlighter = function() {
+    return __dirname + '/jquery-blackhighlighter';
+}
 
 //
 // COMMITTING
 //
 exports.makeCommitment = function(commit, callback) {
-	var requestTime = new Date();
+    var requestTime = new Date();
 
-	// We don't want to put "extra junk" in the MongoDB database, as it
-	// will just store whatever objects we put in it (no schema).
-	//
-	// REVIEW: This seems pretty tedious, but what else can we do when
-	// storing JSON from a potentially hostile/hacked client?
+    // We don't want to put "extra junk" in the MongoDB database, as it
+    // will just store whatever objects we put in it (no schema).
+    //
+    // REVIEW: This seems pretty tedious, but what else can we do when
+    // storing JSON from a potentially hostile/hacked client?
 
-	// Must be an object
-	if (!_.isObject(commit)) {
-		throw ClientError('commit must be an object');
-	}
+    // Must be an object
+    if (!_.isObject(commit)) {
+        throw ClientError('commit must be an object');
+    }
 
-	// Verify it doesn't have more than just "spans"
-	if (!_.isEqual(_.keys(commit).sort(), ["spans"])) {
-		console.log(commit.toString());
-		throw ClientError('commit should have a .spans key, only');
-	}
+    // Verify it doesn't have more than just "spans"
+    if (!_.isEqual(_.keys(commit).sort(), ["spans"])) {
+        console.log(commit.toString());
+        throw ClientError('commit should have a .spans key, only');
+    }
 
-	// Spans can be either strings or objects with 2 keys
-	_.each(commit.spans, function (commitSpan) {
-		if (_.isString(commitSpan)) {
-			return;
-		}
-		if (!_.isObject(commitSpan)) {
-			throw ClientError('commit spans must be string or object');
-		}
-		if (!_.isEqual(
-			_.keys(commitSpan).sort(), ["display_length", "sha256"])
-		) {
-			throw ClientError(
-				'span objects can only have sha256 and display_length'
-			);
-		}
-		if (!_.isNumber(commitSpan.display_length)) {
-			throw ClientError('display_length must be a number');
-		}
-		if (!_.isString(commitSpan.sha256)) {
-			throw ClientError('sha256 of span must be string');
-		}
-	});
+    // Spans can be either strings or objects with 2 keys
+    _.each(commit.spans, function (commitSpan) {
+        if (_.isString(commitSpan)) {
+            return;
+        }
+        if (!_.isObject(commitSpan)) {
+            throw ClientError('commit spans must be string or object');
+        }
+        if (!_.isEqual(
+            _.keys(commitSpan).sort(), ["display_length", "sha256"])
+        ) {
+            throw ClientError(
+                'span objects can only have sha256 and display_length'
+            );
+        }
+        if (!_.isNumber(commitSpan.display_length)) {
+            throw ClientError('display_length must be a number');
+        }
+        if (!_.isString(commitSpan.sha256)) {
+            throw ClientError('sha256 of span must be string');
+        }
+    });
 
-	// Okay, the written content itself may be junk, but at least it's 
-	// all "in-band" junk.  Start the database work...
+    // Okay, the written content itself may be junk, but at least it's 
+    // all "in-band" junk.  Start the database work...
 
-	var result = null;
+    var result = null;
 
-	Q.try(function() {
+    Q.try(function() {
 
-		// 1: Connect to database with authorization
-		return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
+        // 1: Connect to database with authorization
+        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
 
-	}).then(function (conn) {
+    }).then(function (conn) {
 
-		// 2: Get the commits collection from the database
-		return Q.ninvoke(conn, 'collection', 'commits');
+        // 2: Get the commits collection from the database
+        return Q.ninvoke(conn, 'collection', 'commits');
 
-	}).then(function (coll) {
+    }).then(function (coll) {
 
-		// 3: Add commit to collection
+        // 3: Add commit to collection
 
-		// Should we check to make sure the date in the request matches
-		// so we are on the same page as the client about time?
-		//
-		// mongodb JS driver knows about Date()?
-		// or do we need to use the .toJSON() method?
-		commit.commit_date = requestTime;
-		commit.commit_id = common.commitIdFromCommit(commit);
-		return Q.ninvoke(coll, "insert", commit, {safe: true});
+        // Should we check to make sure the date in the request matches
+        // so we are on the same page as the client about time?
+        //
+        // mongodb JS driver knows about Date()?
+        // or do we need to use the .toJSON() method?
+        commit.commit_date = requestTime;
+        commit.commit_id = common.commitIdFromCommit(commit);
+        return Q.ninvoke(coll, "insert", commit, {safe: true});
 
-	}).then(function (records) {
+    }).then(function (records) {
 
-		// 4. Echo the commit back with the commit_date and commit_id added
+        // 4. Echo the commit back with the commit_date and commit_id added
 
-		// MongoDB stuck its own _id on there, and the client doesn't
-		// need to know that.
-		delete commit._id;
+        // MongoDB stuck its own _id on there, and the client doesn't
+        // need to know that.
+        delete commit._id;
 
-		// We know the async insertion actually succeeded due to {safe: true}
-		callback(null, {
-			commit: commit
-		});
+        // We know the async insertion actually succeeded due to {safe: true}
+        callback(null, {
+            commit: commit
+        });
 
-	}).catch(function (err) {
+    }).catch(function (err) {
 
-		callback(err);
+        callback(err);
 
-	}).finally(function () {
+    }).finally(function () {
 
-		// add general cleanup code here if necessary
+        // add general cleanup code here if necessary
 
-	}).done();
+    }).done();
 }
 
 
@@ -273,166 +289,166 @@ exports.makeCommitment = function(commit, callback) {
 //
 
 exports.generateHtmlFromCommitAndReveals = function(commit, revealsArray) {
-	// Note: We do this on the server side rather than in JavaScript code on
-	// the client for purposes of search engines, and also based on the
-	// general principle that while writing and verifying a blackhighlighter
-	// letter requires a JavaScript-enabled browser, reading it should not!
-	// (though without the JavaScript the current page might look a bit bad,
-	// this could be used for some kind of "raw" page generator as well)
+    // Note: We do this on the server side rather than in JavaScript code on
+    // the client for purposes of search engines, and also based on the
+    // general principle that while writing and verifying a blackhighlighter
+    // letter requires a JavaScript-enabled browser, reading it should not!
+    // (though without the JavaScript the current page might look a bit bad,
+    // this could be used for some kind of "raw" page generator as well)
 
-	// u'\u00A0' is the non breaking space
-	// ...it should be preserved in db strings via UTF8
-	
-	// REVIEW: for each one that has been unredacted make
-	// a hovery bit so that you can get a tip on when it was made public?
-	// how will auditing be done?
+    // u'\u00A0' is the non breaking space
+    // ...it should be preserved in db strings via UTF8
+    
+    // REVIEW: for each one that has been unredacted make
+    // a hovery bit so that you can get a tip on when it was made public?
+    // how will auditing be done?
 
-	// http://documentcloud.github.com/underscore/#groupBy
-	var revealsByHash = _.groupBy(revealsArray, function(reveal) { 
-		return reveal.sha256;
-	});
+    // http://documentcloud.github.com/underscore/#groupBy
+    var revealsByHash = _.groupBy(revealsArray, function(reveal) { 
+        return reveal.sha256;
+    });
 
-	// Just a sanity check -- make sure there's only one reveal per hash!
-	_.each(revealsByHash, function(value) {
-		if (value.length !== 1) {
-			throw Error("More than one reveal for hash on server.");
-		}
-	}); 
-		
-	var result = '';
-	_.each(commit.spans, function (commitSpan) {
+    // Just a sanity check -- make sure there's only one reveal per hash!
+    _.each(revealsByHash, function(value) {
+        if (value.length !== 1) {
+            throw Error("More than one reveal for hash on server.");
+        }
+    }); 
+        
+    var result = '';
+    _.each(commit.spans, function (commitSpan) {
 
-		if (_.isString(commitSpan)) {
-			// The commits and reveals contain just ordinary text as JavaScript
-			// strings, so "a < b" is legal.  But what we're making here needs
-			// to be raw HTML in the template, to get the spans and divs and
-			// such for the redaction in the blacked-out bits.  Hence, we have
-			// to escape the text span!
-			commitSpan = _.escape(commitSpan);
+        if (_.isString(commitSpan)) {
+            // The commits and reveals contain just ordinary text as JavaScript
+            // strings, so "a < b" is legal.  But what we're making here needs
+            // to be raw HTML in the template, to get the spans and divs and
+            // such for the redaction in the blacked-out bits.  Hence, we have
+            // to escape the text span!
+            commitSpan = _.escape(commitSpan);
 
-			// Also, line breaks must be converted to br nodes
-			result += commitSpan.split('\n').join('<br />');
-		} else {
-			if (revealsByHash[commitSpan.sha256]) {
-				var reveal = revealsByHash[commitSpan.sha256][0];
-				result += 
-					'<span class="placeholder revealed">'
-					+ '<span class="placeholder-sha256">'
-					+ commitSpan.sha256
-					+ '</span>'
-					+ reveal.value
-					+ '</span>';
-			} else {				
-				var display_length = parseInt(commitSpan.display_length, 10);
+            // Also, line breaks must be converted to br nodes
+            result += commitSpan.split('\n').join('<br />');
+        } else {
+            if (revealsByHash[commitSpan.sha256]) {
+                var reveal = revealsByHash[commitSpan.sha256][0];
+                result += 
+                    '<span class="placeholder revealed">'
+                    + '<span class="placeholder-sha256">'
+                    + commitSpan.sha256
+                    + '</span>'
+                    + reveal.value
+                    + '</span>';
+            } else {                
+                var display_length = parseInt(commitSpan.display_length, 10);
 
-				// http://stackoverflow.com/a/1877479/211160
-				var placeholderString = Array(display_length + 1).join('?');
-				
-				// REVIEW: use hex digest as title for query, or do something
-				// more clever?  e.g. we could add a method onto the element
-				// or keep a sidestructure
-				var placeholder = 
-					'<span class="placeholder protected">'
-					+ '<span class="placeholder-sha256">'
-					+ commitSpan.sha256
-					+ '</span>'
-					+ placeholderString 
-					+ '</span>';
+                // http://stackoverflow.com/a/1877479/211160
+                var placeholderString = Array(display_length + 1).join('?');
+                
+                // REVIEW: use hex digest as title for query, or do something
+                // more clever?  e.g. we could add a method onto the element
+                // or keep a sidestructure
+                var placeholder = 
+                    '<span class="placeholder protected">'
+                    + '<span class="placeholder-sha256">'
+                    + commitSpan.sha256
+                    + '</span>'
+                    + placeholderString 
+                    + '</span>';
 
-				result += placeholder;
-			}
-		}
-	});
-	return result;
+                result += placeholder;
+            }
+        }
+    });
+    return result;
 }
 
 
 exports.generateCertificateStubsFromCommit = function(commit) {
-	
-	var mapSha256ToTrue = {};
-	_.each(commit.spans, function (commitSpan) {		
-		if (_.isString(commitSpan)) {
-			// Not redacted.
-		} else {
-			mapSha256ToTrue[commitSpan.sha256] = true;
-		}
-	});
-			
-	var result = [];
-	_.each(mapSha256ToTrue, function(trueValue, key) {
-		result.push({sha256: key});
-	});
-	return result;
+    
+    var mapSha256ToTrue = {};
+    _.each(commit.spans, function (commitSpan) {        
+        if (_.isString(commitSpan)) {
+            // Not redacted.
+        } else {
+            mapSha256ToTrue[commitSpan.sha256] = true;
+        }
+    });
+            
+    var result = [];
+    _.each(mapSha256ToTrue, function(trueValue, key) {
+        result.push({sha256: key});
+    });
+    return result;
 }
 
 
 exports.getCommitAndReveals = function(commit_id, callback) {
-	Q.try(function() {
+    Q.try(function() {
 
-		// 1: Connect to database with authorization
-		return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
+        // 1: Connect to database with authorization
+        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
 
-	}).then(function (conn) {
+    }).then(function (conn) {
 
-		// 2: Get commits and reveals collections in parallel
-		return [
-			Q.ninvoke(conn, 'collection', 'commits')
-			, Q.ninvoke(conn, 'collection', 'reveals')
-		];
+        // 2: Get commits and reveals collections in parallel
+        return [
+            Q.ninvoke(conn, 'collection', 'commits')
+            , Q.ninvoke(conn, 'collection', 'reveals')
+        ];
 
-	}).spread(function (commitsCollection, revealsCollection) {
+    }).spread(function (commitsCollection, revealsCollection) {
 
-		// 3: Query for specific commit and reveals objects in parallel
-		//
-		// REVIEW: necessary to use ObjectID conversion?
-		// http://stackoverflow.com/questions/4902569/
-		return [
-			Q.ninvoke(
-				commitsCollection, 'find'
-				, {'commit_id': commit_id}
-				, {limit: 1, sort:[['_id', 'ascending']]}
-			)
-			, Q.ninvoke(
-				revealsCollection, 'find'
-				, {'commit_id': commit_id}
-				, {sort:[['sha256', 'ascending']]}
-			)
-		];
+        // 3: Query for specific commit and reveals objects in parallel
+        //
+        // REVIEW: necessary to use ObjectID conversion?
+        // http://stackoverflow.com/questions/4902569/
+        return [
+            Q.ninvoke(
+                commitsCollection, 'find'
+                , {'commit_id': commit_id}
+                , {limit: 1, sort:[['_id', 'ascending']]}
+            )
+            , Q.ninvoke(
+                revealsCollection, 'find'
+                , {'commit_id': commit_id}
+                , {sort:[['sha256', 'ascending']]}
+            )
+        ];
 
-	}).spread(function (commitsCursor, revealsCursor) {
+    }).spread(function (commitsCursor, revealsCursor) {
 
-		// 4: Convert the result cursors to arrays
-		return [
-			Q.ninvoke(commitsCursor, 'toArray')
-			, Q.ninvoke(revealsCursor, 'toArray')
-		];
+        // 4: Convert the result cursors to arrays
+        return [
+            Q.ninvoke(commitsCursor, 'toArray')
+            , Q.ninvoke(revealsCursor, 'toArray')
+        ];
 
-	}).spread(function (commitsArray, revealsArray) {
+    }).spread(function (commitsArray, revealsArray) {
 
-		// 5: Check the arrays for validity and extract needed data
-		if (commitsArray.length == 0) {
-			throw ClientError("No commit with requested _id");
-		} else if (commitsArray.length > 1) {
-			throw Error("Multiple commits with same _id.");
-		}
+        // 5: Check the arrays for validity and extract needed data
+        if (commitsArray.length == 0) {
+            throw ClientError("No commit with requested _id");
+        } else if (commitsArray.length > 1) {
+            throw Error("Multiple commits with same _id.");
+        }
 
-		// REVIEW: is the length the only thing we need to check?
-		return [commitsArray[0], revealsArray];
+        // REVIEW: is the length the only thing we need to check?
+        return [commitsArray[0], revealsArray];
 
-	}).spread(function (commit, revealsArray) {
+    }).spread(function (commit, revealsArray) {
 
-		// 6: Return the results
-		callback(null, commit, revealsArray);
+        // 6: Return the results
+        callback(null, commit, revealsArray);
 
-	}).catch(function (err) {
+    }).catch(function (err) {
 
-		callback(err);
+        callback(err);
 
-	}).finally(function () {
+    }).finally(function () {
 
-		// add general cleanup code here if necessary
+        // add general cleanup code here if necessary
 
-	}).done();
+    }).done();
 };
 
 
@@ -442,175 +458,175 @@ exports.getCommitAndReveals = function(commit_id, callback) {
 //
 
 exports.revealSecret = function(commit_id, revealsArray, callback) {
-	var requestTime = new Date();
+    var requestTime = new Date();
 
-	// We don't want to put "extra junk" in the MongoDB database, as it
-	// will just store whatever objects we put in it (no schema).
-	//
-	// REVIEW: This seems pretty tedious, but what else can we do when
-	// storing JSON from a potentially hostile/hacked client?
+    // We don't want to put "extra junk" in the MongoDB database, as it
+    // will just store whatever objects we put in it (no schema).
+    //
+    // REVIEW: This seems pretty tedious, but what else can we do when
+    // storing JSON from a potentially hostile/hacked client?
 
-	// Verify the keyset
-	// REVIEW: Should "naming" each redaction in a certificate be optional?
-	if (!_.isString(commit_id)) {
-		throw ClientError('commit_id should be a string');
-	}
+    // Verify the keyset
+    // REVIEW: Should "naming" each redaction in a certificate be optional?
+    if (!_.isString(commit_id)) {
+        throw ClientError('commit_id should be a string');
+    }
 
-	// Verify the spans
-	if (!_.isArray(revealsArray)) {
-		throw ClientError('reveals should be an array');
-	}
-	if (!revealsArray.length) {
-		throw ClientError('reveals array should not be empty');
-	}
-	_.each(revealsArray, function (reveal) {
-		if (!_.isObject(reveal)) {
-			throw ClientError('all reveals must be objects');
-		}
-		if (!_.isEqual(_.keys(reveal).sort(), 
-			["salt", "sha256", "value"])
-		) { 
-			throw ClientError('reveal has extra or missing keys');
-		}
-		if (!_.isString(reveal.salt)) {
-			throw ClientError('reveal salt should be a string');
-		}
-		if (!_.isString(reveal.sha256)) {
-			throw ClientError('reveal sha256 should be a string');
-		}
-		if (!_.isString(reveal.value)) {
-			throw ClientError('reveal value should be a string');
-		}
+    // Verify the spans
+    if (!_.isArray(revealsArray)) {
+        throw ClientError('reveals should be an array');
+    }
+    if (!revealsArray.length) {
+        throw ClientError('reveals array should not be empty');
+    }
+    _.each(revealsArray, function (reveal) {
+        if (!_.isObject(reveal)) {
+            throw ClientError('all reveals must be objects');
+        }
+        if (!_.isEqual(_.keys(reveal).sort(), 
+            ["salt", "sha256", "value"])
+        ) { 
+            throw ClientError('reveal has extra or missing keys');
+        }
+        if (!_.isString(reveal.salt)) {
+            throw ClientError('reveal salt should be a string');
+        }
+        if (!_.isString(reveal.sha256)) {
+            throw ClientError('reveal sha256 should be a string');
+        }
+        if (!_.isString(reveal.value)) {
+            throw ClientError('reveal value should be a string');
+        }
 
-		// Now make sure the reveal isn't lying about its contents hash
-		var actualHash = common.hashOfReveal(reveal);
-		if (actualHash != reveal.sha256) {
-			throw ClientError(
-				'Actual redaction hash is ' + actualHash
-				+ ' while claimed hash is ' + reveal.sha256
-			);
-		}
+        // Now make sure the reveal isn't lying about its contents hash
+        var actualHash = common.hashOfReveal(reveal);
+        if (actualHash != reveal.sha256) {
+            throw ClientError(
+                'Actual redaction hash is ' + actualHash
+                + ' while claimed hash is ' + reveal.sha256
+            );
+        }
 
-	});
+    });
 
 
-	// Okay the certificate is "well-formed".  For more we have to start
-	// talking to the database...
+    // Okay the certificate is "well-formed".  For more we have to start
+    // talking to the database...
 
-	Q.try(function() {
+    Q.try(function() {
 
-		// 1: Connect to database with authorization
-		return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
+        // 1: Connect to database with authorization
+        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
 
-	}).then(function (conn) {
+    }).then(function (conn) {
 
-		// 2: Get commits and reveals collections in parallel
-		return [
-			Q.ninvoke(conn, 'collection', 'commits')
-			, Q.ninvoke(conn, 'collection', 'reveals')
-		];
+        // 2: Get commits and reveals collections in parallel
+        return [
+            Q.ninvoke(conn, 'collection', 'commits')
+            , Q.ninvoke(conn, 'collection', 'reveals')
+        ];
 
-	}).spread(function (commitsCollection, revealsCollection) {
+    }).spread(function (commitsCollection, revealsCollection) {
 
-		// 3: Query for specific commit and reveals objects in parallel
+        // 3: Query for specific commit and reveals objects in parallel
 
-		// REVIEW: necessary to use ObjectID conversion?
-		// http://stackoverflow.com/questions/4902569/
+        // REVIEW: necessary to use ObjectID conversion?
+        // http://stackoverflow.com/questions/4902569/
 
-		return [
-			revealsCollection
-			, Q.ninvoke(commitsCollection, 'find'
-				, {'commit_id': commit_id}
-				, {limit: 1, sort:[['_id', 'ascending']]}
-			)
-			, Q.ninvoke(revealsCollection, 'find' 
-				, {'commit_id': commit_id}
-				, {sort:[['sha256', 'ascending']]}
-			)
-		];
+        return [
+            revealsCollection
+            , Q.ninvoke(commitsCollection, 'find'
+                , {'commit_id': commit_id}
+                , {limit: 1, sort:[['_id', 'ascending']]}
+            )
+            , Q.ninvoke(revealsCollection, 'find' 
+                , {'commit_id': commit_id}
+                , {sort:[['sha256', 'ascending']]}
+            )
+        ];
 
-	}).spread(function (revealsCollection, commitsCursor, oldRevealsCursor) {
+    }).spread(function (revealsCollection, commitsCursor, oldRevealsCursor) {
 
-		// 4: Convert the result cursors to arrays
-		return [
-			revealsCollection
-			, Q.ninvoke(commitsCursor, 'toArray')
-			, Q.ninvoke(oldRevealsCursor, 'toArray')
-		];
+        // 4: Convert the result cursors to arrays
+        return [
+            revealsCollection
+            , Q.ninvoke(commitsCursor, 'toArray')
+            , Q.ninvoke(oldRevealsCursor, 'toArray')
+        ];
 
-	}).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
+    }).spread(function (revealsCollection, commitsArray, oldRevealsArray) {
 
-		// 5: Add new reveals if it passes verification
+        // 5: Add new reveals if it passes verification
 
-		// Make sure there's exactly one commit with that ID
-		if (commitsArray.length == 0) {
-			throw ClientError("No commit with requested _id");
-		} else if (commitsArray.length > 1) {
-			throw Error("Multiple commits with same _id.");
-		}
+        // Make sure there's exactly one commit with that ID
+        if (commitsArray.length == 0) {
+            throw ClientError("No commit with requested _id");
+        } else if (commitsArray.length > 1) {
+            throw Error("Multiple commits with same _id.");
+        }
 
-		var commit = commitsArray[0];
+        var commit = commitsArray[0];
 
-		// Now verify the redactions against the database
-		_.each(revealsArray, function (reveal) {
+        // Now verify the redactions against the database
+        _.each(revealsArray, function (reveal) {
 
-			// Ensure the redaction hasn't *already* been revealed
-			_.each(oldRevealsArray, function(oldReveal) {
-				if (reveal.sha256 == oldReveal.sha256) {
-					throw ClientError(
-						"Redaction " + reveal.sha256 + " was already published."
-					);
-				}
-			});
+            // Ensure the redaction hasn't *already* been revealed
+            _.each(oldRevealsArray, function(oldReveal) {
+                if (reveal.sha256 == oldReveal.sha256) {
+                    throw ClientError(
+                        "Redaction " + reveal.sha256 + " was already published."
+                    );
+                }
+            });
 
-			// Make sure the hash matches an exist hash in the commit
-			// Note: Some spans are strings!  .sha256 is not defined for them.
-			var matchedSpan = null;
-			_.every(commit.spans, function(span) {
-				if (span.sha256 == reveal.sha256) {
-					matchedSpan = span;
-					// http://stackoverflow.com/a/8779920/211160
-					return false;
-				}
-				return true;
-			});
-			if (!matchedSpan) {
-				throw ClientError("A reveal hash matched no span in commit.");
-			}
+            // Make sure the hash matches an exist hash in the commit
+            // Note: Some spans are strings!  .sha256 is not defined for them.
+            var matchedSpan = null;
+            _.every(commit.spans, function(span) {
+                if (span.sha256 == reveal.sha256) {
+                    matchedSpan = span;
+                    // http://stackoverflow.com/a/8779920/211160
+                    return false;
+                }
+                return true;
+            });
+            if (!matchedSpan) {
+                throw ClientError("A reveal hash matched no span in commit.");
+            }
 
-			// we need to poke the commit_id into the reveal so that the
-			// database can connect them to the commit in our query
-			//
-			// REVIEW: Should we be keeping the reveals inside the commit
-			// object instead of connecting them in this relational-DB way?
-			//
-			reveal.commit_id = commit_id;
+            // we need to poke the commit_id into the reveal so that the
+            // database can connect them to the commit in our query
+            //
+            // REVIEW: Should we be keeping the reveals inside the commit
+            // object instead of connecting them in this relational-DB way?
+            //
+            reveal.commit_id = commit_id;
 
-			// mongodb JS driver knows about Date(), or do we need to use
-			// the .toJSON() method?
-			reveal.reveal_date = requestTime;
-		});
+            // mongodb JS driver knows about Date(), or do we need to use
+            // the .toJSON() method?
+            reveal.reveal_date = requestTime;
+        });
 
-		return Q.ninvoke(
-			revealsCollection, 'insert', revealsArray, {safe: true}
-		);
+        return Q.ninvoke(
+            revealsCollection, 'insert', revealsArray, {safe: true}
+        );
 
-	}).then(function (insertedRecords) {
+    }).then(function (insertedRecords) {
 
-		// 6: Respond with reveal's insertion date
+        // 6: Respond with reveal's insertion date
 
-		// We know asynchronous insert actually succeeded due to {safe: true}
-		callback(null, {
-			reveal_date: insertedRecords[0].reveal_date
-		});
+        // We know asynchronous insert actually succeeded due to {safe: true}
+        callback(null, {
+            reveal_date: insertedRecords[0].reveal_date
+        });
 
-	}).catch(function (err) {
+    }).catch(function (err) {
 
-		callback(err);
+        callback(err);
 
-	}).finally(function () {
+    }).finally(function () {
 
-		// add general cleanup code here if necessary
+        // add general cleanup code here if necessary
 
-	}).done();
+    }).done();
 };

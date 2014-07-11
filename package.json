@@ -1,59 +1,47 @@
 {
-	"_comment_ThisFileFormatDescription": "http://package.json.nodejitsu.com/",
-	"_comment_JsonSucksForCommentingConfigs": "http://stackoverflow.com/questions/244777/",
-	"name": "blackhighlighter-sandbox",
-	"subdomain": "blackhighlighter",
-	"domains": [
-		"blackhighlighter.org",
-		"www.blackhighlighter.org"
-	],
-	"preferGlobal": "false",
-	"version": "0.0.1-199",
-	"author": "Brian Dickens <brian@hostilefork.com>",
-	"description": "A basic walkthrough demo of the blackhighlighter system",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/hostilefork/blackhighlighter.git"
-	},
-	"keywords": [
-		"server",
-		"cryptography",
-		"redaction",
-		"transparency",
-		"accountability"
-	],
-	"dependencies": {
-		"requirejs": "*",
-		"body-parser": "*",
-		"express": ">=3.0.0",
-		"swig": "*",
-		"mongodb": "*",
-		"underscore": "*",
-		"q": "*"
-	},
-	"noAnalyze": true,
-	"devDependencies": {
-		"test": ">=0.0.5"
-	},
-	"bundleDependencies": [],
-	"license": "AGPL",
-	"engines": {
-		"node": "0.10.x"
-	},
-	"scripts": {
-		"start": "app.js",
-		"test": "node test/all.js"
-	},
-	"_comment_NeededByOpenShift": "https://github.com/ramr/nodejs-custom-version-openshift/blob/master/package.json",
-	"main": "app.js",
-	"_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
-	"files": [
-		"app.js",
-		"blackhighlighter.js",
-		"mytags.js",
-		"jquery-fake.js",
-		"public",
-		"jquery-blackhighlighter",
-		"views"
-	]
+    "_comment_ThisFileFormatDescription": "http://browsenpm.org/package.json",
+    "_comment_JsonSucksForCommentingConfigs": "http://stackoverflow.com/questions/244777/",
+    "name": "blackhighlighter",
+    "preferGlobal": "false",
+    "version": "0.9.9",
+    "author": "Brian Dickens <brian@hostilefork.com>",
+    "description": "Client and server for widget implementing secure and committed web redaction",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/hostilefork/blackhighlighter.git"
+    },
+    "keywords": [
+        "server",
+        "cryptography",
+        "redaction",
+        "transparency",
+        "accountability"
+    ],
+    "dependencies": {
+        "requirejs": "*",
+        "body-parser": "*",
+        "express": ">=3.0.0",
+        "mongodb": "*",
+        "underscore": "*",
+        "q": "*"
+    },
+    "noAnalyze": true,
+    "devDependencies": {
+        "test": ">=0.0.5"
+    },
+    "bundleDependencies": [],
+    "license": "AGPL",
+    "engines": {
+        "node": "0.10.x"
+    },
+    "scripts": {
+        "test": "node test/all.js"
+    },
+    "_comment_BewareHidden.IgnoreFiles": "https://github.com/jrburke/requirejs/issues/541",
+    "files": [
+        "index.js",
+        "blackhighlighter.js",
+        "jquery-fake.js",
+        "jquery-blackhighlighter"
+    ]
 }
