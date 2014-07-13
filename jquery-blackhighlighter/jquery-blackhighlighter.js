@@ -2156,7 +2156,7 @@
 			if (instance.mode === 'compose') {
 				$spanArray.each(function() {
 					var $span = $(this);
-					attr('title', '');
+					$span.attr('title', '');
 				});
 				return;
 			}
