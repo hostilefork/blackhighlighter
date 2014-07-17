@@ -668,18 +668,9 @@
 
         canonicalJsonFromCommit: function(commit) {
             // There are some things to consider here regarding Unicode
-            // Normalization and canonical JSON:
-            //
-            // http://wiki.laptop.org/go/Canonical_JSON
-            //
-            // In general, having a dependency on a library that may change
-            // (like how escaping of strings is done by JSON.stringify) could
-            // cause false negatives.  These could be investigated after the
-            // fact and rectified against a correct answer.
-            //
-            // REVIEW: Discuss this with peers to make sure there's no risk of
-            // false positives, and see if there are better ways to avoid false
-            // negatives.
+            // Normalization and "Canonical JSON":
+            // 
+            // https://github.com/hostilefork/blackhighlighter/issues/56
 
             var result = '{"commit_date":';
             result += JSON.stringify(commit.commit_date);
@@ -2226,112 +2217,6 @@
             }
         },
 
-        makeCommitment: function(base_url, callback) {
-
-            // Should be parameterized with the server.
-
-            var temp = this.generateCommitAndProtections();
-            var instance = this;
-            var clientDate = new Date();
-
-            // http://docs.jquery.com/Ajax/jQuery.ajax
-
-            $.ajax({
-                type: 'POST',
-
-                dataType: 'json',
-
-                url: exports.makeCommitUrl(base_url),
-
-                data: {
-                    'commit': exports.escapeNonBreakingSpacesInString(
-                        JSON.stringify(temp.commit, null, ' ')
-                    )
-                },
-
-                success: function(result) {
-                    if (result.error) {
-                        callback(result.error.msg);
-                    }
-                    else {
-                        temp.commit.commit_date = result.commit.commit_date;
-                        temp.commit.commit_id =
-                            exports.commitIdFromCommit(temp.commit)
-                        ;
-
-                        if (temp.commit.commit_id != result.commit.commit_id) {
-                            callback(
-                                'Server gave back hash with signature '
-                                + result.commit.commit_id
-                                + ' but we calculated a signature of '
-                                + temp.commit.commit_id
-                                + " ... if you believe this may be acceptable "
-                                + " your message is viewable at: "
-                                + exports.makeShowUrl(
-                                    base_url,
-                                    result.commit.commit_id
-                                )
-                            );
-                            return;
-                        }
-
-                        var serverDate = new Date(temp.commit.commit_date);
-                        if (Math.abs(serverDate - clientDate)/1000 > 60) {
-                            callback(
-                                'Server signed data with timestamp '
-                                + serverDate.toUTCString()
-                                + " which doesn't match your browser's clock at "
-                                + clientDate.toUTCString()
-                                + " ... if you believe this may be acceptable "
-                                + " your message is viewable at: "
-                                + exports.makeShowUrl(
-                                    base_url,
-                                    result.commit.commit_id
-                                )
-                            );
-                            return;
-                        }
-
-                        instance.commit = temp.commit;
-                        instance.protections = temp.protections;
-
-                        // Technically we shouldn't have to do this, but if
-                        // we don't then since we have an artificial delay
-                        // the setMode call will show junk otherwise.
-                        instance.$div.html(
-                            "<h3>Committing Blackhighlighter Message to Server</h3>"
-                            + "<p><i>Please wait...</i></p>"
-                        );
-                        instance.setMode('show');
-
-                        callback(null);
-                    }
-                },
-
-                error: function (XMLHttpRequest, textStatus, errorThrown) {
-                    // Note that "this" contains the options for this ajax request
-                    switch (textStatus) {
-                        case 'timeout':
-                            callback('The request timed out.  Check your network connection and try again.', null);
-                            break;
-
-                        case 'error':
-                            callback('There was an error on the server side during your request.', null);
-                            break;
-
-                        case 'notmodified':
-                        case 'parsererror':
-                            callback('commit', 'Unexpected error code during Ajax POST: ' + textStatus, null);
-                            break;
-
-                        default:
-                            callback('Unexpected error code during Ajax POST: ' + textStatus, null);
-                            break;
-                    }
-                }
-            });
-        },
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -2585,77 +2470,241 @@
             delete this.protections[protctionKey];
 
             this._refreshAllPlaceholders();
-        },
+        }
+    };
 
 ////////////////////////////////////////////////////////////////////////////////
 
-        //
-        // REVEAL MODE
-        //
+    //
+    // BATCH REVEAL AND COMMIT
+    //
+    // Revealing/committing is something that is not done in a "foreach" loop
+    // with multiple network requests for all the widgets in the set.  So
+    // this batches all those up into one network request.
+    //
+    // These are thus global functions that takes an instanceArray, and not
+    // a method directly on the widgets.  Review if widgets should know what
+    // server they are from and hold that as a piece of state information:
+    //
+    // https://github.com/hostilefork/blackhighlighter/issues/55
 
-        revealSecret: function(base_url, callback) {
-            var instance = this;
+    Blackhighlighter.makeCommitments
+        = function (instanceArray, base_url, callback)
+    {
+        var clientDate = new Date();
 
+        var commit_array = [];
+        var protections_array = [];
+
+        var instancesByCommitId = {};
+
+        $.each(instanceArray, function (index, instance) {
+            var commitAndProtections = this.generateCommitAndProtections();
+
+            commit_array.push(commitAndProtections.commit);
+            protections_array.push(commitAndProtections.protections);
+        });
+
+        // http://docs.jquery.com/Ajax/jQuery.ajax
+
+        $.ajax({
+            type: 'POST',
+
+            dataType: 'json',
+
+            url: exports.makeCommitUrl(base_url),
+
+            data: {
+                'commit_array': exports.escapeNonBreakingSpacesInString(
+                    JSON.stringify(commit_array, null, ' ')
+                )
+            },
+
+            success: function(result) {
+                if (result.error) {
+                    callback(result.error.msg);
+                    return;
+                }
+
+                if (
+                    result.commit_id_and_date_array.length
+                    != commit_array.length
+                ) {
+                    callback(Error(
+                        'Server confirmed with an array of differing length.'
+                    ));
+                    return;
+                }
+
+                var error_array = [];
+                var resultCommitsByCommitId = {};
+
+                for (var index = 0; index < commit_array.length; index++) {
+                    var commit = commit_array[index];
+                    var commit_id_and_date
+                        = result.commit_id_and_date_array[index];
+
+                    commit.commit_date = commit_id_and_date.commit_date;
+                    commit.commit_id = exports.commitIdFromCommit(commit);
+
+                    if (commit.commit_id != commit_id_and_date.commit_id) {
+                        error_array.push(Error(
+                            'Server gave back hash with signature '
+                            + commit_id_and_date.commit_id
+                            + ' but we calculated a signature of '
+                            + commit.commit_id
+                            + " ... if you believe this may be acceptable "
+                            + " your message is viewable at: "
+                            + exports.makeShowUrl(
+                                base_url,
+                                commit_id_and_date.commit_id
+                            )
+                        ));
+                    }
+
+                    var serverDate = new Date(commit_id_and_date.commit_date);
+                    if (Math.abs(serverDate - clientDate) / 1000 > 60) {
+                        error_array.push(Error(
+                            'Server signed data with timestamp '
+                            + serverDate.toUTCString()
+                            + " which is off by more than a minute from "
+                            + clientDate.toUTCString()
+                            + " ... if you believe this may be acceptable "
+                            + " your message is viewable at: "
+                            + exports.makeShowUrl(
+                                base_url,
+                                commit_id_and_date.commit_id
+                            )
+                        ));
+                    }
+
+                    var instance = instanceArray[index];
+
+                    instance.commit = commit;
+                    instance.protections = protections_array[index];
+
+                    // Technically we shouldn't have to do this, but if
+                    // we don't then since we have an artificial delay
+                    // the setMode call will show junk otherwise.
+                    instance.$div.html(
+                        "<h3>Committing Blackhighlighter Message to Server</h3>"
+                        + "<p><i>Please wait...</i></p>"
+                    );
+                    instance.setMode('show');
+                }
+
+                if (error_array.length > 0) {
+                    // Need to think about whether the errors should be an
+                    // array or a special Error type.  Stringify for now.
+                    //
+                    // http://stackoverflow.com/questions/8513703/
+
+                    callback(Error(JSON.stringify(error_array)));
+                }
+                else {
+                    callback(null);
+                }
+            },
+
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                // Note that "this" contains the options for this ajax request
+                switch (textStatus) {
+                    case 'timeout':
+                        callback('The request timed out.  Check your network connection and try again.', null);
+                        break;
+
+                    case 'error':
+                        callback('There was an error on the server side during your request.', null);
+                        break;
+
+                    case 'notmodified':
+                    case 'parsererror':
+                        callback('commit', 'Unexpected error code during Ajax POST: ' + textStatus, null);
+                        break;
+
+                    default:
+                        callback('Unexpected error code during Ajax POST: ' + textStatus, null);
+                        break;
+                }
+            }
+        });
+    };
+
+    Blackhighlighter.revealSecrets
+        = function (instanceArray, base_url, callback)
+    {
+        var commit_id_with_reveals_array = [];
+
+        $.each(instanceArray, function (index, instance) {
             var protectionArray = [];
-            $.each(this.getProtectionsClone(false), function(key, element) {
+
+            // We pass "false" to the getProtectionsClone so we only get the
+            // protections that aren't on the server already, and that are in
+            // a shown status
+
+            $.each(instance.getProtectionsClone(false), function(key, element) {
                 protectionArray.push(element);
             });
 
-            var reveal_url = exports.makeRevealUrl(PARAMS.base_url);
-
-            // http://docs.jquery.com/Ajax/jQuery.ajax
-
-            $.ajax({
-                type: 'POST',
-
-                dataType: 'json',
-
-                url: reveal_url,
-
-                // sends as UTF-8
-                data: {
-                    commit_id: instance.commit.commit_id,
-                    reveals: JSON.stringify(
-                        protectionArray, null, ' '
-                    )
-                },
-
-                success: function(resultJson) {
-                    if (resultJson.error) {
-                        callback(resultJson.error.msg);
-                    }
-                    else {
-                        callback(null)
-                    }
-                },
-
-                error: function (XMLHttpRequest, textStatus, errorThrown) {
-
-                    // "this" contains the options for this ajax request
-
-                    switch (textStatus) {
-                        case 'timeout':
-                            callback('The POST reveal request timed out on ' + reveal_url +
-                                ' --- check your network connection and try again.');
-                            break;
-
-                        case 'error':
-                            callback('There was an error with the web server during your request.');
-                            break;
-
-                        case 'notmodified':
-                        case 'parsererror':
-                            callback('Unexpected error code during Ajax POST: ' + textStatus);
-                            break;
-
-                        default:
-                            callback('Unexpected error code during Ajax POST: ' + textStatus);
-                            break;
-                    }
-                }
+            commit_id_with_reveals_array.push({
+                'commit_id': instance.commit.commit_id,
+                'reveal_array': protectionArray
             });
-        }
-    };
+        });
+
+        var reveal_url = exports.makeRevealUrl(PARAMS.base_url);
+
+        // http://docs.jquery.com/Ajax/jQuery.ajax
+
+        $.ajax({
+            type: 'POST',
+
+            dataType: 'json',
+
+            url: reveal_url,
+
+            // sends as UTF-8
+            data: {
+                'commit_id_with_reveals_array': commit_id_with_reveals_array
+            },
+
+            success: function (resultJson) {
+                if (resultJson.error) {
+                    callback(resultJson.error.msg);
+                }
+                else {
+                    callback(null)
+                }
+            },
+
+            error: function (XMLHttpRequest, textStatus, errorThrown) {
+                // "this" contains the options for this ajax request
+
+                switch (textStatus) {
+                case 'timeout':
+                    callback(
+                        'The POST reveal request timed out on ' +
+                        reveal_url +
+                        ' --- check your network connection and try again.'
+                    );
+                    break;
+
+                case 'error':
+                    callback('There was an error with the web server during your request.');
+                    break;
+
+                case 'notmodified':
+                case 'parsererror':
+                    callback('Unexpected error code during Ajax POST: ' + textStatus);
+                    break;
+
+                default:
+                    callback('Unexpected error code during Ajax POST: ' + textStatus);
+                    break;
+                }
+            }
+        });
+    }
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2880,17 +2929,26 @@
         }
 
         if (o === "commit") {
-            if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in commit.");
+           if (this.length < 0) {
+                throw new Error("At least one widget must be in reveal set.");
             }
 
-            var instance = Blackhighlighter.getInstance(this.get(0));
-            instance.makeCommitment(arg1, arg2);
+            var instanceArray = [];
+            this.each(function() {
+                instanceArray.push(Blackhighlighter.getInstance(this));
+            });
+
+            Blackhighlighter.makeCommitments(instanceArray, arg1, arg2);
         }
 
         if (o === "verify") {
+            // Verify is all on the client, so there's not really a benefit
+            // to grouping them specially.  Multi API also makes less sense;
+            // because extra information is being passed in vs. the "I'm ready
+            // now, use your internal state" of commit/reveal.  Think about it.
+
             if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in commit.");
+                throw new Error("Currently not handling length > 1 collections in verify.");
             }
 
             var instance = Blackhighlighter.getInstance(this.get(0));
@@ -2898,12 +2956,16 @@
         }
 
         if (o === "reveal") {
-            if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in commit.");
+            if (this.length < 0) {
+                throw new Error("At least one widget must be in reveal set.");
             }
 
-            var instance = Blackhighlighter.getInstance(this.get(0));
-            instance.revealSecret(arg1, arg2);
+            var instanceArray = [];
+            this.each(function() {
+                instanceArray.push(Blackhighlighter.getInstance(this));
+            });
+
+            Blackhighlighter.revealSecrets(instanceArray, arg1, arg2);
         }
 
         if (o === "destroy") {
