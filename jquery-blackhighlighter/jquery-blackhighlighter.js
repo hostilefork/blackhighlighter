@@ -409,8 +409,8 @@
     //
     // HTML ESCAPING
     //
-    // Was using _.escape() from underscore.js, but when that dependency was
-    // removed for the widget, no equivalent exists in jQuery.
+    // _.escape() is in underscore.js with no equivalent in jQuery; this native
+    // implementation can be used in shared code between widget and server.
     //
     // http://stackoverflow.com/a/12034334/211160
     //
@@ -424,7 +424,7 @@
         "/": '&#x2F;'
     };
 
-    function escapeHtml(string) {
+    function escapeHtmlNativeJS (string) {
         return String(string).replace(/[&<>"'\/]/g, function (s) {
             return entityMap[s];
         });
@@ -748,23 +748,6 @@
             // the spans and divs and such for the redaction in the
             // blacked-out bits.  We have to escape the span using
             // native JavaScript in this set of common exports.
-            //
-            // http://stackoverflow.com/a/12034334/211160
-
-            var entityMap = {
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': '&quot;',
-                "'": '&#39;',
-                "/": '&#x2F;'
-            };
-
-            function escapeHtmlNativeJS (string) {
-                return String(string).replace(/[&<>"'\/]/g, function (s) {
-                    return entityMap[s];
-                });
-            }
 
             for (var index = 0; index < commit.spans.length; index++) {
                 var commitSpan = commit.spans[index];
@@ -3203,7 +3186,7 @@
             //
             // http://stackoverflow.com/a/2373823/211160
 
-            var newText = escapeHtml(pastedText);
+            var newText = escapeHtmlNativeJS(pastedText);
             var regex = new RegExp("\n", 'g');
             newText = newText.replace(regex, "<br>");
             regex = new RegExp("  ", 'g');
