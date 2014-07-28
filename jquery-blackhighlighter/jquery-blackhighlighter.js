@@ -716,6 +716,108 @@
 
         hashOfReveal: function(reveal) {
             return urlencode_base64_sha256(reveal.salt + reveal.contents);
+        },
+
+        generateHtmlFromCommitAndReveals: function (commit, reveal_array) {
+            // https://github.com/hostilefork/blackhighlighter/issues/53
+
+            // u'\u00A0' is the non breaking space
+            // ...it should be preserved in db strings via UTF8
+            
+            // REVIEW: for each one that has been unredacted make
+            // a hovery bit so that you can get a tip on when it was made public?
+            // how will auditing be done?
+
+            // http://documentcloud.github.com/underscore/#groupBy
+
+            var revealsByHash = {};
+            for (var index = 0; index < reveal_array.length; index++) {
+                var reveal = reveal_array[index];
+
+                if (revealsByHash[reveal.sha256] != null)
+                    throw Error("More than one reveal for the same hash.");
+
+                revealsByHash[reveal.sha256] = reveal_array[index];
+            }
+                
+            var result = '';
+
+            // The commits and reveals contain just ordinary text as
+            // JavaScript strings, so "a < b" is legal.  But what we're
+            // making here needs to be raw HTML in the template, to get
+            // the spans and divs and such for the redaction in the
+            // blacked-out bits.  We have to escape the span using
+            // native JavaScript in this set of common exports.
+            //
+            // http://stackoverflow.com/a/12034334/211160
+
+            var entityMap = {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': '&quot;',
+                "'": '&#39;',
+                "/": '&#x2F;'
+            };
+
+            function escapeHtmlNativeJS (string) {
+                return String(string).replace(/[&<>"'\/]/g, function (s) {
+                    return entityMap[s];
+                });
+            }
+
+            for (var index = 0; index < commit.spans.length; index++) {
+                var commitSpan = commit.spans[index];
+
+                if (
+                    typeof commitSpan == 'string'
+                    || commitSpan instanceof String
+                ) {
+                    commitSpan = escapeHtmlNativeJS(commitSpan);
+
+                    // Also, line breaks must be converted to br nodes
+
+                    result += commitSpan.split('\n').join('<br />');
+                }
+                else {
+                    if (revealsByHash[commitSpan.sha256]) {
+                        var reveal = revealsByHash[commitSpan.sha256];
+                        result += '<span class="placeholder revealed">'
+                            + '<span class="placeholder-sha256">'
+                            + commitSpan.sha256
+                            + '</span>'
+                            + reveal.value
+                            + '</span>';
+                    }
+                    else {                
+                        var display_length = parseInt(
+                            commitSpan.display_length, 10
+                        );
+
+                        // http://stackoverflow.com/a/1877479/211160
+
+                        var placeholderString = Array(
+                            display_length + 1
+                        ).join('?');
+                        
+                        // REVIEW: use hex digest as title for query, or do
+                        // something more clever?  we could add a method onto
+                        // the element or keep a sidestructure
+
+                        var placeholder = 
+                            '<span class="placeholder protected">'
+                            + '<span class="placeholder-sha256">'
+                            + commitSpan.sha256
+                            + '</span>'
+                            + placeholderString 
+                            + '</span>';
+
+                        result += placeholder;
+                    }
+                }
+            }
+
+            return result;
         }
     };
 
@@ -1354,7 +1456,7 @@
                     }
 
                     default:
-                        throw "Internal blackhighlighter error: bad mode found."
+                        throw "Internal blackhighlighter error: bad mode found.";
                 }
             }
 
@@ -1374,6 +1476,10 @@
 
             switch (newMode) {
                 case 'compose': {
+                    if (!initializing && (oldMode !== 'protect')) {
+                        throw "Can only go from protect to compose.";
+                    }
+
                     this.$div
                         .attr("contenteditable", true)
                         .addClass("blackhighlighter-compose");
@@ -1381,6 +1487,10 @@
                 }
 
                 case 'protect': {
+                    if (!initializing && (oldMode !== 'compose')) {
+                        throw "Can only go from compose to protect.";
+                    }
+
                     this.$div.addClass("blackhighlighter-protect");
                     this._canonizeContent();
 
@@ -1412,9 +1522,21 @@
                 }
 
                 case 'show':
-                    // we transition to show in the editor in a broken
-                    // way, but eventually we will transition in a smooth
-                    // way...
+                    // If we came from the old mode that was either a "compose"
+                    // or a "protect", then we're doing this in an "Ajax" way
+                    // vs. the "Noscript compatible search-engine-friendly"
+                    // way, and have to generate the HTML client side.
+
+                    // REVIEW: Should we be alerting if this.protections is not
+                    // empty right after a commit?
+
+                    if ((oldMode == 'compose') || (oldMode == 'protect')) {
+                        this.$div.html(
+                            exports.generateHtmlFromCommitAndReveals(
+                                this.commit, []
+                            )
+                        );
+                    }
 
                     this.$div.addClass("blackhighlighter-show");
                     break;

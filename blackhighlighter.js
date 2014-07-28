@@ -94,19 +94,14 @@ var common = requirejs('jquery-blackhighlighter');
 // UTILITY LIBRARIES
 //
 
-// Underscore contains common JavaScript helpers like you might find in a
-// library like jQuery (forEach, isString, etc)...but without being tied
-// into the presumption that you are running in a browser with a DOM, etc.
-//
-// http://documentcloud.github.com/underscore/
+// http://blog.hostilefork.com/underscore-use-with-node-jquery/
 
 var _ = require('underscore')._;
 
-// The default way of coding in node.js with asynchronous callbacks
-// produces a new level of nesting and indentation each time you add a
-// step to your process.  Originally I used the Step library to address this,
-// but decided to convert to the Q Promises library instead:
-// 
+
+// Q Promises library
+//
+// https://github.com/kriskowal/q
 // http://stackoverflow.com/questions/22138759/
 
 var Q = require('q');
@@ -114,22 +109,9 @@ var Q = require('q');
 
 
 //
-// ERROR HANDLING
+// CUSTOM ERROR INDICATING A CLIENT ERROR
 //
-// Node is unusual because if its single-threaded-server crashes in any given
-// handler, it will take down the whole server process.  A general error
-// handling strategy is needed.  How do we deal with exceptions that are thrown
-// on invalid inputs from the client, vs. internal errors.
-//
-//     http://stackoverflow.com/questions/5816436/
-//
-// For now just strings, but we want the stack trace in there too
-//
-//     http://www.devthought.com/2011/12/22/a-string-is-not-an-error/
-//
-// See note here about how arguments.callee is not to be used in strict mode:
-//
-//    https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
+// http://blog.hostilefork.com/error-handling-internal-badrequest-node/
 //
 
 function ClientError (msg) {
@@ -140,12 +122,16 @@ function ClientError (msg) {
     }
 
     Error.call(this);
-    Error.captureStackTrace(this, ClientError);
     this.message = msg;
-    this.name = 'ClientError';
+
+    // captureStackTrace is V8 specific (Chrome, Node)
+    // http://www.devthought.com/2011/12/22/a-string-is-not-an-error/
+    
+    Error.captureStackTrace(this, ClientError);
 };
 
 ClientError.prototype.__proto__ = Error.prototype;
+ClientError.prototype.name = 'ClientError';
 
 exports.ClientError = ClientError;
 
@@ -318,102 +304,7 @@ exports.makeCommitments = function (commit_array, callback) {
 //
 
 exports.generateHtmlFromCommitAndReveals = function (commit, reveal_array) {
-    // https://github.com/hostilefork/blackhighlighter/issues/53
-
-    // u'\u00A0' is the non breaking space
-    // ...it should be preserved in db strings via UTF8
-    
-    // REVIEW: for each one that has been unredacted make
-    // a hovery bit so that you can get a tip on when it was made public?
-    // how will auditing be done?
-
-    // http://documentcloud.github.com/underscore/#groupBy
-
-    var revealsByHash = _.groupBy(reveal_array, function(reveal) { 
-        return reveal.sha256;
-    });
-
-    // Just a sanity check -- make sure there's only one reveal per hash!
-
-    _.each(revealsByHash, function(value) {
-        if (value.length !== 1) {
-            throw Error("More than one reveal for hash on server.");
-        }
-    }); 
-        
-    var result = '';
-
-    _.each(commit.spans, function (commitSpan) {
-        if (_.isString(commitSpan)) {
-            // The commits and reveals contain just ordinary text as JavaScript
-            // strings, so "a < b" is legal.  But what we're making here needs
-            // to be raw HTML in the template, to get the spans and divs and
-            // such for the redaction in the blacked-out bits.  Hence, we have
-            // to escape the text span!
-
-            commitSpan = _.escape(commitSpan);
-
-            // Also, line breaks must be converted to br nodes
-
-            result += commitSpan.split('\n').join('<br />');
-        }
-        else {
-            if (revealsByHash[commitSpan.sha256]) {
-                var reveal = revealsByHash[commitSpan.sha256][0];
-                result += '<span class="placeholder revealed">'
-                    + '<span class="placeholder-sha256">'
-                    + commitSpan.sha256
-                    + '</span>'
-                    + reveal.value
-                    + '</span>';
-            }
-            else {                
-                var display_length = parseInt(commitSpan.display_length, 10);
-
-                // http://stackoverflow.com/a/1877479/211160
-
-                var placeholderString = Array(display_length + 1).join('?');
-                
-                // REVIEW: use hex digest as title for query, or do something
-                // more clever?  e.g. we could add a method onto the element
-                // or keep a sidestructure
-
-                var placeholder = 
-                    '<span class="placeholder protected">'
-                    + '<span class="placeholder-sha256">'
-                    + commitSpan.sha256
-                    + '</span>'
-                    + placeholderString 
-                    + '</span>';
-
-                result += placeholder;
-            }
-        }
-    });
-
-    return result;
-}
-
-
-exports.generateCertificateStubsFromCommit = function (commit) {
-    var mapSha256ToTrue = {};
-
-    _.each(commit.spans, function (commitSpan) {        
-        if (_.isString(commitSpan)) {
-            // Not redacted.
-        }
-        else {
-            mapSha256ToTrue[commitSpan.sha256] = true;
-        }
-    });
-            
-    var result = [];
-
-    _.each(mapSha256ToTrue, function (trueValue, key) {
-        result.push({sha256: key});
-    });
-
-    return result;
+    return common.generateHtmlFromCommitAndReveals(commit, reveal_array);
 }
 
 
