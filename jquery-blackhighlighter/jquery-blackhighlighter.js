@@ -618,53 +618,7 @@
         },
 
 
-        //
-        // DATA FORMAT NOTES
-        //
-        // "PublicOne PublicTwo [HiddenOne] PublicThree [HiddenTwo] PublicFour"
-        //
-        // The commit looks like this, and when put into the database it will
-        // have added to it a MongoDB _id as well as a commit_date
-        //
-        // { "spans": [
-        //      "PublicOne PublicTwo ",
-        //      { "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
-        //      " PublicThree ",
-        //      { "display_length": 11, "sha256": "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce" },
-        //      " PublicFour"
-        //  ] }
-        //
-        // We must be able to check that the server doesn't change the content
-        // of the commit out from under you.  Additionally, a client who *only*
-        // has been given a URL needs to be able to do this check.  That means
-        // the URL must encode enough information to test an unrevealed commit.
-        // To do this, we make a cryptographic hash of a string made by
-        // appending together the spans along with the commit_date.
-        //
-        // (Note: Because letters without redactions do not have reveal
-        // certificates, the only thing differentiating two unredacted letters
-        // is the commit_date.  Hence the client cannot know the actual URL
-        // until after the server has decided the commit time.)
-        //
-        // A single revealJson looks like this, and when put into the database
-        // it will have added to it a mongodb _id as well as a commit_date
-        //
-        // {
-        //     "commit_id": "4f89521b67032a424a000002",
-        //     "reveals": [
-        //          [
-        //              value: "HiddenOne",
-        //              salt: "26716853c86b247fc81834822b0ca058",
-        //              sha256: "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
-        //          ], [
-        //              value: "HiddenTwo",
-        //              salt: "26716853c86b247fc81834822b0ca058",
-        //              sha256: "c7363c3e5fb8fab684146fbb22cd0ef462e1f90e7fd52ef65c43c71da44435ce"
-        //          ]
-        //      ]
-        // }
-        //
-        // (Note: Hash values are made up, will fix in real documentation.)
+        // See ../test/all.js for notes on JSON format and tests
 
         canonicalJsonFromCommit: function(commit) {
             // There are some things to consider here regarding Unicode
@@ -2658,8 +2612,7 @@
                             + commit_id_and_date.commit_id
                             + ' but we calculated a signature of '
                             + commit.commit_id
-                            + " ... if you believe this may be acceptable "
-                            + " your message is viewable at: "
+                            + " the corrupted post may be visible at: "
                             + exports.makeShowUrl(
                                 base_url,
                                 commit_id_and_date.commit_id
