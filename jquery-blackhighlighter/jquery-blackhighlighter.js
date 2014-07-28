@@ -487,7 +487,55 @@
     // http://stackoverflow.com/a/9329476/211160
     //
 
+    // http://blog.hostilefork.com/error-handling-internal-badrequest-node/
+
+    function TimestampError(serverDate, clientDate) {
+        if (!(this instanceof TimestampError)) {
+            return new TimestampError(serverDate, clientDate);
+        }
+
+        Error.call(this);
+
+        this.serverDate = serverDate;
+        this.clientDate = clientDate;
+    };
+
+    TimestampError.prototype.__proto__ = Error.prototype;
+    TimestampError.prototype.name = 'TimestampError';
+    TimestampError.prototype.toString = function () {
+        return 'TimestampError: Server signed data with timestamp '
+            + serverDate.toUTCString()
+            + " which is off by more than a minute from "
+            + clientDate.toUTCString();
+    }
+
+
+    // http://blog.hostilefork.com/error-handling-internal-badrequest-node/
+    // http://stackoverflow.com/a/24876472/211160
+
+    function MultipleError(errs) {
+        if (!(this instanceof MultipleError)) {
+            return new MultipleError(errs);
+        }
+
+        Error.call(this);
+        this.errs = errs;
+    };
+
+    MultipleError.prototype.__proto__ = Error.prototype;
+    MultipleError.prototype.name = 'MultipleError';
+    MultipleError.prototype.toString = function () {
+        return 'MultipleError: [\n\t' + this.errs.join(',\n\t') + '\n]';
+    }
+
+
     var exports = {
+
+        // Custom error classes
+
+        'TimestampError': TimestampError,
+
+        'MultipleError': MultipleError,
 
         // These are URLs that get exposed to end users, and as they are
         // already very long (base64 encodings of sha256) we try to keep
@@ -2526,7 +2574,7 @@
                 throw 'Attempt to remove protection not in the local list.';
             }
 
-            delete this.protections[protctionKey];
+            delete this.protections[protectionKey];
 
             this._refreshAllPlaceholders();
         }
@@ -2621,19 +2669,9 @@
                     }
 
                     var serverDate = new Date(commit_id_and_date.commit_date);
-                    if (Math.abs(serverDate - clientDate) / 1000 > 60) {
-                        error_array.push(Error(
-                            'Server signed data with timestamp '
-                            + serverDate.toUTCString()
-                            + " which is off by more than a minute from "
-                            + clientDate.toUTCString()
-                            + " ... if you believe this may be acceptable "
-                            + " your message is viewable at: "
-                            + exports.makeShowUrl(
-                                base_url,
-                                commit_id_and_date.commit_id
-                            )
-                        ));
+                    var deltaDate = Math.abs(serverDate - clientDate);
+                    if (deltaDate / 1000 < 60) { // temp do less than to force error
+                        error_array.push(TimestampError(serverDate, clientDate));
                     }
 
                     var instance = instanceArray[index];
@@ -2651,16 +2689,14 @@
                     instance.setMode('show');
                 }
 
-                if (error_array.length > 0) {
-                    // Need to think about whether the errors should be an
-                    // array or a special Error type.  Stringify for now.
-                    //
-                    // http://stackoverflow.com/questions/8513703/
-
-                    callback(Error(JSON.stringify(error_array)));
+                if (error_array.length == 0) {
+                    callback(null);
+                }
+                else if (error_array.length == 1) {
+                    callback(error_array[0]);
                 }
                 else {
-                    callback(null);
+                    callback(MultipleError(error_array));
                 }
             },
 
