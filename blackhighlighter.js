@@ -353,6 +353,21 @@ exports.getCommitsWithReveals = function (commit_id_array, callback) {
             // http://stackoverflow.com/questions/4035232/
 
             var revealsForCommit = revealsByCommitId[commit.commit_id];
+
+            _.each(revealsForCommit, function(reveal) {
+                // https://github.com/hostilefork/blackhighlighter/issues/48
+
+                if (!('commit_id' in reveal)) {
+                    throw Error('commit_id expected in server-side reveal');
+                }
+                delete reveal['commit_id'];
+
+                if (!('_id' in reveal)) {
+                    throw Error('_id expected in server-side reveal');
+                }
+                delete reveal['_id'];
+            });
+
             commits_and_reveals.push({
                 'commit': commit,
                 'reveals': revealsForCommit != null
