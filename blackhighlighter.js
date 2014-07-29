@@ -88,6 +88,10 @@ var MongoClient = mongodb.MongoClient;
 
 var common = requirejs('jquery-blackhighlighter');
 
+// http://blog.hostilefork.com/error-handling-internal-badrequest-node/
+
+exports.ClientError = common.ClientError;
+
 
 
 //
@@ -105,35 +109,6 @@ var _ = require('underscore')._;
 // http://stackoverflow.com/questions/22138759/
 
 var Q = require('q');
-
-
-
-//
-// CUSTOM ERROR INDICATING A CLIENT ERROR
-//
-// http://blog.hostilefork.com/error-handling-internal-badrequest-node/
-//
-
-function ClientError (msg) {
-    // http://stackoverflow.com/a/13294728/211160
-
-    if (!(this instanceof ClientError)) {
-        return new ClientError(msg);
-    }
-
-    Error.call(this);
-    this.message = msg;
-
-    // captureStackTrace is V8 specific (Chrome, Node)
-    // http://www.devthought.com/2011/12/22/a-string-is-not-an-error/
-    
-    Error.captureStackTrace(this, ClientError);
-};
-
-ClientError.prototype.__proto__ = Error.prototype;
-ClientError.prototype.name = 'ClientError';
-
-exports.ClientError = ClientError;
 
 
 

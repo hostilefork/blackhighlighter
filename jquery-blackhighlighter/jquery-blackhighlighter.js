@@ -896,12 +896,16 @@
                 this.commit = opts.commit;
             }
             else {
-                throw "Starting a blackhighlighter in show mode requires a commit in the options";
+                throw ClientError("Starting a blackhighlighter in show mode requires a commit in the options");
             }
         }
         else {
             if (opts.commit) {
-                throw "Can't start a compose/protect blackhighlighter with a commit";
+                throw ClientError("Can't start a compose/protect blackhighlighter with a commit");
+            }
+
+            if (opts.reveals) {
+                throw ClientError("Can't start a compose/protect blackhighlighter with reveals");
             }
         }
 
@@ -1040,7 +1044,7 @@
 
             function pushTextNode(str) {
                 if (lastPushWasText) {
-                    throw "Pushed two text nodes in a row, need normalization for that.";
+                    throw Error("Pushed two text nodes in a row, need normalization for that.");
                 }
                 if (str !== '') {
                     $(node).before(document.createTextNode(str));
@@ -1139,7 +1143,7 @@
                         (splitIndex != splitArray.length)
                         || (matchIndex != matchArray.length)
                     ) {
-                        throw "Unreachable condition in regular expression matcher for addProtectSuggestions.";
+                        throw Error("Unreachable condition in regular expression matcher for addProtectSuggestions.");
                     }
 
                     $(node).remove();
@@ -1469,7 +1473,7 @@
                     }
 
                     default:
-                        throw "Internal blackhighlighter error: bad mode found.";
+                        throw Error("Invalid blackhighlighter mode found.");
                 }
             }
 
@@ -1490,7 +1494,7 @@
             switch (newMode) {
                 case 'compose': {
                     if (!initializing && (oldMode !== 'protect')) {
-                        throw "Can only go from protect to compose.";
+                        throw ClientError("Can only go from protect to compose.");
                     }
 
                     this.$div
@@ -1501,7 +1505,7 @@
 
                 case 'protect': {
                     if (!initializing && (oldMode !== 'compose')) {
-                        throw "Can only go from compose to protect.";
+                        throw ClientError("Can only go from compose to protect.");
                     }
 
                     this.$div.addClass("blackhighlighter-protect");
@@ -1556,14 +1560,17 @@
 
                 case 'reveal':
                     if (oldMode !== 'show') {
-                        throw "Can only go from show to reveal.";
+                        throw ClientError("Can only go from show to reveal.");
                     }
                     this.$div.addClass("blackhighlighter-reveal");
                     this.blinkTimer = setInterval($.proxy(blinker, this), 800);
                     break;
 
                 default:
-                    throw "Invalid mode passed to setBlackhighlighterMode: " + newMode;
+                    throw ClientError(
+                        "Invalid mode passed to setBlackhighlighterMode: "
+                        + newMode
+                    );
             }
 
             this.mode = newMode;
@@ -1637,10 +1644,10 @@
 
         _unprotectSpan: function($span) {
             if (this.mode !== 'protect') {
-                throw "Can't unprotect span outside of protect mode";
+                throw Error("Can't unprotect span outside of protect mode");
             }
             if (!$span.hasClass('protected')) {
-                throw "trying to unprotect a non-protected span";
+                throw Error("trying to unprotect a non-protected span");
             }
 
             var $parent = $span.parent();
@@ -1682,10 +1689,10 @@
             // disrupt the enumeration.
 
             if (this.mode !== 'protect') {
-                throw "Can't take protect suggestion outside of protect mode";
+                throw Error("Can't take protect suggestion outside of protect mode");
             }
             if (!$span.hasClass('suggested')) {
-                throw "trying to take non-suggested span";
+                throw Error("trying to take non-suggested span");
             }
 
             $span.removeClass("placeholder suggested");
@@ -1715,7 +1722,7 @@
 
         _makeProtectedSpan: function(str) {
             if (!str) {
-                throw "Empty string passed to _makeProtectedSpan";
+                throw Error("Empty string passed to _makeProtectedSpan");
             }
             var $span = $('<span class="placeholder protected"></span>');
             $span.append($(document.createTextNode(str)));
@@ -1877,7 +1884,7 @@
                     }
                 }
                 else {
-                    throw "Unknown element found in blackhighlighter."
+                    throw Error("Unknown element found in blackhighlighter.");
                 }
             }
 
@@ -1922,7 +1929,8 @@
             while ($endContainer.hasClass("nbsp-spacing-hack")) {
                 if ($endContainer.is($startContainer)) {
                     // Shouldn't happen, or we'd have hit it above!
-                    throw "Internal error in nbsp-spacing-hack enumeration";
+
+                    throw Error("Internal error in nbsp-spacing-hack enumeration");
                 }
                 $endContainer = $endContainer.prev();
                 endOffset = $endContainer.contents().length;
@@ -1957,7 +1965,7 @@
                         );
                     }
                     else {
-                        throw "Unknown span selection in blackhighlighter";
+                        throw Error("Unknown span selection in blackhighlighter");
                     }
                 }
 
@@ -1996,7 +2004,7 @@
                                 );
                             }
                             else {
-                                throw "Unknown span selection in blackhighlighter";
+                                throw Error("Unknown span selection in blackhighlighter");
                             }
                         }
 
@@ -2048,7 +2056,7 @@
                                 );
                             }
                             else {
-                                throw "Unknown span selection in blackhighlighter";
+                                throw Error("Unknown span selection in blackhighlighter");
                             }
                         }
 
@@ -2195,7 +2203,7 @@
             }
 
             if (this.mode !== 'protect') {
-                throw "generateCommitAndProtections called in bad mode";
+                throw Error("generateCommitAndProtections called in bad mode");
             }
 
             var protectedObjs = undefined;
@@ -2205,10 +2213,10 @@
 
             function pushStringSpan(stringSpan) {
                 if ($.type(stringSpan) !== 'string') {
-                    throw 'Pushing non-string as string span';
+                    throw Error('Pushing non-string as string span');
                 }
                 if (stringSpan.length === 0) {
-                    throw 'Pushing zero length string span';
+                    throw Error('Pushing zero length string span');
                 }
 
                 var numSpans = commit.spans.length;
@@ -2226,7 +2234,7 @@
 
             function pushPlaceholderSpan(placeholder) {
                 if ($.type(placeholder.display_length) === undefined) {
-                    throw 'Invalid placeholder pushed';
+                    throw Error('Invalid placeholder pushed');
                 }
                 commit.spans.push(placeholder);
             }
@@ -2235,7 +2243,7 @@
                 var $subDiv = $(subDiv);
 
                 if (!$subDiv.is('div')) {
-                    throw 'Unknown DOM element found in canonized area';
+                    throw Error('Unknown DOM element found in canonized area');
                 }
 
                 if ($subDiv.hasClass("nbsp-spacing-hack")) {
@@ -2260,7 +2268,7 @@
                     }
 
                     if (!$child.is('span')) {
-                        throw 'Non span or textnode in canonized div';
+                        throw Error('Non span or textnode in canonized div');
                     }
 
                     if ($child.hasClass('protected')) {
@@ -2270,7 +2278,7 @@
 
                         var content = $child.text();
                         if (content.length === 0) {
-                            throw "Zero length redaction found, illegal";
+                            throw Error("Zero length redaction found, illegal");
                         }
 
                         var protection = {
@@ -2308,7 +2316,7 @@
                         pushStringSpan($child.text());
                     }
                     else {
-                        throw "Illegal span in canonized blackhighlighter area";
+                        throw Error("Illegal span in canonized blackhighlighter area");
                     }
                 });
 
@@ -2323,7 +2331,7 @@
             $.each(commit.spans, function(idx, spanToCheck) {
                 if ($.type(spanToCheck) === 'string') {
                     if (lastWasString) {
-                        throw "Two sequential string spans in commit";
+                        throw Error("Two sequential string spans in commit");
                     }
                     lastWasString = true;
                 }
@@ -2362,7 +2370,7 @@
 
         _toggleMask: function ($span) {
             if (!$span.is('span') || !$span.hasClass('verified')) {
-                throw "Bad element received by _toggleMask";
+                throw Error("Bad element received by _toggleMask");
             }
 
             // We have separate classes because the :not css selector is not
@@ -2493,7 +2501,7 @@
                             var $el = $(this)
                             if (this.nodeType === Node.TEXT_NODE) {
                                 if (foundTextNode) {
-                                    throw "More than one text node in span!";
+                                    throw Error("More than one text node in span!");
                                 }
                                 $el.replaceWith(
                                     document.createTextNode(reveal.value)
@@ -2503,7 +2511,7 @@
                         });
 
                         if (!foundTextNode) {
-                            throw "No text nodes found in span";
+                            throw Error("No text nodes found in span");
                         }
 
                         $span.removeClass('protected');
@@ -2537,7 +2545,7 @@
 
                     var sha256 = $el.find('span.placeholder-sha256').text();
                     if (!protectionsClone[sha256]) {
-                        throw "Masked protection span not in protections";
+                        throw Error("Masked protection span not in protections");
                     }
 
                     delete protectionsClone[sha256];
@@ -2554,8 +2562,10 @@
                 var actualHash =
                     exports.hashOfReveal(protection);
                 if (actualHash != protection.sha256) {
-                    throw 'Invalid certificate: content hash is ' + actualHash
-                        + ' while claimed hash is ' + protection.sha256;
+                    throw ClientError(
+                        'Invalid certificate: content hash is ' + actualHash
+                        + ' while claimed hash is ' + protection.sha256
+                    );
                 }
 
                 var numPlaceholdersForKey = 0;
@@ -2568,11 +2578,11 @@
                 // warn user if certificate is useless, need better UI
 
                 if (numPlaceholdersForKey === 0) {
-                    throw 'Protection does not match any placeholders.';
+                    throw ClientError('Protection does not match any placeholders.');
                 }
 
                 if (numPlaceholdersForKey > 1) {
-                    throw 'Protection matches more than one placeholder.';
+                    throw Error('Protection matches more than one placeholder.');
                 }
 
                 if (isFromServer) {
@@ -2599,7 +2609,7 @@
         unseeProtection: function(protectionKey) {
 
             if (!(protectionKey in this.protections)) {
-                throw 'Attempt to remove protection not in the local list.';
+                throw ClientError('Attempt to remove protection not in the local list.');
             }
 
             delete this.protections[protectionKey];
@@ -2698,7 +2708,7 @@
 
                     var serverDate = new Date(commit_id_and_date.commit_date);
                     var deltaDate = Math.abs(serverDate - clientDate);
-                    if (deltaDate / 1000 < 60) { // temp do less than to force error
+                    if (deltaDate / 1000 > 60) {
                         error_array.push(TimestampError(serverDate, clientDate));
                     }
 
@@ -2890,7 +2900,7 @@
             // REVIEW: Ask what convention is here.
 
             if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in blackhighlighter options.");
+                throw ClientError("Currently not handling length > 1 collections in blackhighlighter options.");
             }
 
             var instance = Blackhighlighter.getInstance(this.get(0));
@@ -2909,7 +2919,7 @@
 
             if (arg1 === "commit") {
                 if (this.length != 1) {
-                    throw new Error("Currently not handling length > 1 collections for commit.");
+                    throw ClientError("Currently not handling length > 1 collections for commit.");
                 }
 
                 var instance = Blackhighlighter.getInstance(this.get(0));
@@ -2975,7 +2985,7 @@
 
         if (o === "certificate") {
             if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in certificate.");
+                throw ClientError("Currently not handling length > 1 collections in certificate.");
             }
 
             var instance = Blackhighlighter.getInstance(this.get(0));
@@ -2987,11 +2997,11 @@
 
                 if (arg1 === 'encode') {
                     if ($.type(arg2) !== 'string') {
-                        throw "Certificate encode requires commit_id as string";
+                        throw ClientError("Certificate encode requires commit_id as string");
                     }
 
                     if ($.type(arg3) !== 'array') {
-                        throw "Parameter to certificate encode must be array";
+                        throw ClientError("Parameter to certificate encode must be array");
                     }
 
                     // Validate input object?
@@ -3020,7 +3030,7 @@
                 }
                 else if (arg1 === 'decode') {
                     if ($.type(arg2) !== 'string') {
-                        throw "Parameter to certificate decode must be string";
+                        throw ClientError("Parameter to certificate decode must be string");
                     }
 
                     // We tolerate whitespace, due to the encoding throwing
@@ -3038,21 +3048,21 @@
 
                 }
                 else {
-                    throw "Option to certificate other than encode/decode";
+                    throw ClientError("Option to certificate other than encode/decode");
                 }
 
                 // Don't return the actual reveal objects!
                 return instance.reveals.clone();
             }
             else {
-                throw "Can't encode or decode certificates while editing/protecting";
+                throw ClientError("Can't encode or decode certificates while editing/protecting");
             }
 
         }
 
         if (o === "commit") {
            if (this.length < 0) {
-                throw new Error("At least one widget must be in reveal set.");
+                throw new ClientError("At least one widget must be in reveal set.");
             }
 
             var instanceArray = [];
@@ -3070,7 +3080,7 @@
             // now, use your internal state" of commit/reveal.  Think about it.
 
             if (this.length != 1) {
-                throw new Error("Currently not handling length > 1 collections in verify.");
+                throw ClientError("Currently not handling length > 1 collections in verify.");
             }
 
             var instance = Blackhighlighter.getInstance(this.get(0));
@@ -3079,7 +3089,7 @@
 
         if (o === "reveal") {
             if (this.length < 0) {
-                throw new Error("At least one widget must be in reveal set.");
+                throw ClientError("At least one widget must be in reveal set.");
             }
 
             var instanceArray = [];
