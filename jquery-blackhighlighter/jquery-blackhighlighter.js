@@ -460,6 +460,81 @@
 
 
     //
+    // CUSTOM ERRORS
+    //
+    // http://blog.hostilefork.com/error-handling-internal-badrequest-node/
+    //
+    // Note that `captureStackTrace` is V8 specific (Chrome, Node)
+    // http://www.devthought.com/2011/12/22/a-string-is-not-an-error/
+    //
+
+    function ClientError (msg) {
+        if (!(this instanceof ClientError)) {
+            return new ClientError(msg);
+        }
+
+        Error.call(this);
+        this.message = msg;
+        
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, ClientError);
+        }
+    };
+
+    ClientError.prototype.__proto__ = Error.prototype;
+    ClientError.prototype.name = 'ClientError';
+
+
+    function TimestampError(serverDate, clientDate) {
+        if (!(this instanceof TimestampError)) {
+            return new TimestampError(serverDate, clientDate);
+        }
+
+        Error.call(this);
+        this.serverDate = serverDate;
+        this.clientDate = clientDate;
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, TimestampError);
+        }
+    };
+
+    TimestampError.prototype.__proto__ = Error.prototype;
+    TimestampError.prototype.name = 'TimestampError';
+    TimestampError.prototype.toString = function () {
+        return 'TimestampError: Server signed data with timestamp '
+            + this.serverDate.toUTCString()
+            + " which is off by more than a minute from "
+            + this.clientDate.toUTCString();
+    }
+
+
+    // http://stackoverflow.com/a/24876472/211160
+
+    function MultipleError(errs) {
+        if (!(this instanceof MultipleError)) {
+            return new MultipleError(errs);
+        }
+
+        Error.call(this);
+        this.errs = errs;
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, MultipleError);
+        }
+    };
+
+    MultipleError.prototype.__proto__ = Error.prototype;
+    MultipleError.prototype.name = 'MultipleError';
+    MultipleError.prototype.toString = function () {
+        return 'MultipleError: [\n\t' + this.errs.join(',\n\t') + '\n]';
+    }
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+    //
     // EXPORTED API
     //
     // What we return from this RequireJS "module function" is an object
@@ -487,51 +562,11 @@
     // http://stackoverflow.com/a/9329476/211160
     //
 
-    // http://blog.hostilefork.com/error-handling-internal-badrequest-node/
-
-    function TimestampError(serverDate, clientDate) {
-        if (!(this instanceof TimestampError)) {
-            return new TimestampError(serverDate, clientDate);
-        }
-
-        Error.call(this);
-
-        this.serverDate = serverDate;
-        this.clientDate = clientDate;
-    };
-
-    TimestampError.prototype.__proto__ = Error.prototype;
-    TimestampError.prototype.name = 'TimestampError';
-    TimestampError.prototype.toString = function () {
-        return 'TimestampError: Server signed data with timestamp '
-            + serverDate.toUTCString()
-            + " which is off by more than a minute from "
-            + clientDate.toUTCString();
-    }
-
-
-    // http://blog.hostilefork.com/error-handling-internal-badrequest-node/
-    // http://stackoverflow.com/a/24876472/211160
-
-    function MultipleError(errs) {
-        if (!(this instanceof MultipleError)) {
-            return new MultipleError(errs);
-        }
-
-        Error.call(this);
-        this.errs = errs;
-    };
-
-    MultipleError.prototype.__proto__ = Error.prototype;
-    MultipleError.prototype.name = 'MultipleError';
-    MultipleError.prototype.toString = function () {
-        return 'MultipleError: [\n\t' + this.errs.join(',\n\t') + '\n]';
-    }
-
-
     var exports = {
 
         // Custom error classes
+
+        'ClientError': ClientError,
 
         'TimestampError': TimestampError,
 
