@@ -572,19 +572,11 @@
 
         'MultipleError': MultipleError,
 
-        // These are URLs that get exposed to end users, and as they are
-        // already very long (base64 encodings of sha256) we try to keep
-        // them brief as possible.
-
-        makeVerifyUrl: function(base_url, commit_id) {
-            return base_url + 'v/' + commit_id;
-        },
-
-        makeShowUrl: function(base_url, commit_id) {
-            return base_url + 's/' + commit_id;
-        },
-
-        // These are API points under the hood; no need to shorten them
+        // API points, base_url should be passed in the constructor and not
+        // repeated, see:
+        //
+        // https://github.com/hostilefork/blackhighlighter/issues/57
+        // https://github.com/hostilefork/blackhighlighter/issues/55
 
         makeCommitUrl: function(base_url) {
             return base_url + 'commit/';
@@ -593,6 +585,7 @@
         makeRevealUrl: function(base_url) {
             return base_url + 'reveal/';
         },
+
 
         //
         // UUID
