@@ -860,40 +860,18 @@
     //
 
     var Blackhighlighter = function($div, opts) {
-        Blackhighlighter._registry.push(this);
+        var instance = this;
+        Blackhighlighter._registry.push(instance);
 
-        this.$div = $div;
-
-        // Grab a copy of whatever was in the div at the time of initialization
-
-        this.initialContent = $div.contents().clone();
+        instance.$div = $div;
 
         // keep track of if we added it to take it off?
 
         $div.addClass("blackhighlighter");
 
-        // Event delegation sounds like a good idea; to handle elements that
-        // are added dynamically with CSS selectors.  Problem is, the CSS
-        // selectors have a pecking order based on "specificity":
-        //
-        // http://htmldog.com/guides/css/intermediate/specificity/
-        //
-        // In the end, it's safer to put the functions directly onto the
-        // elements they want to act on.  jQuery UI was overriding
-        // "div.blackhighlighter-protect span.protected" but not
-        // when the div wasn't specified, but just saying span.protected
-        // would be too broad.  Would be nice if it worked; it doesn't.
-        //
-        /* $div.on('click', 'div.blackhighlighter-protect span.suggested',
-            $.proxy(this._takeSuggestionListener, this)
-        );
-        $div.on('click', 'div.blackhighlighter-protect span.protected',
-            $.proxy(this._unprotectSpanListener, this)
-        ); */
-
         if (opts.mode === 'show') {
             if (opts.commit) {
-                this.commit = opts.commit;
+                instance.commit = opts.commit;
             }
             else {
                 throw ClientError("Starting a blackhighlighter in show mode requires a commit in the options");
@@ -911,18 +889,25 @@
 
         // Protections are local reveals in the show/reveal modes
 
-        this.protections = {};
+        instance.protections = {};
 
-        // We want to set up the reveals and check that their hashes match
+        // REVIEW: should we force a check of the hashes here to give a client
+        // error if they pass in bad reveals, or is it okay to throw the
+        // error later?
 
-        this.reveals = {};
+        instance.reveals = {};
         if (opts.reveals) {
-            this.seeProtections(opts.reveals, true);
+            $.each(opts.reveals, function(idx, reveal) {
+                if (reveal.sha256 in instance.reveals) {
+                    throw ClientError("Duplicate reveal hash passed into blackhighlighter");
+                }
+                instance.reveals[reveal.sha256] = reveal;
+            });
         }
 
         // Set the mode (needs the commit/protections to update titles)
 
-        this.setMode(opts.mode, true);
+        instance.setMode(opts.mode, true);
 
         // When the content of the text area is modified, we want to give
         // an update notification to clients of the widget.
@@ -933,14 +918,13 @@
         //
         // http://stackoverflow.com/a/6263537/211160
         
-        this.$div.on('focus', function() {
+        instance.$div.on('focus', function() {
             var $this = $(this);
             $this.data('before', $this.html());
             return $this;
         });
 
-        this.$div.on('blur keyup paste input', function() {
-            var instance = Blackhighlighter.getInstance(this);
+        instance.$div.on('blur keyup paste input', function() {
             var $this = $(this);
             if ($this.data('before') !== $this.html()) {
                 $this.data('before', $this.html());
@@ -953,8 +937,7 @@
         // know at least if someone has redacted or unredacted...or typed
         // into the widget.
 
-        this.$div.on('change', function() {
-            var instance = Blackhighlighter.getInstance(this);
+        instance.$div.on('change', function() {
             instance.update();
             return true;
         });
@@ -1027,6 +1010,11 @@
         // MODE TRANSITIONS
         //
 
+        //
+        // Suggestions should be done with an API.
+        // https://github.com/hostilefork/blackhighlighter/issues/60
+        //
+
         _addSuggestionsRecursive: function(node) {
 
             var lastPushWasText = false;
@@ -1038,7 +1026,12 @@
                 var $span = $('<span class="placeholder suggested"></span>');
                 $span.append($(document.createTextNode(str)));
                 $(node).before($span);
+
+                // Event delegation would be nice, but poor compositionality
+                // https://github.com/hostilefork/blackhighlighter/issues/59
+
                 $span.on('click', $.proxy(this._takeSuggestionListener, this));
+
                 lastPushWasText = false;
             }
 
@@ -1052,18 +1045,6 @@
                 }
             }
 
-            // This is just a simple demonstration of the concept that the
-            // editor could be looking for things you might want to protect
-            // and suggest them for you.  While there are limits to how good
-            // a job a browser client can do without talking to *some* server
-            // to analyze for you, one could use a local/trusted server to
-            // do it.
-            //
-            // NOTE: Blackhighlighter should only implement the suggestion
-            // offering interface, not scan for the suggestions itself.
-            // This needs to be broken out as an API.  At minimum, put the
-            // suggest regexes in the options for now.
-
             var nodeType = $.type(node.nodeType) === undefined
                 ? Node.ATTRIBUTE_NODE
                 : node.nodeType;
@@ -1073,10 +1054,6 @@
             switch (nodeType) {
                 case Node.TEXT_NODE:
                     var strData = node.data;
-
-                    // http://development.thatoneplace.net/2008/05/bug-discovered-in-internet-explorer-7.html
-                    /* var regexEmail = /[0-9a-zA-Z]+@[0-9a-zA-Z]+[\.]{1}[0-9a-zA-Z]+[\.]?[0-9a-zA-Z]+/g; */
-                    // using /g option does a global search
 
                     var regexEmail = /[0-9a-zA-Z]+@[0-9a-zA-Z]+[\.][0-9a-zA-Z]+[\.]?[0-9a-zA-Z]+/g;
                     var firstMatchPos = strData.search(regexEmail);
@@ -1088,14 +1065,6 @@
                     }
 
                     var splitArray = strData.split(regexEmail);
-
-                    // NOTE: Inconsistent cross-browser behavior led me to
-                    // switch from RegExp.exec() to using String.match() --
-                    // sometimes exec() did not reset the lastIndex
-                    // for the next time this procedure is called (Firefox) and
-                    // in IE there were even weirder problems where the first
-                    // call would return null but the second would not
-                    // (even with regexEmail.lastIndex = 0).
 
                     // reset lastIndex so we find first match again
 
@@ -1360,30 +1329,8 @@
                 instance._safeNormalize.call(instance, $subDiv.get(0));
             });
 
-
-            // HTML collapses all whitespace as not being visually significant
-            // but if the content is in a text node, it's not a problem.  We
-            // may need to do some processing on the text nodes, but leaving
-            // it out for now.
-            //
-            // http://stackoverflow.com/a/4399718/211160
-            //
-/*
-            var getTextNodesIn = function(el) {
-                return $(el).find(":not(iframe)")
-                    .addBack().contents().filter(function() {
-                        return this.nodeType == Node.TEXT_NODE;
-                    });
-            };
-            getTextNodesIn(this.$div).each(function(idx, el) {
-                // http://stackoverflow.com/questions/7635952/
-                var str = el.nodeValue;
-                str = str.replace(/\s+/g, " ");
-                str = str.replace(/^\s+|\s+$/g, "");
-                // should we also do something with zero-no-width joiners?
-                el.nodeValue = str;
-            });
-*/
+            // Do text nodes need any processing in the canonization?
+            // https://github.com/hostilefork/blackhighlighter/issues/61
         },
 
         _decanonizeContent: function() {
@@ -1442,9 +1389,8 @@
 
                         this.$div.removeClass("blackhighlighter-ink");
 
-                        // See notes on why I'm doing it this way.
-                        // Using less-specificity in selectors, or delegates,
-                        // led events to be snapped up by jQuery UI
+                        // Event delegation would be nice, bad compositionality
+                        // https://github.com/hostilefork/blackhighlighter/issues/59
 
                         this.$div.find("span.protected").off(
                             'click', this._unprotectSpanListener
@@ -1511,9 +1457,8 @@
                     this.$div.addClass("blackhighlighter-protect");
                     this._canonizeContent();
 
-                    // See notes on why I'm doing it this way.
-                    // Using less-specificity in selectors, or delegates,
-                    // led events to be snapped up by jQuery UI
+                    // Event delegation would be nice, bad compositionality
+                    // https://github.com/hostilefork/blackhighlighter/issues/59
 
                     this.$div.find("span.protected").on('click',
                         $.proxy(this._unprotectSpanListener, this)
@@ -1694,6 +1639,9 @@
             if (!$span.hasClass('suggested')) {
                 throw Error("trying to take non-suggested span");
             }
+
+            // Event delegation would be nice, bad compositionality
+            // https://github.com/hostilefork/blackhighlighter/issues/59
 
             $span.removeClass("placeholder suggested");
             $span.off('click', $.proxy(this._takeSuggestionListener, this));
@@ -2476,9 +2424,14 @@
             // Save what the server made in the beginning so that if we mess
             // with it we can restore it back.
 
-            this.$div.empty().append(this.initialContent.clone());
-
             var instance = this;
+
+            instance.$div.empty().append(
+                exports.generateHtmlFromCommitAndReveals(
+                    instance.commit, instance.reveals
+                )
+            );
+
             this.$div.find('span').filter('.placeholder').each(function(i) {
                 var $span = $(this);
                 var sha256 = $span.find('span.placeholder-sha256').text();
@@ -2859,11 +2812,13 @@
         // These are the per-instance options.  If there's a piece of state
         // or a hook that might be different between one div and another
         // then it needs to go in here.
+        //
+        // REVIEW: Should protections be an option?
+
         opts: {
             mode: 'compose',
             commit: null,
-            protections: {},
-            reveals: {},
+            reveals: null,
             update: function() { }
         }
     }, $.blackhighlighter || {});
