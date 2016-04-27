@@ -611,13 +611,20 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
             revealsCollection, 'insert', newRevealsArray, {safe: true}
         );
     })
-    .then(function (insertedRecords) {
+    .then(function (resultAndOps) {
         // 6: Respond with reveal's insertion date
+
+        // !!! The JSON result for insertions changed in MongoDB 3 to be an
+        // object with a `.result` and `.ops` field as the array, not just the
+        // array itself.  This appears to be a basically undocumented change,
+        // but others hit it too: http://stackoverflow.com/q/36235355/
+
+        var insertedRecords = resultAndOps.ops;
 
         // We know asynchronous insert actually succeeded due to {safe: true}
 
         callback(null, {
-            reveal_date: insertedRecords[0].reveal_date
+            reveal_date: resultAndOps.ops[0].reveal_date
         });
     })
     .catch(function (err) {
