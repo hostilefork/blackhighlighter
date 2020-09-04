@@ -21,7 +21,7 @@
         "requirejs": "2.2.0",
         "body-parser": "1.15.0",
         "express": ">=3.0.0",
-        "mongodb": "2.1.18",
+        "mongodb": "3.6.1",
         "underscore": "1.8.3",
         "q": "1.4.1"
     },
