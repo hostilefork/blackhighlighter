@@ -217,30 +217,21 @@ exports.makeCommitments = function (commit_array, callback) {
     // all "in-band" junk.  Start the database work...
 
     var result = null;
+    const client = new MongoClient(configuration.mongoConnectURI);
+    const db = client.db();
+    const collection = db.collection('commits');
 
-    Q.try(function() {
-        // 1: Connect to database with authorization
+    // Add commits to collection
 
-        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
-    })
-    .then(function (conn) {
-        // 2: Get the commits collection from the database
+    // There is no transactionality in MongoDB, so when we insert an array
+    // of JS objects it doesn't guarantee us all will succeed or fail.
+    // We can ask to stop on the first failure, though.
+    //
+    // https://github.com/hostilefork/blackhighlighter/issues/52
 
-        return Q.ninvoke(conn, 'collection', 'commits');
-    })
-    .then(function (coll) {
-        // 3: Add commits to collection
-
-        // There is no transactionality in MongoDB, so when we insert an array
-        // of JS objects it doesn't guarantee us all will succeed or fail.
-        // We can ask to stop on the first failure, though.
-        //
-        // https://github.com/hostilefork/blackhighlighter/issues/52
-
-        return Q.ninvoke(coll, "insert", commit_array, {safe: true});
-    })
-    .then(function (result) {
-        // 4. Success (via .then), so give commit_ids and times to the client
+    Q(collection.insertMany(commit_array))  // safe: true ?
+      .then(function (result) {
+        // Success (via .then), so give commit_ids and times to the client
 
         // We know the async insertion actually succeeded due to {safe: true}
 
@@ -284,55 +275,43 @@ exports.generateHtmlFromCommitAndReveals = function (commit, reveal_array) {
 
 
 exports.getCommitsWithReveals = function (commit_id_array, callback) {
-    Q.try(function () {
-        // 1: Connect to database with authorization
+    const client = new MongoClient(configuration.mongoConnectURI);
+    const db = client.db();
+    const commitsCollection = db.collection('commits');
+    const revealsCollection = db.collection('reveals');
 
-        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
-    })
-    .then(function (conn) {
-        // 2: Get commits and reveals collections in parallel
+    // Query for specific commits and reveals objects in parallel
 
-        return [
-            Q.ninvoke(conn, 'collection', 'commits')
-            , Q.ninvoke(conn, 'collection', 'reveals')
-        ];
-    })
-    .spread(function (commitsCollection, revealsCollection) {
-        // 3: Query for specific commits and reveals objects in parallel
+    // We want to batch these up, so use $or:
+    // http://mongodb.github.io/node-mongodb-native/markdown-docs/queries.html
 
-        // We want to batch these up, so use $or:
-        // http://mongodb.github.io/node-mongodb-native/markdown-docs/queries.html
+    var orList = [];
+    _.each(commit_id_array, function (commit_id) {
+        orList.push({'commit_id': commit_id});
+    });
 
-        var orList = [];
-        _.each(commit_id_array, function (commit_id) {
-            orList.push({'commit_id': commit_id});
-        });
-
-        return [
-            Q.ninvoke(
-                commitsCollection,
-                'find'
-                , {$or: orList}
-                , {sort:[['_id', 'ascending']]}
-            )
-            , Q.ninvoke(
-                revealsCollection
-                , 'find'
-                , {$or: orList}
-                , {sort:[['sha256', 'ascending']]}
-            )
-        ];
-    })
-    .spread(function (commitsCursor, revealsCursor) {
-        // 4: Convert the result cursors to arrays
+    Q.all([
+        commitsCollection.find(
+            {$or: orList}
+            , null
+            , {sort:[['_id', 'ascending']]}
+        )
+        , revealsCollection.find(
+            {$or: orList}
+            , null
+            , {sort:[['sha256', 'ascending']]}
+        )
+    ])
+      .spread(function (commitsCursor, revealsCursor) {
+        // Convert the result cursors to arrays
 
         return [
-            Q.ninvoke(commitsCursor, 'toArray')
-            , Q.ninvoke(revealsCursor, 'toArray')
+            Q(commitsCursor.toArray())
+            , Q(revealsCursor.toArray())
         ];
     })
     .spread(function (commitsArray, revealsArray) {
-        // 5: Check the arrays for validity and formulate results
+        // Check the arrays for validity and formulate results
 
         // REVIEW: is the length the only thing we need to check?
 
@@ -479,60 +458,46 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
     // Okay the certificate is "well-formed".  For more we have to start
     // talking to the database...
 
-    Q.try(function() {
-        // 1: Connect to database with authorization
+    const client = new MongoClient(configuration.mongoConnectURI);
+    const db = client.db();
+    const commitsCollection = db.collection('commits');
+    const revealsCollection = db.collection('reveals');
 
-        return Q.ninvoke(mongodb, 'connect', configuration.mongoConnectURI);
-    })
-    .then(function (conn) {
-        // 2: Get commits and reveals collections in parallel
+    // Query for specific commit and reveals objects in parallel
 
-        return [
-            Q.ninvoke(conn, 'collection', 'commits')
-            , Q.ninvoke(conn, 'collection', 'reveals')
-        ];
-    })
-    .spread(function (commitsCollection, revealsCollection) {
-        // 3: Query for specific commit and reveals objects in parallel
+    // We want to batch these up, so use $or:
+    // http://mongodb.github.io/node-mongodb-native/markdown-docs/queries.html
 
-        // We want to batch these up, so use $or:
-        // http://mongodb.github.io/node-mongodb-native/markdown-docs/queries.html
+    var orList = [];
+    _.each(commit_id_with_reveals_array, function (commit_id_with_reveals) {
+        orList.push({'commit_id': commit_id_with_reveals.commit_id});
+    });
 
-        var orList = [];
-        _.each(commit_id_with_reveals_array, function (commit_id_with_reveals) {
-            orList.push({'commit_id': commit_id_with_reveals.commit_id});
-        });
+    // REVIEW: necessary to use ObjectID conversion?
+    // http://stackoverflow.com/questions/4902569/
 
-        // REVIEW: necessary to use ObjectID conversion?
-        // http://stackoverflow.com/questions/4902569/
-
-        return [
-            revealsCollection
-            , Q.ninvoke(
-                commitsCollection
-                , 'find'
-                , {$or: orList}
-                , {limit: 1, sort:[['_id', 'ascending']]}
-            )
-            , Q.ninvoke(
-                revealsCollection
-                , 'find' 
-                , {$or: orList}
-                , {sort:[['sha256', 'ascending']]}
-            )
-        ];
-    })
-    .spread(function (revealsCollection, commitsCursor, oldRevealsCursor) {
-        // 4: Convert the result cursors to arrays
+    Q.all([
+        commitsCollection.find(
+            {$or: orList}
+            , null
+            , {limit: 1, sort:[['_id', 'ascending']]}
+        )
+        , revealsCollection.find(
+            {$or: orList}
+            , null
+            , {sort:[['sha256', 'ascending']]}
+        )
+    ])
+    .spread(function (commitsCursor, oldRevealsCursor) {
+        // Convert the result cursors to arrays
 
         return [
-            revealsCollection
-            , Q.ninvoke(commitsCursor, 'toArray')
-            , Q.ninvoke(oldRevealsCursor, 'toArray')
+            Q(commitsCursor.toArray())
+            , Q(oldRevealsCursor.toArray())
         ];
     })
-    .spread(function (revealsCollection, commitsArray, oldRevealsArray) {
-        // 5: Add new reveals if they pass verification
+    .spread(function (commitsArray, oldRevealsArray) {
+        // Add new reveals if they pass verification
 
         // Make sure we got as many commits back as we asked for.  Note that
         // this will not be true if you used the same commit_id twice in the
@@ -607,24 +572,15 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
             });
         });
 
-        return Q.ninvoke(
-            revealsCollection, 'insert', newRevealsArray, {safe: true}
-        );
+        return Q(revealsCollection.insertMany(newRevealsArray));
     })
-    .then(function (resultAndOps) {
-        // 6: Respond with reveal's insertion date
-
-        // !!! The JSON result for insertions changed in MongoDB 3 to be an
-        // object with a `.result` and `.ops` field as the array, not just the
-        // array itself.  This appears to be a basically undocumented change,
-        // but others hit it too: http://stackoverflow.com/q/36235355/
-
-        var insertedRecords = resultAndOps.ops;
+    .then(function (result) {
+        // Respond with reveal's insertion date
 
         // We know asynchronous insert actually succeeded due to {safe: true}
 
         callback(null, {
-            reveal_date: resultAndOps.ops[0].reveal_date
+            reveal_date: result.insertedIds[0].reveal_date
         });
     })
     .catch(function (err) {
