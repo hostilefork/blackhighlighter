@@ -2,7 +2,7 @@
 
 //
 // blackhighlighter.js
-// Black Highlighter main Node.JS **server-side** routines 
+// Black Highlighter main Node.JS **server-side** routines
 // Copyright (C) 2012-2014 HostileFork.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 
 
 
-// 
+//
 // CONFIGURE REQUIREJS
 //
 // Explanation and griping about requirejs and JS modularization in general:
@@ -48,7 +48,7 @@ requirejs.config({
     // are loaded relative to the top-level JS file.
 
     nodeRequire: require,
-    
+
     // Note: do not include the '.js' at the end of these paths!
 
     paths: {
@@ -62,10 +62,10 @@ requirejs.config({
 });
 
 
-// 
+//
 // MONGODB DATABASE CONFIGURATION
 //
-// Mongodb interface from 
+// Mongodb interface from
 // http://blog.mongodb.org/post/6587009156/cloudfoundry-mongodb-and-nodejs
 //
 // Best reference for Node.js driver
@@ -213,7 +213,7 @@ exports.makeCommitments = function (commit_array, callback) {
         commit.commit_id = common.commitIdFromCommit(commit);
     });
 
-    // Okay, the written content itself may be junk, but at least it's 
+    // Okay, the written content itself may be junk, but at least it's
     // all "in-band" junk.  Start the database work...
 
     var result = null;
@@ -380,9 +380,9 @@ function throwIfRevealIsMalformedOrLying (reveal) {
         throw ClientError('all reveals must be objects');
     }
 
-    if (!_.isEqual(_.keys(reveal).sort(), 
+    if (!_.isEqual(_.keys(reveal).sort(),
         ["salt", "sha256", "value"])
-    ) { 
+    ) {
         throw ClientError('reveal has extra or missing keys');
     }
 
@@ -428,9 +428,9 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
 
     _.each(commit_id_with_reveals_array, function (commit_id_with_reveals) {
 
-        if (!_.isEqual(_.keys(commit_id_with_reveals).sort(), 
+        if (!_.isEqual(_.keys(commit_id_with_reveals).sort(),
             ["commit_id", "reveal_array"])
-        ) { 
+        ) {
             throw ClientError(
                 'commit_id_with_reveals has extra or missing keys'
             );
@@ -520,7 +520,7 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
             if (value.length !== 1) {
                 throw Error("More than one commit with same ID on server.");
             }
-        }); 
+        });
 
         // Now verify the reveals for the redacted portions against the hash
         // values we stored at the time of commit.
@@ -564,7 +564,7 @@ exports.revealSecrets = function (commit_id_with_reveals_array, callback) {
 
                 // we need to poke the commit_id into the reveal so that the
                 // database can connect them to the commit in our query
-                
+
                 reveal.commit_id = commit.commit_id;
                 reveal.reveal_date = requestTime;
 
