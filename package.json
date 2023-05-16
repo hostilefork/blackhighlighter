@@ -3,7 +3,7 @@
     "_comment_JsonSucksForCommentingConfigs": "http://stackoverflow.com/questions/244777/",
     "name": "blackhighlighter",
     "preferGlobal": "false",
-    "version": "0.10.0",
+    "version": "0.10.1",
     "author": "Brian Dickens <brian@hostilefork.com>",
     "description": "Client and server for widget implementing secure and committed web redaction",
     "repository": {

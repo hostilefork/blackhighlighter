@@ -30,13 +30,19 @@
  * must clean up *any* direct children and convert them into divs before
  * running the protect process!  So don't add .protection-area::selection here
  * to try and solve a problem; fix the canonization before the protect instead.
+ *
+ * Note: It appears that trying to set the selection color to black on black
+ * will fail in Chrome...it ends up choosing black on white, which means you
+ * can't see the highlighter mark as you drag because it's the same as non
+ * selected text.  Using a dark gray foreground color helps the user see
+ * what they are redacting anyway, so maybe it's for the best.
  */
 .blackhighlighter-ink *::selection { /* Safari, Chrome, etc... */
-    color: #000000 !important;
+    color: #bbbbbb !important;  /* See note: black/black fails in chrome! */
     background: #000000 !important;
 }
 .blackhighlighter-ink *::-moz-selection {
-    color: #000000 !important;
+    color: #bbbbbb !important;  /* See note: black/black fails in chrome! */
     background: #000000 !important; /* Firefox */
 }
 
